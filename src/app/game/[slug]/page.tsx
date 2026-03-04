@@ -41,7 +41,7 @@ export default function GameDetailPage() {
         <img
           src={game.coverArt}
           alt={game.title}
-          className="w-full h-full object-cover opacity-60"
+          className="w-full h-full object-cover object-center opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
 

@@ -62,11 +62,6 @@ function slugify(title: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-function placeholder(name: string): string {
-  const encoded = encodeURIComponent(name);
-  return `https://placehold.co/200x200/1a1a1a/666666?text=${encoded}`;
-}
-
 // ── Games ──────────────────────────────────────────────────────
 
 export const mockGames: Game[] = [
@@ -475,7 +470,7 @@ export const mockGames: Game[] = [
     slug: slugify("Nintendo Switch Sports 2"),
     title: "Nintendo Switch Sports 2",
     publisher: "Nintendo",
-    coverArt: placeholder("Switch+Sports+2"),
+    coverArt: "/images/covers/switch-sports-2.jpg",
     currentPrice: 49.99,
     originalPrice: 49.99,
     discount: 0,
@@ -490,7 +485,7 @@ export const mockGames: Game[] = [
     slug: slugify("Pikmin 5"),
     title: "Pikmin 5",
     publisher: "Nintendo",
-    coverArt: placeholder("Pikmin+5"),
+    coverArt: "/images/covers/pikmin-5.jpg",
     currentPrice: 59.99,
     originalPrice: 59.99,
     discount: 0,
@@ -523,7 +518,7 @@ export const mockGames: Game[] = [
     title: "Kirby Star Allies DX",
     publisher: "Nintendo",
     franchise: "Kirby",
-    coverArt: placeholder("Kirby+DX"),
+    coverArt: "/images/covers/kirby-star-allies-dx.jpg",
     currentPrice: 59.99,
     originalPrice: 59.99,
     discount: 0,
@@ -539,7 +534,7 @@ export const mockGames: Game[] = [
     title: "Fire Emblem Warriors: Three Hopes Remaster",
     publisher: "Nintendo",
     franchise: "Fire Emblem",
-    coverArt: placeholder("FE+Warriors"),
+    coverArt: "/images/covers/fe-warriors-remaster.jpg",
     currentPrice: 39.99,
     originalPrice: 39.99,
     discount: 0,
@@ -554,7 +549,7 @@ export const mockGames: Game[] = [
     slug: slugify("Pikmin 4 Deluxe"),
     title: "Pikmin 4 Deluxe",
     publisher: "Nintendo",
-    coverArt: placeholder("Pikmin+4+DX"),
+    coverArt: "/images/covers/pikmin-4-deluxe.jpg",
     currentPrice: 49.99,
     originalPrice: 49.99,
     discount: 0,
@@ -644,7 +639,7 @@ export const mockAlerts: GameAlert[] = [
     id: "a6",
     gameId: "22",
     gameTitle: "Pikmin 5",
-    gameCoverArt: placeholder("Pikmin+5"),
+    gameCoverArt: "/images/covers/pikmin-5.jpg",
     type: "announced",
     headline: "Pikmin 5 just announced for Nintendo Switch",
     subtext: "Coming Spring 2026 · $59.99",

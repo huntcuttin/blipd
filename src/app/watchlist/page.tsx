@@ -193,7 +193,7 @@ function SwipeableGameCard({
           <img
             src={game.coverArt}
             alt={game.title}
-            className="w-14 h-14 rounded-lg object-cover bg-[#1a1a1a] shrink-0"
+            className="w-14 h-14 rounded-lg object-cover object-center bg-[#1a1a1a] shrink-0"
           />
           <div className="flex-1 min-w-0 flex flex-col justify-center">
             <h3 className="font-semibold text-white text-sm truncate">

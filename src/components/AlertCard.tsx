@@ -47,7 +47,7 @@ export default function AlertCard({
       <img
         src={alert.gameCoverArt}
         alt={alert.gameTitle}
-        className="w-12 h-12 rounded-lg object-cover bg-[#1a1a1a] shrink-0"
+        className="w-12 h-12 rounded-lg object-cover object-center bg-[#1a1a1a] shrink-0"
       />
 
       {/* Content */}
