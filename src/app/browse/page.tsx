@@ -72,15 +72,6 @@ export default function BrowsePage() {
             </div>
           </Section>
 
-          {/* Franchises */}
-          <Section title="Franchises">
-            <div className="grid grid-cols-2 gap-2">
-              {mockFranchises.map((franchise) => (
-                <FranchiseCard key={franchise.id} franchise={franchise} />
-              ))}
-            </div>
-          </Section>
-
           {/* On Sale Now */}
           <Section title="On Sale Now">
             <div className="space-y-2">
@@ -96,6 +87,15 @@ export default function BrowsePage() {
               <UpsellBanner />
             </div>
           )}
+
+          {/* Franchises — horizontal scroll, tucked away */}
+          <Section title="Franchises">
+            <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+              {mockFranchises.map((franchise) => (
+                <FranchiseCard key={franchise.id} franchise={franchise} />
+              ))}
+            </div>
+          </Section>
 
           {/* New Releases */}
           {newReleases.length > 0 && (

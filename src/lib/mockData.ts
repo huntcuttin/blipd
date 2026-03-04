@@ -21,6 +21,7 @@ export interface Franchise {
   id: string;
   name: string;
   gameCount: number;
+  logo: string;
 }
 
 export type AlertType =
@@ -564,12 +565,12 @@ export const mockGames: Game[] = [
 // ── Franchises ─────────────────────────────────────────────────
 
 export const mockFranchises: Franchise[] = [
-  { id: "f1", name: "The Legend of Zelda", gameCount: 47 },
-  { id: "f2", name: "Mario", gameCount: 68 },
-  { id: "f3", name: "Metroid", gameCount: 18 },
-  { id: "f4", name: "Pokémon", gameCount: 42 },
-  { id: "f5", name: "Fire Emblem", gameCount: 23 },
-  { id: "f6", name: "Kirby", gameCount: 35 },
+  { id: "f1", name: "The Legend of Zelda", gameCount: 47, logo: "/images/franchises/zelda.jpg" },
+  { id: "f2", name: "Mario", gameCount: 68, logo: "/images/franchises/mario.jpg" },
+  { id: "f3", name: "Metroid", gameCount: 18, logo: "/images/franchises/metroid.jpg" },
+  { id: "f4", name: "Pokémon", gameCount: 42, logo: "/images/franchises/pokemon.jpg" },
+  { id: "f5", name: "Fire Emblem", gameCount: 23, logo: "/images/franchises/fire-emblem.jpg" },
+  { id: "f6", name: "Kirby", gameCount: 35, logo: "/images/franchises/kirby.jpg" },
 ];
 
 // ── Alerts ─────────────────────────────────────────────────────
