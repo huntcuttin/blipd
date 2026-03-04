@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Logo from "@/components/Logo";
 
 export default function LoginPage() {
@@ -13,7 +14,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#0a0a0a] -mb-20">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#0a0a0a] -mb-20 relative">
+      {/* Back button */}
+      <Link
+        href="/browse"
+        className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#00ff88]/30 transition-all"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+      </Link>
+
       {/* Logo */}
       <div className="mb-8">
         <Logo size={64} />
