@@ -6,15 +6,20 @@ import Logo from "@/components/Logo";
 import FollowButton from "@/components/FollowButton";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import { useFollow } from "@/lib/FollowContext";
-import { mockGames, mockFranchises } from "@/lib/mockData";
+import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
+import { getAllGames, getAllFranchises } from "@/lib/queries";
+import type { Game } from "@/lib/types";
 
 export default function WatchlistPage() {
   const [activeTab, setActiveTab] = useState<"games" | "franchises">("games");
   const { followedGameIds, followedFranchiseIds, toggleFollowGame } =
     useFollow();
 
-  const followedGames = mockGames.filter((g) => followedGameIds.has(g.id));
-  const followedFranchiseList = mockFranchises.filter((f) =>
+  const { data: allGames } = useSupabaseQuery(getAllGames);
+  const { data: allFranchises } = useSupabaseQuery(getAllFranchises);
+
+  const followedGames = (allGames ?? []).filter((g) => followedGameIds.has(g.id));
+  const followedFranchiseList = (allFranchises ?? []).filter((f) =>
     followedFranchiseIds.has(f.id)
   );
 
@@ -145,7 +150,7 @@ function SwipeableGameCard({
   game,
   onUnfollow,
 }: {
-  game: (typeof mockGames)[number];
+  game: Game;
   onUnfollow: () => void;
 }) {
   const [swiped, setSwiped] = useState(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Game } from "@/lib/mockData";
+import type { Game } from "@/lib/types";
 import FollowButton from "./FollowButton";
 
 export default function GameCard({ game }: { game: Game }) {

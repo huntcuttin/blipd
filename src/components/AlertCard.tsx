@@ -1,6 +1,6 @@
 "use client";
 
-import { GameAlert, AlertType } from "@/lib/mockData";
+import type { GameAlert, AlertType } from "@/lib/types";
 
 const alertConfig: Record<
   AlertType,
@@ -59,7 +59,8 @@ export default function AlertCard({
             {config.emoji} {config.label}
           </span>
           <span className="text-[#666666] text-[10px] ml-auto shrink-0">
-            {alert.timestamp}
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {(alert as any).timestamp ?? alert.createdAt}
           </span>
         </div>
 

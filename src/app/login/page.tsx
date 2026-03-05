@@ -3,14 +3,24 @@
 import { useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const { signInWithMagicLink } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) setSent(true);
+    if (!email) return;
+    setError("");
+    const { error } = await signInWithMagicLink(email);
+    if (error) {
+      setError(error.message);
+    } else {
+      setSent(true);
+    }
   };
 
   return (
@@ -46,6 +56,9 @@ export default function LoginPage() {
               required
               className="w-full px-4 py-3.5 rounded-xl bg-[#111111] border border-[#222222] text-white placeholder:text-[#666666] focus:outline-none focus:border-[#00ff88] focus:shadow-[0_0_12px_#00ff8844] transition-all text-sm"
             />
+            {error && (
+              <p className="text-red-400 text-xs">{error}</p>
+            )}
             <button
               type="submit"
               className="w-full py-3.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844]"

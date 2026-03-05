@@ -2,19 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { mockAlerts } from "@/lib/mockData";
-
-const unreadCount = mockAlerts.filter((a) => !a.read).length;
-
-const tabs = [
-  { href: "/browse", label: "Browse", icon: GridIcon },
-  { href: "/watchlist", label: "Watchlist", icon: BookmarkIcon },
-  { href: "/upcoming", label: "Upcoming", icon: CalendarIcon },
-  { href: "/alerts", label: "Alerts", icon: BellIcon, badge: unreadCount },
-];
+import { useAuth } from "@/lib/AuthContext";
+import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
+import { getAlerts } from "@/lib/queries";
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const { data: alerts } = useSupabaseQuery(
+    (sb) => getAlerts(sb, user?.id),
+    [user?.id]
+  );
+
+  const unreadCount = (alerts ?? []).filter((a) => !a.read).length;
+
+  const tabs = [
+    { href: "/browse", label: "Browse", icon: GridIcon },
+    { href: "/watchlist", label: "Watchlist", icon: BookmarkIcon },
+    { href: "/upcoming", label: "Upcoming", icon: CalendarIcon },
+    { href: "/alerts", label: "Alerts", icon: BellIcon, badge: unreadCount },
+  ];
 
   // Hide nav on login page
   if (pathname === "/login") return null;

@@ -1,11 +1,16 @@
 "use client";
 
-import { Franchise, getGamesByFranchise } from "@/lib/mockData";
+import type { Franchise } from "@/lib/types";
+import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
+import { getGamesByFranchise } from "@/lib/queries";
 import FranchiseFollowButton from "./FranchiseFollowButton";
 
 export default function FranchiseCard({ franchise }: { franchise: Franchise }) {
-  const games = getGamesByFranchise(franchise.name);
-  const onSaleCount = games.filter((g) => g.isOnSale).length;
+  const { data: games } = useSupabaseQuery(
+    (sb) => getGamesByFranchise(sb, franchise.name),
+    [franchise.name]
+  );
+  const onSaleCount = (games ?? []).filter((g) => g.isOnSale).length;
 
   return (
     <div className="shrink-0 w-[120px] flex flex-col items-center text-center">

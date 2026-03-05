@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import { AuthProvider } from "@/lib/AuthContext";
 import { FollowProvider } from "@/lib/FollowContext";
 
 const inter = Inter({
@@ -28,12 +29,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
-        <FollowProvider>
-          <div className="max-w-[430px] mx-auto min-h-screen">
-            <main className="pb-20">{children}</main>
-          </div>
-          <BottomNav />
-        </FollowProvider>
+        <AuthProvider>
+          <FollowProvider>
+            <div className="max-w-[430px] mx-auto min-h-screen">
+              <main className="pb-20">{children}</main>
+            </div>
+            <BottomNav />
+          </FollowProvider>
+        </AuthProvider>
       </body>
     </html>
   );

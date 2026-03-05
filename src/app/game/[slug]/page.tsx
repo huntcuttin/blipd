@@ -2,16 +2,39 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/mockData";
 import FollowButton from "@/components/FollowButton";
 import AlertCard from "@/components/AlertCard";
 import { useFollow } from "@/lib/FollowContext";
+import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
+import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/queries";
 
 export default function GameDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const game = getGameBySlug(slug);
   const { isFollowingFranchise, toggleFollowFranchise } = useFollow();
+
+  const { data: game, loading: gameLoading } = useSupabaseQuery(
+    (sb) => getGameBySlug(sb, slug),
+    [slug]
+  );
+
+  const { data: alerts } = useSupabaseQuery(
+    (sb) => (game ? getAlertsForGame(sb, game.id) : Promise.resolve([])),
+    [game?.id]
+  );
+
+  const { data: franchise } = useSupabaseQuery(
+    (sb) => (game?.franchise ? getFranchiseByName(sb, game.franchise) : Promise.resolve(null)),
+    [game?.franchise]
+  );
+
+  if (gameLoading) {
+    return (
+      <div className="px-4 py-20 text-center">
+        <div className="w-8 h-8 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  }
 
   if (!game) {
     return (
@@ -21,17 +44,16 @@ export default function GameDetailPage() {
           href="/browse"
           className="inline-block mt-4 text-sm text-[#00ff88] hover:underline"
         >
-          ← Back to Browse
+          &larr; Back to Browse
         </Link>
       </div>
     );
   }
 
-  const alerts = getAlertsForGame(game.id);
-  const franchise = game.franchise ? getFranchiseByName(game.franchise) : undefined;
   const followingFranchise = franchise ? isFollowingFranchise(franchise.id) : false;
   const releaseDate = new Date(game.releaseDate);
   const maxPrice = Math.max(...game.priceHistory.map((p) => p.price));
+  const gameAlerts = alerts ?? [];
 
   return (
     <div className="pb-4">
@@ -170,13 +192,13 @@ export default function GameDetailPage() {
         </div>
 
         {/* Recent alerts */}
-        {alerts.length > 0 && (
+        {gameAlerts.length > 0 && (
           <div className="py-4 border-t border-[#222222]">
             <h2 className="text-sm font-bold text-white mb-3">
               Recent Alerts
             </h2>
             <div className="space-y-2">
-              {alerts.map((alert) => (
+              {gameAlerts.map((alert) => (
                 <AlertCard key={alert.id} alert={alert} />
               ))}
             </div>

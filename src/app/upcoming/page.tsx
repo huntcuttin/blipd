@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import FollowButton from "@/components/FollowButton";
 import { useFollow } from "@/lib/FollowContext";
-import { mockGames, Game } from "@/lib/mockData";
+import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
+import { getAllGames } from "@/lib/queries";
+import type { Game } from "@/lib/types";
 import Link from "next/link";
 
 type DateGroup = "today" | "tomorrow" | "this_week" | "next_week" | "later";
@@ -56,13 +58,12 @@ const GROUP_LABELS: Record<DateGroup, string> = {
 export default function UpcomingPage() {
   const [filter, setFilter] = useState<"all" | "watchlist">("all");
   const { followedGameIds } = useFollow();
+  const { data: allGames } = useSupabaseQuery(getAllGames);
 
-  // Include upcoming and out_today games, plus recently released (today or just released)
-  const upcomingGames = mockGames
+  const upcomingGames = (allGames ?? [])
     .filter((g) => {
       const isUpcomingOrRecent =
-        g.releaseStatus === "upcoming" ||
-        g.releaseStatus === "out_today";
+        g.releaseStatus === "upcoming" || g.releaseStatus === "out_today";
       if (filter === "watchlist") {
         return isUpcomingOrRecent && followedGameIds.has(g.id);
       }
@@ -196,7 +197,7 @@ function CountdownTimer({ releaseDate }: { releaseDate: string }) {
     }
 
     update();
-    const interval = setInterval(update, 60000); // update every minute
+    const interval = setInterval(update, 60000);
     return () => clearInterval(interval);
   }, [releaseDate]);
 

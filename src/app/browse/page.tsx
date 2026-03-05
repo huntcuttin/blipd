@@ -1,37 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardCompact } from "@/components/GameCard";
 import FranchiseCard from "@/components/FranchiseCard";
 import UpsellBanner from "@/components/UpsellBanner";
 import { useFollow } from "@/lib/FollowContext";
-import { mockGames, mockFranchises } from "@/lib/mockData";
+import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
+import { getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
+import { createClient } from "@/lib/supabase/client";
+import type { Game } from "@/lib/types";
 
 export default function BrowsePage() {
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { isAtLimit } = useFollow();
 
-  const trending = mockGames.slice(0, 8);
-  const onSale = mockGames.filter((g) => g.isOnSale);
-  const newReleases = mockGames.filter((g) => {
+  const { data: games } = useSupabaseQuery(getAllGames);
+  const { data: franchises } = useSupabaseQuery(getAllFranchises);
+
+  // Debounced search
+  useEffect(() => {
+    if (!search) {
+      setSearchResults(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const supabase = createClient();
+      const results = await searchGames(supabase, search);
+      setSearchResults(results);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const allGames = games ?? [];
+  const trending = allGames.slice(0, 8);
+  const onSale = allGames.filter((g) => g.isOnSale);
+  const newReleases = allGames.filter((g) => {
     const d = new Date(g.releaseDate);
     const now = new Date();
     const daysAgo = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
     return g.releaseStatus === "released" && daysAgo >= 0 && daysAgo <= 7;
   });
-  const comingSoon = mockGames
+  const comingSoon = allGames
     .filter((g) => g.releaseStatus === "upcoming" || g.releaseStatus === "out_today")
     .sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime())
     .slice(0, 5);
-
-  // Search filtering
-  const searchResults = search
-    ? mockGames.filter((g) =>
-        g.title.toLowerCase().includes(search.toLowerCase())
-      )
-    : null;
 
   return (
     <div className="px-4">
@@ -91,7 +106,7 @@ export default function BrowsePage() {
           {/* Franchises — horizontal scroll, tucked away */}
           <Section title="Franchises">
             <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-              {mockFranchises.map((franchise) => (
+              {(franchises ?? []).map((franchise) => (
                 <FranchiseCard key={franchise.id} franchise={franchise} />
               ))}
             </div>

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AlertCard from "@/components/AlertCard";
 import UpsellBanner from "@/components/UpsellBanner";
-import { mockAlerts, GameAlert } from "@/lib/mockData";
+import { useAuth } from "@/lib/AuthContext";
+import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
+import { getAlerts, markAlertRead, dismissAlert } from "@/lib/queries";
+import { createClient } from "@/lib/supabase/client";
+import type { GameAlert } from "@/lib/types";
 
 type TimeGroup = "today" | "yesterday" | "this_week" | "earlier";
 
@@ -15,20 +19,37 @@ const GROUP_LABELS: Record<TimeGroup, string> = {
 };
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState<GameAlert[]>(mockAlerts);
+  const { user } = useAuth();
+  const { data: fetchedAlerts } = useSupabaseQuery(
+    (sb) => getAlerts(sb, user?.id),
+    [user?.id]
+  );
 
-  const handleMarkSeen = (id: string) => {
-    setAlerts((prev) =>
+  const [localAlerts, setLocalAlerts] = useState<GameAlert[]>([]);
+
+  useEffect(() => {
+    if (fetchedAlerts) setLocalAlerts(fetchedAlerts);
+  }, [fetchedAlerts]);
+
+  const handleMarkSeen = async (id: string) => {
+    setLocalAlerts((prev) =>
       prev.map((a) => (a.id === id ? { ...a, read: true } : a))
     );
+    if (user) {
+      const supabase = createClient();
+      await markAlertRead(supabase, user.id, id);
+    }
   };
 
-  const handleRemind = (id: string) => {
-    // Hide the alert — it would reappear in 3 days
-    // TODO: Implement remind_at logic with actual timestamps
-    setAlerts((prev) => prev.filter((a) => a.id !== id));
+  const handleRemind = async (id: string) => {
+    setLocalAlerts((prev) => prev.filter((a) => a.id !== id));
+    if (user) {
+      const supabase = createClient();
+      await dismissAlert(supabase, user.id, id);
+    }
   };
 
+  const alerts = localAlerts;
   const unreadCount = alerts.filter((a) => !a.read).length;
 
   // Group alerts by time
