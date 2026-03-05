@@ -16,7 +16,7 @@ export default function GameCard({ game }: { game: Game }) {
         <img
           src={game.coverArt}
           alt={game.title}
-          className="w-[72px] h-[72px] rounded-lg object-cover object-center bg-[#1a1a1a] shrink-0"
+          className="w-[80px] h-[80px] rounded-lg object-cover object-top bg-[#1a1a1a] shrink-0"
         />
 
         {/* Info */}
@@ -84,7 +84,7 @@ export function GameCardCompact({ game }: { game: Game }) {
         <img
           src={game.coverArt}
           alt={game.title}
-          className="w-full h-[100px] object-cover object-center bg-[#1a1a1a]"
+          className="w-full aspect-square object-cover object-top bg-[#1a1a1a] rounded-lg"
         />
         <div className="p-2.5">
           <h3 className="font-semibold text-white text-xs leading-tight truncate">
