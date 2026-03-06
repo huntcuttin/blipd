@@ -5,7 +5,7 @@ import AlertCard from "@/components/AlertCard";
 import UpsellBanner from "@/components/UpsellBanner";
 import { useAuth } from "@/lib/AuthContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getAlerts, markAlertRead, dismissAlert } from "@/lib/queries";
+import { getAlerts, markAlertRead } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import type { GameAlert } from "@/lib/types";
 
@@ -31,21 +31,13 @@ export default function AlertsPage() {
     if (fetchedAlerts) setLocalAlerts(fetchedAlerts);
   }, [fetchedAlerts]);
 
-  const handleMarkSeen = async (id: string) => {
+  const handleTap = async (id: string) => {
     setLocalAlerts((prev) =>
       prev.map((a) => (a.id === id ? { ...a, read: true } : a))
     );
     if (user) {
       const supabase = createClient();
       await markAlertRead(supabase, user.id, id);
-    }
-  };
-
-  const handleRemind = async (id: string) => {
-    setLocalAlerts((prev) => prev.filter((a) => a.id !== id));
-    if (user) {
-      const supabase = createClient();
-      await dismissAlert(supabase, user.id, id);
     }
   };
 
@@ -123,8 +115,7 @@ export default function AlertsPage() {
                     <AlertCard
                       key={alert.id}
                       alert={alert}
-                      onMarkSeen={handleMarkSeen}
-                      onRemind={handleRemind}
+                      onTap={handleTap}
                     />
                   ))}
                 </div>

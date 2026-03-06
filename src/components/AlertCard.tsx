@@ -16,21 +16,20 @@ const alertConfig: Record<
 
 export default function AlertCard({
   alert,
-  onMarkSeen,
-  onRemind,
+  onTap,
 }: {
   alert: GameAlert;
-  onMarkSeen?: (id: string) => void;
-  onRemind?: (id: string) => void;
+  onTap?: (id: string) => void;
 }) {
   const config = alertConfig[alert.type];
 
   return (
     <div
+      onClick={() => !alert.read && onTap?.(alert.id)}
       className={`flex gap-3 p-3 rounded-xl border transition-all ${
         alert.read
           ? "bg-[#111111]/60 border-[#222222]"
-          : "bg-[#111111] border-[#00ff88]/20"
+          : "bg-[#111111] border-[#00ff88]/20 cursor-pointer"
       }`}
     >
       {/* Unread dot */}
@@ -72,26 +71,6 @@ export default function AlertCard({
           {alert.headline}
         </h3>
         <p className="text-[#666666] text-xs mt-0.5">{alert.subtext}</p>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-4 mt-2">
-          {!alert.read && onMarkSeen && (
-            <button
-              onClick={() => onMarkSeen(alert.id)}
-              className="text-xs font-medium text-[#666666] hover:text-white transition-colors py-1"
-            >
-              Mark as Seen
-            </button>
-          )}
-          {onRemind && (
-            <button
-              onClick={() => onRemind(alert.id)}
-              className="text-xs font-medium text-[#666666] hover:text-[#00ff88] transition-colors py-1"
-            >
-              Remind me in a few days
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
