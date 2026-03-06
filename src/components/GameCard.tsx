@@ -69,6 +69,16 @@ export default function GameCard({ game }: { game: Game }) {
                 ALL TIME LOW
               </span>
             )}
+
+            {/* Sale end date badge */}
+            {game.isOnSale && game.saleEndDate && (() => {
+              const label = getSaleEndLabel(game.saleEndDate);
+              return label ? (
+                <span className="px-1.5 py-0.5 rounded-full bg-[#ff6874]/15 text-[#ff6874] text-[10px] font-bold">
+                  {label}
+                </span>
+              ) : null;
+            })()}
           </div>
 
           {/* Release info */}
@@ -130,6 +140,18 @@ function getDaysUntil(dateStr: string): number {
   return Math.round(
     (targetDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
+}
+
+function getSaleEndLabel(dateStr: string): string | null {
+  const target = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const days = Math.round((targetDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return "Ends today";
+  if (days === 1) return "Ends tomorrow";
+  if (days <= 14) return `Ends in ${days} days`;
+  return null;
 }
 
 function getReleaseLabel(game: Game, daysUntil: number): string | null {

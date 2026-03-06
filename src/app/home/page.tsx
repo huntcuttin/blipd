@@ -38,11 +38,11 @@ const GROUP_LABELS: Record<DateGroup, string> = {
   later: "LATER",
 };
 
-const TABS = ["Upcoming", "My Games", "My Franchises"] as const;
+const TABS = ["Discover", "My Games", "My Franchises"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<Tab>("Upcoming");
+  const [activeTab, setActiveTab] = useState<Tab>("Discover");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { followedGameIds, followedFranchiseIds, isAtLimit } = useFollow();
@@ -165,6 +165,20 @@ export default function HomePage() {
             })}
           </div>
 
+          {/* Swipe indicator dots */}
+          <div className="flex justify-center gap-1.5 mb-4">
+            {TABS.map((tab) => (
+              <div
+                key={tab}
+                className={`h-1.5 rounded-full transition-all ${
+                  activeTab === tab
+                    ? "w-4 bg-[#00ff88]"
+                    : "w-1.5 bg-[#333333]"
+                }`}
+              />
+            ))}
+          </div>
+
           {/* Swipeable content area */}
           <div
             ref={containerRef}
@@ -172,7 +186,7 @@ export default function HomePage() {
             onTouchEnd={handleTouchEnd}
             className="min-h-[60vh]"
           >
-            {activeTab === "Upcoming" && (
+            {activeTab === "Discover" && (
               <UpcomingTab allGames={allGames} allFranchises={allFranchises} isAtLimit={isAtLimit} />
             )}
             {activeTab === "My Games" && (

@@ -23,6 +23,7 @@ function mapGame(row: any): Game {
     releaseDate: row.release_date,
     releaseStatus: row.release_status,
     metacriticScore: row.metacritic_score ?? null,
+    saleEndDate: row.sale_end_date ?? null,
     priceHistory: row.price_history as { date: string; price: number }[],
   };
 }

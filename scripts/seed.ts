@@ -42,6 +42,7 @@ const games = [
     discount: 29,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(5),
     release_date: daysFromNow(-300),
     release_status: "released",
     price_history: [
@@ -64,6 +65,7 @@ const games = [
     discount: 50,
     is_on_sale: true,
     is_all_time_low: true,
+    sale_end_date: daysFromNow(3),
     release_date: daysFromNow(-900),
     release_status: "released",
     price_history: [
@@ -86,6 +88,7 @@ const games = [
     discount: 25,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(7),
     release_date: daysFromNow(-400),
     release_status: "released",
     price_history: [
@@ -108,6 +111,7 @@ const games = [
     discount: 33,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(10),
     release_date: daysFromNow(-1200),
     release_status: "released",
     price_history: [
@@ -130,6 +134,7 @@ const games = [
     discount: 75,
     is_on_sale: true,
     is_all_time_low: true,
+    sale_end_date: daysFromNow(5),
     release_date: daysFromNow(-1400),
     release_status: "released",
     price_history: [
@@ -152,6 +157,7 @@ const games = [
     discount: 50,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(1),
     release_date: daysFromNow(-800),
     release_status: "released",
     price_history: [
@@ -196,6 +202,7 @@ const games = [
     discount: 75,
     is_on_sale: true,
     is_all_time_low: true,
+    sale_end_date: daysFromNow(4),
     release_date: daysFromNow(-600),
     release_status: "released",
     price_history: [
@@ -218,6 +225,7 @@ const games = [
     discount: 17,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(8),
     release_date: daysFromNow(-500),
     release_status: "released",
     price_history: [
@@ -240,6 +248,7 @@ const games = [
     discount: 40,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(10),
     release_date: daysFromNow(-400),
     release_status: "released",
     price_history: [
@@ -262,6 +271,7 @@ const games = [
     discount: 30,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(6),
     release_date: daysFromNow(-450),
     release_status: "released",
     price_history: [
@@ -284,6 +294,7 @@ const games = [
     discount: 25,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(12),
     release_date: daysFromNow(-500),
     release_status: "released",
     price_history: [
@@ -306,6 +317,7 @@ const games = [
     discount: 33,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(3),
     release_date: daysFromNow(-1800),
     release_status: "released",
     price_history: [
@@ -328,6 +340,7 @@ const games = [
     discount: 33,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(9),
     release_date: daysFromNow(-500),
     release_status: "released",
     price_history: [
@@ -350,6 +363,7 @@ const games = [
     discount: 25,
     is_on_sale: true,
     is_all_time_low: false,
+    sale_end_date: daysFromNow(5),
     release_date: daysFromNow(-600),
     release_status: "released",
     price_history: [

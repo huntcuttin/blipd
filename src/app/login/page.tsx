@@ -27,7 +27,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#0a0a0a] -mb-20 relative">
       {/* Back button */}
       <Link
-        href="/browse"
+        href="/home"
         className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#00ff88]/30 transition-all"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

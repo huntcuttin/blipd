@@ -13,6 +13,7 @@ export interface Game {
   releaseDate: string;
   releaseStatus: "released" | "upcoming" | "out_today";
   metacriticScore: number | null;
+  saleEndDate: string | null;
   priceHistory: { date: string; price: number }[];
 }
 

@@ -19,6 +19,7 @@ create table if not exists games (
   release_date text not null,
   release_status text not null default 'released',
   metacritic_score integer,
+  sale_end_date text,
   price_history jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
