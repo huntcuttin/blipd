@@ -5,7 +5,6 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardCompact } from "@/components/GameCard";
-import FranchiseCard from "@/components/FranchiseCard";
 import FollowButton from "@/components/FollowButton";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import UpsellBanner from "@/components/UpsellBanner";
@@ -187,7 +186,7 @@ export default function HomePage() {
             className="min-h-[60vh]"
           >
             {activeTab === "Discover" && (
-              <UpcomingTab allGames={allGames} allFranchises={allFranchises} isAtLimit={isAtLimit} />
+              <UpcomingTab allGames={allGames} isAtLimit={isAtLimit} />
             )}
             {activeTab === "My Games" && (
               <MyGamesTab games={followedGames} />
@@ -209,11 +208,9 @@ export default function HomePage() {
 
 function UpcomingTab({
   allGames,
-  allFranchises,
   isAtLimit,
 }: {
   allGames: Game[];
-  allFranchises: Franchise[];
   isAtLimit: boolean;
 }) {
   const upcomingGames = allGames
