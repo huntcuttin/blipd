@@ -41,7 +41,7 @@ export default function GameDetailPage() {
       <div className="px-4 py-20 text-center">
         <p className="text-[#666666] text-sm">Game not found</p>
         <Link
-          href="/browse"
+          href="/home"
           className="inline-block mt-4 text-sm text-[#00ff88] hover:underline"
         >
           &larr; Back to Browse
@@ -69,7 +69,7 @@ export default function GameDetailPage() {
 
         {/* Back button */}
         <Link
-          href="/browse"
+          href="/home"
           className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center rounded-full bg-[#0a0a0a]/60 backdrop-blur-sm text-white"
         >
           <svg
