@@ -94,6 +94,15 @@ export default function GameDetailPage() {
           </h1>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-[#666666] text-sm">{game.publisher}</span>
+            {game.metacriticScore !== null && (
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
+                game.metacriticScore >= 75 ? "bg-[#00ce7a]/20 text-[#00ce7a]"
+                : game.metacriticScore >= 50 ? "bg-[#ffbd3f]/20 text-[#ffbd3f]"
+                : "bg-[#ff6874]/20 text-[#ff6874]"
+              }`}>
+                {game.metacriticScore}
+              </span>
+            )}
             {franchise && (
               <button
                 onClick={() => toggleFollowFranchise(franchise.id)}

@@ -12,6 +12,7 @@ export interface Game {
   isAllTimeLow: boolean;
   releaseDate: string;
   releaseStatus: "released" | "upcoming" | "out_today";
+  metacriticScore: number | null;
   priceHistory: { date: string; price: number }[];
 }
 

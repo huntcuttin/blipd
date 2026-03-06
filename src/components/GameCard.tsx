@@ -25,7 +25,18 @@ export default function GameCard({ game }: { game: Game }) {
             <h3 className="font-semibold text-white text-sm leading-tight truncate">
               {game.title}
             </h3>
-            <p className="text-[#666666] text-xs mt-0.5">{game.publisher}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="text-[#666666] text-xs">{game.publisher}</p>
+              {game.metacriticScore !== null && (
+                <span className={`px-1 py-0.5 rounded text-[9px] font-bold leading-none ${
+                  game.metacriticScore >= 75 ? "bg-[#00ce7a]/15 text-[#00ce7a]"
+                  : game.metacriticScore >= 50 ? "bg-[#ffbd3f]/15 text-[#ffbd3f]"
+                  : "bg-[#ff6874]/15 text-[#ff6874]"
+                }`}>
+                  {game.metacriticScore}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 mt-1 flex-wrap">

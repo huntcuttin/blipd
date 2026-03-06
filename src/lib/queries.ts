@@ -22,6 +22,7 @@ function mapGame(row: any): Game {
     isAllTimeLow: row.is_all_time_low,
     releaseDate: row.release_date,
     releaseStatus: row.release_status,
+    metacriticScore: row.metacritic_score ?? null,
     priceHistory: row.price_history as { date: string; price: number }[],
   };
 }

@@ -18,6 +18,7 @@ export interface Database {
           is_all_time_low: boolean;
           release_date: string;
           release_status: "released" | "upcoming" | "out_today";
+          metacritic_score: number | null;
           price_history: Json;
           created_at: string;
         };
@@ -35,6 +36,7 @@ export interface Database {
           is_all_time_low?: boolean;
           release_date: string;
           release_status?: "released" | "upcoming" | "out_today";
+          metacritic_score?: number | null;
           price_history?: Json;
           created_at?: string;
         };
