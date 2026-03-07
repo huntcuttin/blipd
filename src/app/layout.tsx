@@ -19,6 +19,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "blippd — Never miss a Nintendo drop.",
   description: "Track Nintendo eShop prices, get alerts when they drop.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

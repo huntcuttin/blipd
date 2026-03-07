@@ -1,5 +1,8 @@
 # Blippd — Claude Code Context Document
 
+## Workflow Rules
+- **Always push after committing.** After every `git commit`, immediately run `git push origin main` without asking. Every commit should be deployed.
+
 ## What This Is
 Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follow games and get alerted the moment something changes. The goal is a clean, reliable side project that wins the US Switch niche by being definitively better at the one thing that matters: the alert fires, it's accurate, and it doesn't spam you.
 
