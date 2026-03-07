@@ -21,7 +21,11 @@ export interface Database {
           metacritic_score: number | null;
           sale_end_date: string | null;
           price_history: Json;
+          nsuid: string | null;
+          nintendo_url: string | null;
+          last_price_check: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -40,7 +44,11 @@ export interface Database {
           metacritic_score?: number | null;
           sale_end_date?: string | null;
           price_history?: Json;
+          nsuid?: string | null;
+          nintendo_url?: string | null;
+          last_price_check?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["games"]["Insert"]>;
         Relationships: [];

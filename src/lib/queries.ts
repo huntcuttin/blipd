@@ -25,6 +25,8 @@ function mapGame(row: any): Game {
     metacriticScore: row.metacritic_score ?? null,
     saleEndDate: row.sale_end_date ?? null,
     priceHistory: row.price_history as { date: string; price: number }[],
+    nsuid: row.nsuid ?? null,
+    nintendoUrl: row.nintendo_url ?? null,
   };
 }
 

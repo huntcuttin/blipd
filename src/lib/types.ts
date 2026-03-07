@@ -15,6 +15,8 @@ export interface Game {
   metacriticScore: number | null;
   saleEndDate: string | null;
   priceHistory: { date: string; price: number }[];
+  nsuid?: string | null;
+  nintendoUrl?: string | null;
 }
 
 export interface Franchise {

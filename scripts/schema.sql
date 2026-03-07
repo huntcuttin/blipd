@@ -21,8 +21,15 @@ create table if not exists games (
   metacritic_score integer,
   sale_end_date text,
   price_history jsonb not null default '[]'::jsonb,
-  created_at timestamptz not null default now()
+  nsuid text unique,
+  nintendo_url text,
+  last_price_check timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+create index if not exists idx_games_nsuid on games (nsuid) where nsuid is not null;
+create index if not exists idx_games_last_price_check on games (last_price_check asc nulls first);
 
 alter table games enable row level security;
 create policy "Games are publicly readable"
