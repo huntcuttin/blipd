@@ -46,25 +46,65 @@ export async function fetchGameCatalog(options: {
   }
 }
 
-export async function fetchAllGames(
-  onPage?: (page: number, total: number) => void
+// Algolia search caps at 1000 results per query. Split by price ranges
+// to get full catalog coverage.
+const PRICE_RANGES = [
+  "msrp < 10",
+  "msrp >= 10 AND msrp < 30",
+  "msrp >= 30 AND msrp < 60",
+  "msrp >= 60",
+];
+
+const PLATFORM_FILTER = '(platform:"Nintendo Switch" OR platform:"Nintendo Switch 2")';
+
+async function fetchAllPages(
+  baseFilter: string,
+  onPage?: (page: number, total: number) => void,
+  pageOffset?: number
 ): Promise<AlgoliaSearchResponse["hits"]> {
-  const allHits: AlgoliaSearchResponse["hits"] = [];
+  const hits: AlgoliaSearchResponse["hits"] = [];
   let page = 0;
 
   while (true) {
     const result = await fetchGameCatalog({
       hitsPerPage: 500,
       page,
-      filters: 'topLevelCategoryCode:GAMES AND (platform:"Nintendo Switch" OR platform:"Nintendo Switch 2")',
+      filters: baseFilter,
     });
 
-    allHits.push(...result.hits);
-    onPage?.(page + 1, result.nbPages);
+    hits.push(...result.hits);
+    onPage?.(
+      (pageOffset ?? 0) + page + 1,
+      (pageOffset ?? 0) + result.nbPages
+    );
 
     if (page + 1 >= result.nbPages) break;
     page++;
     await delay(200);
+  }
+
+  return hits;
+}
+
+export async function fetchAllGames(
+  onPage?: (page: number, total: number) => void
+): Promise<AlgoliaSearchResponse["hits"]> {
+  const allHits: AlgoliaSearchResponse["hits"] = [];
+  const seen = new Set<string>();
+  let pageOffset = 0;
+
+  for (const priceRange of PRICE_RANGES) {
+    const filter = `topLevelCategoryCode:GAMES AND ${PLATFORM_FILTER} AND ${priceRange}`;
+    const hits = await fetchAllPages(filter, onPage, pageOffset);
+    pageOffset += Math.ceil(hits.length / 500);
+
+    for (const hit of hits) {
+      const key = hit.nsuid || hit.objectID;
+      if (!seen.has(key)) {
+        seen.add(key);
+        allHits.push(hit);
+      }
+    }
   }
 
   return allHits;
