@@ -75,11 +75,15 @@ export interface Database {
         Row: {
           user_id: string;
           game_id: string;
+          notify_release: boolean;
+          notify_price: boolean;
           created_at: string;
         };
         Insert: {
           user_id: string;
           game_id: string;
+          notify_release?: boolean;
+          notify_price?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["user_game_follows"]["Insert"]>;

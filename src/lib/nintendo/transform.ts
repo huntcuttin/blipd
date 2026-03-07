@@ -1,5 +1,22 @@
 import type { AlgoliaHit } from "./types";
 
+const LANGUAGE_PREFIX = /^\((English|French|Spanish|German|Italian|Dutch|Japanese|Korean|Chinese|Portuguese|Russian)\)\s/i;
+
+export function isEnglishGame(hit: AlgoliaHit): boolean {
+  return !LANGUAGE_PREFIX.test(hit.title);
+}
+
+const NON_GAME_PATTERNS = /\b(DLC|Season Pass|Expansion Pass|Bundle|Pack|Transfer Tool|Membership|Online Service|Voucher|Demo|Trial|Starter Edition)\b/i;
+const FREE_UTILITY = /\b(Transfer Tool|Online Service|Membership|Voucher)\b/i;
+
+export function isStandaloneGame(hit: AlgoliaHit): boolean {
+  // Filter out free utilities ($0 items that aren't real games)
+  if (hit.msrp <= 0 && FREE_UTILITY.test(hit.title)) return false;
+  // Filter out DLC, season passes, bundles, demos, etc.
+  if (NON_GAME_PATTERNS.test(hit.title)) return false;
+  return true;
+}
+
 export function generateSlug(title: string): string {
   return title
     .toLowerCase()
@@ -39,11 +56,109 @@ function parseReleaseDate(releaseDateDisplay: string): string {
   return parsed.toISOString().split("T")[0];
 }
 
+const NINTENDO_CDN_PREFIX =
+  "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/c_scale,w_400/";
+
+function buildCoverArtUrl(hit: AlgoliaHit): string {
+  if (hit.productImage) {
+    return `${NINTENDO_CDN_PREFIX}${hit.productImage}`;
+  }
+  return hit.productImageSquare || hit.horizontalHeaderImage || hit.boxart || "";
+}
+
+const FRANCHISE_KEYWORDS: [RegExp, string][] = [
+  [/\bzelda\b/i, "The Legend of Zelda"],
+  [/\bmario kart\b/i, "Mario Kart"],
+  [/\bmario party\b/i, "Mario Party"],
+  [/\bmario strikers\b/i, "Mario Strikers"],
+  [/\bmario tennis\b/i, "Mario Tennis"],
+  [/\bmario golf\b/i, "Mario Golf"],
+  [/\bpaper mario\b/i, "Paper Mario"],
+  [/\bmario \+ rabbids\b/i, "Mario + Rabbids"],
+  [/\bmario vs\b/i, "Mario vs. Donkey Kong"],
+  [/\bsuper mario\b/i, "Super Mario"],
+  [/\bmario\b/i, "Mario"],
+  [/\bpokémon|pokemon\b/i, "Pokemon"],
+  [/\bkirby\b/i, "Kirby"],
+  [/\bmetroid\b/i, "Metroid"],
+  [/\bsplatoon\b/i, "Splatoon"],
+  [/\banimal crossing\b/i, "Animal Crossing"],
+  [/\bfire emblem\b/i, "Fire Emblem"],
+  [/\bsmash bros\b/i, "Super Smash Bros."],
+  [/\bxenoblade\b/i, "Xenoblade Chronicles"],
+  [/\bdonkey kong\b/i, "Donkey Kong"],
+  [/\byoshi\b/i, "Yoshi"],
+  [/\bstar fox\b/i, "Star Fox"],
+  [/\bf-zero\b/i, "F-Zero"],
+  [/\bpikmin\b/i, "Pikmin"],
+  [/\bbayonetta\b/i, "Bayonetta"],
+  [/\bastral chain\b/i, "Astral Chain"],
+  [/\bmonster hunter\b/i, "Monster Hunter"],
+  [/\bstreet fighter\b/i, "Street Fighter"],
+  [/\bmega man\b/i, "Mega Man"],
+  [/\bresident evil\b/i, "Resident Evil"],
+  [/\bace attorney\b/i, "Ace Attorney"],
+  [/\bdevil may cry\b/i, "Devil May Cry"],
+  [/\bfinal fantasy\b/i, "Final Fantasy"],
+  [/\bdragon quest\b/i, "Dragon Quest"],
+  [/\bkingdom hearts\b/i, "Kingdom Hearts"],
+  [/\bpersona\b/i, "Persona"],
+  [/\bshin megami\b/i, "Shin Megami Tensei"],
+  [/\bsonic\b/i, "Sonic"],
+  [/\btales of\b/i, "Tales of"],
+  [/\bdark souls\b/i, "Dark Souls"],
+  [/\bcastlevania\b/i, "Castlevania"],
+  [/\bmetal gear\b/i, "Metal Gear"],
+  [/\bsuikoden\b/i, "Suikoden"],
+  [/\bcontra\b/i, "Contra"],
+  [/\bnba 2k\b/i, "NBA 2K"],
+  [/\bfifa\b/i, "FIFA"],
+  [/\bjust dance\b/i, "Just Dance"],
+  [/\bassist creed\b/i, "Assassin's Creed"],
+  [/\bdiablo\b/i, "Diablo"],
+  [/\bwolfenstein\b/i, "Wolfenstein"],
+  [/\bdoom\b/i, "DOOM"],
+  [/\bthe witcher\b/i, "The Witcher"],
+  [/\bcivilization\b/i, "Civilization"],
+  [/\bharvest moon\b/i, "Harvest Moon"],
+  [/\bstory of seasons\b/i, "Story of Seasons"],
+  [/\brune factory\b/i, "Rune Factory"],
+  [/\batelier\b/i, "Atelier"],
+  [/\bdisgaea\b/i, "Disgaea"],
+  [/\blego\b/i, "LEGO"],
+  [/\blayton\b/i, "Professor Layton"],
+  [/\bno more heroes\b/i, "No More Heroes"],
+  [/\btrail[s]?\b.*\b(sky|steel|cold|azure|zero|reverie|daybreak)\b/i, "Trails"],
+  [/\bys\b/i, "Ys"],
+  [/\bhyrule warriors\b/i, "Hyrule Warriors"],
+  [/\bwarriors\b.*\b(age|calamity)\b/i, "Hyrule Warriors"],
+  [/\btriangle strategy\b/i, "Triangle Strategy"],
+  [/\boctopath\b/i, "Octopath Traveler"],
+  [/\bbravely\b/i, "Bravely Default"],
+  [/\bwarioware\b/i, "WarioWare"],
+  [/\bwario\b/i, "Wario"],
+  [/\bluigi.s mansion\b/i, "Luigi's Mansion"],
+  [/\badvance wars\b/i, "Advance Wars"],
+  [/\bfatal frame\b/i, "Fatal Frame"],
+  [/\bring fit\b/i, "Ring Fit"],
+  [/\bnintendo switch sports\b/i, "Nintendo Switch Sports"],
+  [/\b1-2-switch\b/i, "1-2-Switch"],
+  [/\barms\b/i, "ARMS"],
+  [/\bcaptain toad\b/i, "Captain Toad"],
+  [/\bnintendo labo\b/i, "Nintendo Labo"],
+];
+
+export function detectFranchise(title: string): string | null {
+  for (const [pattern, franchise] of FRANCHISE_KEYWORDS) {
+    if (pattern.test(title)) return franchise;
+  }
+  return null;
+}
+
 export function algoliaHitToGameRow(hit: AlgoliaHit) {
   const title = hit.title;
-  // Prefer the slug from Nintendo's API, fall back to generating one
   const slug = hit.slug || generateSlug(title);
-  const coverArt = hit.horizontalHeaderImage || hit.boxart || hit.productImage || "";
+  const coverArt = buildCoverArtUrl(hit);
   const msrp = hit.msrp ?? 0;
   const salePrice = hit.salePrice;
   const currentPrice = salePrice != null && salePrice < msrp ? salePrice : msrp;
@@ -51,9 +166,8 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
   const isOnSale = salePrice != null && salePrice < msrp;
   const releaseDate = parseReleaseDate(hit.releaseDateDisplay);
   const releaseStatus = computeReleaseStatus(releaseDate);
-  const publisher = hit.publishers?.[0] || "Unknown";
-  // Use the franchises field from Nintendo's API directly
-  const franchise = hit.franchises || null;
+  const publisher = hit.softwarePublisher || "Unknown";
+  const franchise = (hit.franchises && hit.franchises.length > 0 ? hit.franchises : null) || detectFranchise(title);
 
   return {
     nsuid: hit.nsuid || null,

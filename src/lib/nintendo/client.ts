@@ -56,7 +56,7 @@ export async function fetchAllGames(
     const result = await fetchGameCatalog({
       hitsPerPage: 500,
       page,
-      filters: 'platform:"Nintendo Switch"',
+      filters: 'topLevelCategoryCode:GAMES AND (platform:"Nintendo Switch" OR platform:"Nintendo Switch 2")',
     });
 
     allHits.push(...result.hits);

@@ -199,13 +199,23 @@ export async function dismissAlert(supabase: Client, userId: string, alertId: st
 
 // ── Follow queries ────────────────────────────────────────────
 
-export async function getUserGameFollows(supabase: Client, userId: string): Promise<string[]> {
+export interface GameFollowRecord {
+  gameId: string;
+  notifyRelease: boolean;
+  notifyPrice: boolean;
+}
+
+export async function getUserGameFollows(supabase: Client, userId: string): Promise<GameFollowRecord[]> {
   const { data, error } = await supabase
     .from("user_game_follows")
-    .select("game_id")
+    .select("game_id, notify_release, notify_price")
     .eq("user_id", userId);
   if (error) throw error;
-  return (data ?? []).map((r: { game_id: string }) => r.game_id);
+  return (data ?? []).map((r: { game_id: string; notify_release: boolean; notify_price: boolean }) => ({
+    gameId: r.game_id,
+    notifyRelease: r.notify_release,
+    notifyPrice: r.notify_price,
+  }));
 }
 
 export async function getUserFranchiseFollows(supabase: Client, userId: string): Promise<string[]> {
@@ -231,4 +241,20 @@ export async function followFranchise(supabase: Client, userId: string, franchis
 
 export async function unfollowFranchise(supabase: Client, userId: string, franchiseId: string) {
   await supabase.from("user_franchise_follows").delete().eq("user_id", userId).eq("franchise_id", franchiseId);
+}
+
+export async function updateFollowPreferences(
+  supabase: Client,
+  userId: string,
+  gameId: string,
+  prefs: { notifyRelease?: boolean; notifyPrice?: boolean }
+) {
+  const update: Record<string, boolean> = {};
+  if (prefs.notifyRelease !== undefined) update.notify_release = prefs.notifyRelease;
+  if (prefs.notifyPrice !== undefined) update.notify_price = prefs.notifyPrice;
+  await supabase
+    .from("user_game_follows")
+    .update(update)
+    .eq("user_id", userId)
+    .eq("game_id", gameId);
 }

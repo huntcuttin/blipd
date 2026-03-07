@@ -10,6 +10,7 @@ export interface AlgoliaHit {
   horizontalHeaderImage?: string;
   boxart?: string;
   productImage: string;
+  productImageSquare?: string;
   msrp: number;
   salePrice: number | null;
   lowestPrice: number;
@@ -18,8 +19,8 @@ export interface AlgoliaHit {
     regPrice: number;
     salePrice: number | null;
   };
-  publishers: string[];
-  developers: string[];
+  softwarePublisher: string;
+  softwareDeveloper: string;
   franchises: string;
   genres: string[];
   generalFilters: string[];
@@ -30,6 +31,8 @@ export interface AlgoliaHit {
   esrbRating: string;
   freeToStart: boolean;
   objectID: string;
+  topLevelCategoryCode: string;
+  eshopDetails?: unknown;
 }
 
 export interface AlgoliaSearchResponse {

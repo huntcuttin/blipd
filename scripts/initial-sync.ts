@@ -1,4 +1,5 @@
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
 import { runFullCatalogSync, runPriceUpdate } from "../src/lib/nintendo/ingest";
 
 async function main() {

@@ -1,12 +1,142 @@
 import { createAdminClient } from "./admin-client";
 import { fetchAllGames, fetchPrices } from "./client";
-import { algoliaHitToGameRow, computeDiscount, isAllTimeLow } from "./transform";
+import { algoliaHitToGameRow, computeDiscount, isAllTimeLow, isEnglishGame, isStandaloneGame } from "./transform";
 import {
   generatePriceDropAlert,
   generateAllTimeLowAlert,
   generateSaleStartedAlert,
   generateReleaseAlert,
 } from "./alerts";
+import type { AlgoliaHit } from "./types";
+
+const QUALITY_PUBLISHERS = new Set([
+  "Nintendo",
+  "CAPCOM",
+  "Capcom",
+  "SEGA",
+  "Sega",
+  "Square Enix",
+  "SQUARE ENIX",
+  "Bandai Namco Entertainment",
+  "BANDAI NAMCO Entertainment",
+  "BANDAI NAMCO Entertainment Inc.",
+  "Ubisoft",
+  "Konami",
+  "KONAMI",
+  "Konami Digital Entertainment",
+  "Atlus",
+  "ATLUS",
+  "KOEI TECMO",
+  "Koei Tecmo",
+  "KOEI TECMO GAMES",
+  "NIS America",
+  "NIS America, Inc.",
+  "XSEED Games",
+  "Marvelous",
+  "Marvelous (XSEED Games)",
+  "505 Games",
+  "Devolver Digital",
+  "Team17",
+  "Annapurna Interactive",
+  "Warner Bros. Interactive Entertainment",
+  "Warner Bros. Games",
+  "Electronic Arts",
+  "EA",
+  "2K",
+  "2K Games",
+  "Take-Two Interactive",
+  "Bethesda",
+  "Bethesda Softworks",
+  "Microsoft",
+  "Xbox Game Studios",
+  "Dotemu",
+  "Limited Run Games",
+  "Nacon",
+  "THQ Nordic",
+  "Deep Silver",
+  "Koch Media",
+  "Plaion",
+  "Arc System Works",
+  "Spike Chunsoft",
+  "SPIKE CHUNSOFT",
+  "Spike Chunsoft, Inc.",
+  "Compile Heart",
+  "Idea Factory",
+  "Idea Factory International",
+  "PlatinumGames",
+  "Platinum Games Inc.",
+  "ConcernedApe",
+  "Supergiant Games",
+  "Innersloth",
+  "Mojang",
+  "Mojang Studios",
+  "Re-Logic",
+  "Chucklefish",
+  "Yacht Club Games",
+  "Motion Twin",
+  "Team Cherry",
+  "Moon Studios",
+  "Larian Studios",
+  "Coffee Stain Studios",
+  "Behaviour Interactive",
+  "WayForward",
+  "SNK",
+  "SNK CORPORATION",
+  "Hori",
+  "LEVEL-5",
+  "Level-5",
+  "Level-5 Inc.",
+  "Nippon Ichi Software",
+  "Nihon Falcom",
+  "Falcom",
+  "Grasshopper Manufacture",
+  "Aksys Games",
+  "ININ Games",
+  "Microids",
+  "Merge Games",
+  "Raw Fury",
+  "Thunderful",
+  "Finji",
+  "Fellow Traveller",
+  "Dangen Entertainment",
+  "Playism",
+  "PLAYISM",
+  "Humble Games",
+  "Chorus Worldwide",
+  "PM Studios",
+  "Graffiti Games",
+  "Dear Villagers",
+  "HandyGames",
+  "Gameloft",
+  "Activision",
+  "Activision Blizzard",
+  "Blizzard Entertainment",
+  "Riot Games",
+  "Panic",
+  "Cygames",
+  "miHoYo",
+  "HoYoverse",
+  "NetEase",
+  "Tencent",
+  "Focus Entertainment",
+  "Focus Home Interactive",
+  "Curve Games",
+  "Curve Digital",
+]);
+
+function isQualityGame(hit: AlgoliaHit): boolean {
+  // Must have a cover image
+  if (!hit.productImage && !hit.productImageSquare) return false;
+
+  // Check publisher allowlist (case-sensitive match against the set)
+  const pub = hit.softwarePublisher || "";
+  if (QUALITY_PUBLISHERS.has(pub)) return true;
+
+  // Also allow any game priced $30+ (likely a real release, not shovelware)
+  if (hit.msrp >= 30) return true;
+
+  return false;
+}
 
 interface SyncResult {
   totalFetched: number;
@@ -33,8 +163,16 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
 
   console.log(`  Total games fetched: ${hits.length}`);
 
+  // Filter to English, standalone, quality games before transforming
+  const englishHits = hits.filter(isEnglishGame);
+  console.log(`  English games: ${englishHits.length} (filtered out ${hits.length - englishHits.length} non-English)`);
+  const standaloneHits = englishHits.filter(isStandaloneGame);
+  console.log(`  Standalone games: ${standaloneHits.length} (filtered out ${englishHits.length - standaloneHits.length} DLC/bundles/tools)`);
+  const qualityHits = standaloneHits.filter(isQualityGame);
+  console.log(`  Quality games after filtering: ${qualityHits.length} (filtered out ${standaloneHits.length - qualityHits.length})`);
+
   // Transform and deduplicate slugs
-  const rows = hits.map(algoliaHitToGameRow);
+  const rows = qualityHits.map(algoliaHitToGameRow);
   const slugCounts = new Map<string, number>();
   for (const row of rows) {
     const count = slugCounts.get(row.slug) ?? 0;
