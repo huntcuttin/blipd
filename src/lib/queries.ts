@@ -129,7 +129,7 @@ export async function getFranchiseByName(supabase: Client, name: string): Promis
 export async function getAlerts(supabase: Client, userId?: string): Promise<GameAlert[]> {
   const { data, error } = await supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art )")
+    .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art, slug )")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -154,6 +154,7 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
     gameId: row.game_id,
     gameTitle: row.games.title,
     gameCoverArt: row.games.cover_art,
+    gameSlug: row.games.slug,
     type: row.type,
     headline: row.headline,
     subtext: row.subtext,
@@ -167,7 +168,7 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
 export async function getAlertsForGame(supabase: Client, gameId: string): Promise<GameAlert[]> {
   const { data, error } = await supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art )")
+    .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art, slug )")
     .eq("game_id", gameId)
     .order("created_at", { ascending: false });
 
@@ -179,6 +180,7 @@ export async function getAlertsForGame(supabase: Client, gameId: string): Promis
     gameId: row.game_id,
     gameTitle: row.games.title,
     gameCoverArt: row.games.cover_art,
+    gameSlug: row.games.slug,
     type: row.type,
     headline: row.headline,
     subtext: row.subtext,

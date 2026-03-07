@@ -2,25 +2,44 @@
 
 import { useState, useEffect } from "react";
 import SearchBar from "@/components/SearchBar";
-import GameCard, { GameCardCompact } from "@/components/GameCard";
+import GameCard, { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } from "@/components/GameCard";
 
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
-import { computeGameScore } from "@/lib/ranking";
 import type { Game } from "@/lib/types";
 
 const FILTERS = ["All", "My Games", "My Franchises"] as const;
 type Filter = (typeof FILTERS)[number];
 
+const SORTS = ["Biggest Discount", "Lowest Price", "Ending Soon"] as const;
+type SortMode = (typeof SORTS)[number];
+
+function sortGames(games: Game[], mode: SortMode): Game[] {
+  const sorted = [...games];
+  switch (mode) {
+    case "Biggest Discount":
+      return sorted.sort((a, b) => b.discount - a.discount);
+    case "Lowest Price":
+      return sorted.sort((a, b) => a.currentPrice - b.currentPrice);
+    case "Ending Soon":
+      return sorted.sort((a, b) => {
+        const aEnd = a.saleEndDate || "9999-12-31";
+        const bEnd = b.saleEndDate || "9999-12-31";
+        return aEnd.localeCompare(bEnd);
+      });
+  }
+}
+
 export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const [filter, setFilter] = useState<Filter>("All");
+  const [sort, setSort] = useState<SortMode>("Biggest Discount");
   const { followedGameIds, followedFranchiseIds } = useFollow();
 
-  const { data: games } = useSupabaseQuery(getAllGames);
+  const { data: games, loading: gamesLoading } = useSupabaseQuery(getAllGames);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
 
   useEffect(() => {
@@ -39,7 +58,6 @@ export default function SalesPage() {
   const allGames = games ?? [];
   const allFranchises = franchises ?? [];
 
-  // Build a set of franchise names the user follows
   const followedFranchiseNames = new Set(
     allFranchises
       .filter((f) => followedFranchiseIds.has(f.id))
@@ -48,7 +66,6 @@ export default function SalesPage() {
 
   const onSale = allGames.filter((g) => g.isOnSale && !g.isSuppressed);
 
-  // Apply filter
   const filteredSales =
     filter === "My Games"
       ? onSale.filter((g) => followedGameIds.has(g.id))
@@ -57,10 +74,10 @@ export default function SalesPage() {
       : onSale;
 
   const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow);
-  const releasedSales = filteredSales
-    .filter((g) => g.releaseStatus === "released")
-    .sort((a, b) => b.discount - a.discount);
-  const allDeals = [...releasedSales].sort((a, b) => computeGameScore(b) - computeGameScore(a));
+  const sortedSales = sortGames(
+    filteredSales.filter((g) => g.releaseStatus === "released"),
+    sort
+  );
 
   const myGamesCount = onSale.filter((g) => followedGameIds.has(g.id)).length;
   const myFranchisesCount = onSale.filter(
@@ -90,15 +107,37 @@ export default function SalesPage() {
               <GameCard key={game.id} game={game} />
             ))
           ) : (
-            <div className="text-center py-12">
-              <p className="text-[#666666] text-sm">No games found</p>
+            <div className="flex flex-col items-center py-16 px-4">
+              <svg className="w-10 h-10 text-[#333333] mb-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+              <p className="text-white text-sm font-medium mb-1">
+                No results for &ldquo;{search}&rdquo;
+              </p>
+              <p className="text-[#555555] text-xs">Check your spelling or try a different search</p>
             </div>
           )}
+        </div>
+      ) : gamesLoading ? (
+        <div className="space-y-6">
+          <div>
+            <div className="h-5 bg-[#1a1a1a] rounded w-28 mb-3" />
+            <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <GameCardCompactSkeleton key={i} />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <GameCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       ) : (
         <>
           {/* Filter tabs */}
-          <div className="flex gap-1 p-1 bg-[#111111] rounded-xl mb-4">
+          <div className="flex gap-1 p-1 bg-[#111111] rounded-xl mb-3">
             {FILTERS.map((f) => {
               const isActive = filter === f;
               const count =
@@ -146,7 +185,9 @@ export default function SalesPage() {
               <p className="text-[#666666] text-sm text-center max-w-[260px]">
                 {filter === "My Games"
                   ? "None of your followed games are on sale right now"
-                  : "None of your followed franchise games are on sale right now"}
+                  : filter === "My Franchises"
+                  ? "None of your followed franchise games are on sale right now"
+                  : "No games are on sale right now"}
               </p>
             </div>
           ) : (
@@ -162,27 +203,29 @@ export default function SalesPage() {
                 </Section>
               )}
 
-              {/* Recently Discounted */}
-              {releasedSales.length > 0 && (
-                <Section title="Recently Discounted">
-                  <div className="space-y-2">
-                    {releasedSales.slice(0, 10).map((game) => (
-                      <GameCard key={game.id} game={game} />
-                    ))}
-                  </div>
-                </Section>
-              )}
+              {/* Sort pills */}
+              <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar">
+                {SORTS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setSort(s)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                      sort === s
+                        ? "bg-[#00ff88]/15 text-[#00ff88]"
+                        : "bg-[#1a1a1a] text-[#666666] hover:text-white"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
 
-              {/* All Deals */}
-              {allDeals.length > releasedSales.slice(0, 10).length && (
-                <Section title="All Deals">
-                  <div className="space-y-2">
-                    {allDeals.map((game) => (
-                      <GameCard key={game.id} game={game} />
-                    ))}
-                  </div>
-                </Section>
-              )}
+              {/* Sorted deals */}
+              <div className="space-y-2 pb-4">
+                {sortedSales.map((game) => (
+                  <GameCard key={game.id} game={game} />
+                ))}
+              </div>
             </>
           )}
         </>

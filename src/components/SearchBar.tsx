@@ -32,7 +32,7 @@ export default function SearchBar({
   }
 
   return (
-    <div className="relative w-60">
+    <div className="relative w-60 max-w-[60vw]">
       <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666666]" />
       <input
         ref={inputRef}

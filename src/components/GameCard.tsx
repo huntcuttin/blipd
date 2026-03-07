@@ -1,43 +1,36 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
 import FollowButton from "./FollowButton";
 
-export default function GameCard({ game }: { game: Game }) {
+export default memo(function GameCard({ game }: { game: Game }) {
   const daysUntilRelease = getDaysUntil(game.releaseDate);
   const releaseLabel = getReleaseLabel(game, daysUntilRelease);
   const saleEndLabel = game.isOnSale && game.saleEndDate ? getSaleEndLabel(game.saleEndDate) : null;
 
-  // Pick the single most important badge to show
-  const badge = game.isAllTimeLow
-    ? { label: "ALL TIME LOW", color: "bg-[#FFD700]/15 text-[#FFD700]" }
-    : game.discount > 0
-    ? { label: `-${game.discount}%`, color: "bg-[#00ff88]/15 text-[#00ff88]" }
-    : game.switch2Nsuid
-    ? { label: "Switch 2", color: "bg-[#00aaff]/15 text-[#00aaff]" }
-    : null;
-
   return (
     <Link href={`/game/${game.slug}`} className="block">
-      <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#00ff88]/30 transition-all">
-        {/* Cover art — 16:9 aspect to match Nintendo art */}
-        <div className="w-[100px] shrink-0">
+      <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors">
+        {/* Cover art — 16:9, larger */}
+        <div className="w-[110px] shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={game.coverArt}
             alt={game.title}
-            className="w-full aspect-video rounded-lg object-cover bg-[#1a1a1a]"
+            loading="lazy"
+            className="w-full aspect-[16/10] rounded-lg object-cover bg-[#1a1a1a]"
           />
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+        <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
-            <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2">
+            <h3 className="font-semibold text-white text-[15px] leading-snug line-clamp-2">
               {game.title}
             </h3>
-            <p className="text-[#666666] text-xs mt-0.5 truncate">
+            <p className="text-[#555555] text-[11px] mt-0.5 truncate">
               {game.publisher}
               {game.metacriticScore !== null && (
                 <span className={
@@ -51,82 +44,127 @@ export default function GameCard({ game }: { game: Game }) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 mt-1.5">
-            {/* Price */}
+          {/* Price row */}
+          <div className="flex items-center gap-2 mt-2">
             {game.isOnSale ? (
               <>
-                <span className="text-white font-bold text-sm">
+                <span className="text-[#00ff88] font-bold text-base">
                   ${game.currentPrice.toFixed(2)}
                 </span>
-                <span className="text-[#666666] text-xs line-through">
+                <span className="text-[#555555] text-xs line-through">
                   ${game.originalPrice.toFixed(2)}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-[#00ff88]/15 text-[#00ff88] text-xs font-bold">
+                  -{game.discount}%
                 </span>
               </>
             ) : (
-              <span className="text-white font-bold text-sm">
+              <span className="text-white font-bold text-base">
                 {game.currentPrice > 0 ? `$${game.currentPrice.toFixed(2)}` : "Free"}
               </span>
             )}
+          </div>
 
-            {/* Single most important badge */}
-            {badge && (
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${badge.color}`}>
-                {badge.label}
+          {/* Secondary badges row */}
+          <div className="flex items-center gap-2 mt-1">
+            {game.isAllTimeLow && (
+              <span className="px-2 py-0.5 rounded-md bg-[#FFD700]/15 text-[#FFD700] text-[10px] font-bold tracking-wide">
+                ALL TIME LOW
               </span>
             )}
-
-            {/* Sale end urgency */}
+            {game.switch2Nsuid && !game.isAllTimeLow && (
+              <span className="px-1.5 py-0.5 rounded-md bg-[#00aaff]/15 text-[#00aaff] text-[10px] font-bold">
+                Switch 2
+              </span>
+            )}
             {saleEndLabel && (
               <span className="text-[#ff6874] text-[10px] font-medium">
                 {saleEndLabel}
               </span>
             )}
+            {releaseLabel && (
+              <span className="text-[#00aaff] text-[10px] font-medium">{releaseLabel}</span>
+            )}
           </div>
-
-          {/* Release info */}
-          {releaseLabel && (
-            <p className="text-[#00aaff] text-[10px] font-medium mt-0.5">{releaseLabel}</p>
-          )}
         </div>
 
-        {/* Follow button — min 44px tap target */}
-        <div className="shrink-0 flex items-center pl-1">
+        {/* Follow button */}
+        <div className="shrink-0 flex items-start pt-1">
           <FollowButton gameId={game.id} />
+        </div>
+      </div>
+    </Link>
+  );
+});
+
+// Skeleton loading variant
+export function GameCardSkeleton() {
+  return (
+    <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] animate-pulse">
+      <div className="w-[110px] shrink-0 aspect-[16/10] rounded-lg bg-[#1a1a1a]" />
+      <div className="flex-1 min-w-0 flex flex-col justify-between">
+        <div>
+          <div className="h-4 bg-[#1a1a1a] rounded w-3/4" />
+          <div className="h-3 bg-[#1a1a1a] rounded w-1/2 mt-1.5" />
+        </div>
+        <div className="h-4 bg-[#1a1a1a] rounded w-1/3 mt-2" />
+        <div className="h-3 bg-[#1a1a1a] rounded w-1/4 mt-1" />
+      </div>
+      <div className="w-[70px] h-[36px] rounded-lg bg-[#1a1a1a] shrink-0 mt-1" />
+    </div>
+  );
+}
+
+// Compact horizontal scroll variant
+export function GameCardCompact({ game }: { game: Game }) {
+  return (
+    <Link href={`/game/${game.slug}`} className="block shrink-0">
+      <div className="w-[150px] bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={game.coverArt}
+          alt={game.title}
+          loading="lazy"
+          className="w-full aspect-[16/10] object-cover bg-[#1a1a1a]"
+        />
+        <div className="p-2.5">
+          <h3 className="font-semibold text-white text-xs leading-tight truncate">
+            {game.title}
+          </h3>
+          <p className="text-[#555555] text-[10px] mt-0.5">{game.publisher}</p>
+          <div className="flex items-center gap-1.5 mt-1.5">
+            {game.isOnSale ? (
+              <>
+                <span className="text-[#00ff88] font-bold text-xs">
+                  ${game.currentPrice.toFixed(2)}
+                </span>
+                <span className="px-1 py-0.5 rounded bg-[#00ff88]/15 text-[#00ff88] text-[9px] font-bold">
+                  -{game.discount}%
+                </span>
+              </>
+            ) : (
+              <span className="text-white font-bold text-xs">
+                ${game.currentPrice.toFixed(2)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </Link>
   );
 }
 
-// Compact horizontal scroll variant for trending
-export function GameCardCompact({ game }: { game: Game }) {
+// Compact skeleton
+export function GameCardCompactSkeleton() {
   return (
-    <Link href={`/game/${game.slug}`} className="block shrink-0">
-      <div className="w-[150px] bg-[#111111] rounded-xl border border-[#222222] hover:border-[#00ff88]/30 transition-all overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={game.coverArt}
-          alt={game.title}
-          className="w-full aspect-square object-cover object-top bg-[#1a1a1a] rounded-lg"
-        />
-        <div className="p-2.5">
-          <h3 className="font-semibold text-white text-xs leading-tight truncate">
-            {game.title}
-          </h3>
-          <p className="text-[#666666] text-[10px] mt-0.5">{game.publisher}</p>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <span className="text-white font-bold text-xs">
-              ${game.currentPrice.toFixed(2)}
-            </span>
-            {game.discount > 0 && (
-              <span className="px-1 py-0.5 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-[9px] font-bold">
-                -{game.discount}%
-              </span>
-            )}
-          </div>
-        </div>
+    <div className="w-[150px] shrink-0 bg-[#111111] rounded-xl border border-[#222222] overflow-hidden animate-pulse">
+      <div className="w-full aspect-[16/10] bg-[#1a1a1a]" />
+      <div className="p-2.5">
+        <div className="h-3 bg-[#1a1a1a] rounded w-3/4" />
+        <div className="h-2.5 bg-[#1a1a1a] rounded w-1/2 mt-1.5" />
+        <div className="h-3 bg-[#1a1a1a] rounded w-1/3 mt-2" />
       </div>
-    </Link>
+    </div>
   );
 }
 

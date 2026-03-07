@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { GameAlert, AlertType } from "@/lib/types";
 
 const alertConfig: Record<
@@ -24,13 +25,17 @@ export default function AlertCard({
 }) {
   const config = alertConfig[alert.type];
 
-  return (
+  const handleClick = () => {
+    if (!alert.read) onTap?.(alert.id);
+  };
+
+  const inner = (
     <div
-      onClick={() => !alert.read && onTap?.(alert.id)}
+      onClick={handleClick}
       className={`flex gap-3 p-3 rounded-xl border transition-all ${
         alert.read
-          ? "bg-[#111111]/60 border-[#222222]"
-          : "bg-[#111111] border-[#00ff88]/20 cursor-pointer"
+          ? "bg-[#111111]/60 border-[#1a1a1a] opacity-60"
+          : "bg-[#111111] border-[#00ff88]/20"
       }`}
     >
       {/* Unread dot */}
@@ -43,12 +48,15 @@ export default function AlertCard({
       </div>
 
       {/* Cover art */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={alert.gameCoverArt}
-        alt={alert.gameTitle}
-        className="w-12 h-12 rounded-lg object-cover object-center bg-[#1a1a1a] shrink-0"
-      />
+      {alert.gameCoverArt && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={alert.gameCoverArt}
+          alt={alert.gameTitle}
+          loading="lazy"
+          className="w-12 h-12 rounded-lg object-cover object-center bg-[#1a1a1a] shrink-0"
+        />
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">
@@ -58,7 +66,7 @@ export default function AlertCard({
           >
             {config.emoji} {config.label}
           </span>
-          <span className="text-[#666666] text-[10px] ml-auto shrink-0">
+          <span className="text-[#555555] text-[10px] ml-auto shrink-0">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {(alert as any).timestamp ?? alert.createdAt}
           </span>
@@ -71,8 +79,15 @@ export default function AlertCard({
         >
           {alert.headline}
         </h3>
-        <p className="text-[#666666] text-xs mt-0.5">{alert.subtext}</p>
+        <p className="text-[#555555] text-xs mt-0.5">{alert.subtext}</p>
       </div>
     </div>
   );
+
+  // Link to game detail if we have a slug
+  if (alert.gameSlug) {
+    return <Link href={`/game/${alert.gameSlug}`}>{inner}</Link>;
+  }
+
+  return inner;
 }

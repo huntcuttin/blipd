@@ -53,6 +53,7 @@ export default function GameDetailPage() {
   const followingFranchise = franchise ? isFollowingFranchise(franchise.id) : false;
   const releaseDate = new Date(game.releaseDate);
   const maxPrice = Math.max(...game.priceHistory.map((p) => p.price));
+  const minPrice = Math.min(...game.priceHistory.map((p) => p.price));
   const gameAlerts = alerts ?? [];
 
   return (
@@ -96,8 +97,8 @@ export default function GameDetailPage() {
             <span className="text-[#666666] text-sm">{game.publisher}</span>
             {game.metacriticScore !== null && (
               <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
-                game.metacriticScore >= 75 ? "bg-[#00ce7a]/20 text-[#00ce7a]"
-                : game.metacriticScore >= 50 ? "bg-[#ffbd3f]/20 text-[#ffbd3f]"
+                game.metacriticScore >= 85 ? "bg-[#00ce7a]/20 text-[#00ce7a]"
+                : game.metacriticScore >= 70 ? "bg-[#ffbd3f]/20 text-[#ffbd3f]"
                 : "bg-[#ff6874]/20 text-[#ff6874]"
               }`}>
                 {game.metacriticScore}
@@ -138,10 +139,11 @@ export default function GameDetailPage() {
             )}
           </div>
           {game.isAllTimeLow && (
-            <div className="mt-2">
-              <span className="px-2.5 py-1 rounded-full bg-[#FFD700]/15 text-[#FFD700] text-xs font-bold">
-                ALL TIME LOW
-              </span>
+            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFD700]/10 border border-[#FFD700]/20">
+              <svg className="w-4 h-4 text-[#FFD700]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181" />
+              </svg>
+              <span className="text-[#FFD700] text-xs font-bold tracking-wide">ALL TIME LOW PRICE</span>
             </div>
           )}
           {/* Switch 2 / Upgrade Pack editions */}
@@ -181,8 +183,8 @@ export default function GameDetailPage() {
           </p>
         </div>
 
-        {/* Follow button */}
-        <div className="py-4">
+        {/* Sticky follow button */}
+        <div className="sticky top-0 z-10 py-4 bg-[#0a0a0a]">
           <FollowButton gameId={game.id} size="large" />
           {isFollowingGame(game.id) && (
             <NotificationPrefs gameId={game.id} getNotifyPrefs={getNotifyPrefs} updateNotifyPrefs={updateNotifyPrefs} />
@@ -192,50 +194,71 @@ export default function GameDetailPage() {
         {/* Price history */}
         <div className="py-4 border-t border-[#222222]">
           <h2 className="text-sm font-bold text-white mb-3">Price History</h2>
-          <div className="flex items-end gap-2 h-24">
-            {game.priceHistory.map((point, i) => {
-              const height = maxPrice > 0 ? (point.price / maxPrice) * 100 : 0;
-              const isLatest = i === game.priceHistory.length - 1;
-              return (
-                <div
-                  key={point.date}
-                  className="flex-1 flex flex-col items-center gap-1"
-                >
-                  <span
-                    className={`text-[9px] font-medium ${
-                      isLatest ? "text-[#00ff88]" : "text-[#666666]"
-                    }`}
-                  >
-                    ${point.price.toFixed(0)}
-                  </span>
-                  <div
-                    className={`w-full rounded-t-sm transition-all ${
-                      isLatest ? "bg-[#00ff88]" : "bg-[#333333]"
-                    }`}
-                    style={{ height: `${Math.max(height, 4)}%` }}
-                  />
-                  <span className="text-[8px] text-[#666666]">
-                    {point.date}
-                  </span>
+          {game.priceHistory.length > 0 ? (
+            <div className="relative">
+              {/* Y-axis labels */}
+              <div className="absolute left-0 top-0 bottom-5 flex flex-col justify-between text-[9px] text-[#555555] w-8">
+                <span>${maxPrice.toFixed(0)}</span>
+                {maxPrice !== minPrice && <span>${minPrice.toFixed(0)}</span>}
+              </div>
+              {/* Chart */}
+              <div className="ml-9">
+                <div className="flex items-end gap-2 h-24">
+                  {game.priceHistory.map((point, i) => {
+                    const height = maxPrice > 0 ? (point.price / maxPrice) * 100 : 0;
+                    const isLatest = i === game.priceHistory.length - 1;
+                    return (
+                      <div
+                        key={point.date}
+                        className="flex-1 flex flex-col items-center gap-1"
+                      >
+                        <span
+                          className={`text-[9px] font-medium ${
+                            isLatest ? "text-[#00ff88]" : "text-[#555555]"
+                          }`}
+                        >
+                          ${point.price.toFixed(0)}
+                        </span>
+                        <div
+                          className={`w-full rounded-t-sm transition-all ${
+                            isLatest ? "bg-[#00ff88]" : "bg-[#333333]"
+                          }`}
+                          style={{ height: `${Math.max(height, 4)}%` }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
+                {/* X-axis labels */}
+                <div className="flex gap-2 mt-1">
+                  {game.priceHistory.map((point) => (
+                    <div key={point.date} className="flex-1 text-center">
+                      <span className="text-[8px] text-[#555555]">{point.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[#555555] text-xs">No price history available</p>
+          )}
         </div>
 
         {/* Recent alerts */}
-        {gameAlerts.length > 0 && (
-          <div className="py-4 border-t border-[#222222]">
-            <h2 className="text-sm font-bold text-white mb-3">
-              Recent Alerts
-            </h2>
+        <div className="py-4 border-t border-[#222222]">
+          <h2 className="text-sm font-bold text-white mb-3">
+            Recent Alerts
+          </h2>
+          {gameAlerts.length > 0 ? (
             <div className="space-y-2">
               {gameAlerts.map((alert) => (
                 <AlertCard key={alert.id} alert={alert} />
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-[#555555] text-xs">No alerts yet for this game</p>
+          )}
+        </div>
       </div>
     </div>
   );

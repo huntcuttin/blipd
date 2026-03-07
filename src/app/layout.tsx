@@ -32,7 +32,7 @@ export default function RootLayout({
         <AuthProvider>
           <FollowProvider>
             <div className="max-w-[430px] mx-auto min-h-screen">
-              <main className="pb-20">{children}</main>
+              <main className="pb-24" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>{children}</main>
             </div>
             <BottomNav />
           </FollowProvider>

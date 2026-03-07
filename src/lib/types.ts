@@ -46,6 +46,7 @@ export interface GameAlert {
   gameId: string;
   gameTitle: string;
   gameCoverArt: string;
+  gameSlug: string;
   type: AlertType;
   headline: string;
   subtext: string;
