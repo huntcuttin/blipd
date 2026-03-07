@@ -167,7 +167,8 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
   const releaseDate = parseReleaseDate(hit.releaseDateDisplay);
   const releaseStatus = computeReleaseStatus(releaseDate);
   const publisher = hit.softwarePublisher || "Unknown";
-  const franchise = (hit.franchises && hit.franchises.length > 0 ? hit.franchises : null) || detectFranchise(title);
+  const rawFranchise = hit.franchises && hit.franchises.length > 0 && hit.franchises !== "[]" && hit.franchises.trim() !== "" ? hit.franchises : null;
+  const franchise = rawFranchise || detectFranchise(title);
 
   return {
     nsuid: hit.nsuid || null,

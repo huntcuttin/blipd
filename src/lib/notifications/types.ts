@@ -4,9 +4,9 @@ export interface AlertPayload {
   alertId: string;
   alertType: string;
   gameId: string;
+  gameSlug: string;
   gameTitle: string;
   gameCoverArt: string;
-  nintendoUrl: string | null;
   headline: string;
   subtext: string;
   // Type-specific data

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
-import GameCard, { GameCardCompact } from "@/components/GameCard";
+import GameCard from "@/components/GameCard";
 import FollowButton from "@/components/FollowButton";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
@@ -47,7 +47,7 @@ export default function HomePage() {
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { followedGameIds, followedFranchiseIds } = useFollow();
 
-  const { data: games } = useSupabaseQuery(getAllGames);
+  const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getAllGames);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
 
   // Swipe handling
@@ -187,7 +187,7 @@ export default function HomePage() {
             className="min-h-[60vh]"
           >
             {activeTab === "Discover" && (
-              <UpcomingTab allGames={allGames} />
+              <DiscoverTab allGames={allGames} loading={gamesLoading} error={gamesError} />
             )}
             {activeTab === "My Games" && (
               <MyGamesTab games={followedGames} />
@@ -205,13 +205,42 @@ export default function HomePage() {
   );
 }
 
-// ── Upcoming Tab ──────────────────────────────────────────────
+// ── Discover Tab ──────────────────────────────────────────────
 
-function UpcomingTab({
+function DiscoverTab({
   allGames,
+  loading,
+  error,
 }: {
   allGames: Game[];
+  loading: boolean;
+  error: Error | null;
 }) {
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-20 bg-[#111111] rounded-xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (error || allGames.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-[#666666] text-sm">
+          {error ? "Failed to load games" : "No games available"}
+        </p>
+      </div>
+    );
+  }
+
+  const trending = [...allGames]
+    .filter((g) => g.releaseStatus === "released" && g.currentPrice > 0)
+    .sort((a, b) => computeGameScore(b) - computeGameScore(a))
+    .slice(0, 20);
+
   const upcomingGames = allGames
     .filter((g) => (g.releaseStatus === "upcoming" || g.releaseStatus === "out_today") && g.releaseDate < "2099-01-01")
     .sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime());
@@ -223,51 +252,46 @@ function UpcomingTab({
     groupedUpcoming[getDateGroup(game.releaseDate)].push(game);
   });
 
-  // Sort each group by ranking score (highest first)
   for (const group of Object.values(groupedUpcoming)) {
     group.sort((a, b) => computeGameScore(b) - computeGameScore(a));
   }
 
-  const trending = [...allGames]
-    .filter((g) => g.releaseStatus === "released" && g.currentPrice > 0)
-    .sort((a, b) => computeGameScore(b) - computeGameScore(a))
-    .slice(0, 8);
-
   return (
     <>
-      {upcomingGames.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-[#666666] text-sm">No upcoming games</p>
-        </div>
-      ) : (
-        <div className="space-y-4 mb-6">
-          {(Object.keys(groupedUpcoming) as DateGroup[]).map((group) => {
-            const groupGames = groupedUpcoming[group];
-            if (groupGames.length === 0) return null;
-            return (
-              <div key={group}>
-                <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">
-                  {GROUP_LABELS[group]}
-                </h3>
-                <div className="space-y-2">
-                  {groupGames.map((game) => (
-                    <UpcomingCard key={game.id} game={game} group={group} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Trending */}
+      {trending.length > 0 && (
+        <Section title="Trending">
+          <div className="space-y-2">
+            {trending.map((game) => (
+              <GameCard key={game.id} game={game} />
+            ))}
+          </div>
+        </Section>
       )}
 
-      {/* Discover */}
-      <Section title="Discover">
-        <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-          {trending.map((game) => (
-            <GameCardCompact key={game.id} game={game} />
-          ))}
-        </div>
-      </Section>
+      {/* Upcoming */}
+      {upcomingGames.length > 0 && (
+        <Section title="Upcoming">
+          <div className="space-y-4">
+            {(Object.keys(groupedUpcoming) as DateGroup[]).map((group) => {
+              const groupGames = groupedUpcoming[group];
+              if (groupGames.length === 0) return null;
+              return (
+                <div key={group}>
+                  <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">
+                    {GROUP_LABELS[group]}
+                  </h3>
+                  <div className="space-y-2">
+                    {groupGames.map((game) => (
+                      <UpcomingCard key={game.id} game={game} group={group} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
     </>
   );
 }
@@ -387,12 +411,18 @@ function FranchiseRow({ franchise }: { franchise: Franchise }) {
         href={`/franchise/${encodeURIComponent(franchise.name)}`}
         className="flex items-center gap-3 min-w-0 flex-1 mr-3"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={franchise.logo}
-          alt={franchise.name}
-          className="w-10 h-10 rounded-lg object-cover bg-[#1a1a1a] shrink-0"
-        />
+        {franchise.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={franchise.logo}
+            alt={franchise.name}
+            className="w-10 h-10 rounded-lg object-cover bg-[#1a1a1a] shrink-0"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#333333] flex items-center justify-center shrink-0">
+            <span className="text-[#666666] text-xs font-bold">{franchise.name.slice(0, 2).toUpperCase()}</span>
+          </div>
+        )}
         <div className="min-w-0">
           <h3 className="font-semibold text-white text-sm">{franchise.name}</h3>
           <p className="text-[#666666] text-xs">{franchise.gameCount} games</p>

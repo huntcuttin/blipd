@@ -1,10 +1,14 @@
 import type { AlertPayload } from "./types";
 
-const ESHOP_FALLBACK = "https://www.nintendo.com/store/games/";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://blipd.vercel.app";
 
-function eshopLink(payload: AlertPayload): string {
-  return payload.nintendoUrl || ESHOP_FALLBACK;
+function gameLink(payload: AlertPayload): string {
+  return `${APP_URL}/game/${payload.gameSlug || payload.gameId}`;
+}
+
+function eshopSearchLink(payload: AlertPayload): string {
+  const query = encodeURIComponent(payload.gameTitle);
+  return `https://www.nintendo.com/us/search/#q=${query}&cat=gme`;
 }
 
 function layout(body: string, preheader: string): string {
@@ -73,7 +77,8 @@ export function priceDrop(payload: AlertPayload): { subject: string; html: strin
       <span class="price-old">$${payload.oldPrice?.toFixed(2)}</span>
       ${saved ? `<span style="color:#00ff88;font-size:13px;font-weight:600;">Save ${saved}</span>` : ""}
     </div>
-    <a href="${eshopLink(payload)}" class="btn btn-primary">View on eShop</a>
+    <a href="${gameLink(payload)}" class="btn btn-primary">View on Blipd</a>
+    <a href="${eshopSearchLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is now $${payload.newPrice?.toFixed(2)} — save ${saved}`),
   };
@@ -90,7 +95,8 @@ export function allTimeLow(payload: AlertPayload): { subject: string; html: stri
     <div class="price-row">
       <span class="price-new" style="color:#00ff88;">$${payload.newPrice?.toFixed(2)}</span>
     </div>
-    <a href="${eshopLink(payload)}" class="btn btn-primary">View on eShop</a>
+    <a href="${gameLink(payload)}" class="btn btn-primary">View on Blipd</a>
+    <a href="${eshopSearchLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is at its lowest price ever: $${payload.newPrice?.toFixed(2)}`),
   };
@@ -111,7 +117,8 @@ export function saleStarted(payload: AlertPayload): { subject: string; html: str
       <span class="price-new" style="color:#ffaa00;">$${payload.newPrice?.toFixed(2)}</span>
       ${endStr ? `<span style="color:#666666;font-size:13px;">${endStr}</span>` : ""}
     </div>
-    <a href="${eshopLink(payload)}" class="btn btn-primary">View on eShop</a>
+    <a href="${gameLink(payload)}" class="btn btn-primary">View on Blipd</a>
+    <a href="${eshopSearchLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is ${payload.discount}% off — now $${payload.newPrice?.toFixed(2)}`),
   };
@@ -128,7 +135,8 @@ export function releaseToday(payload: AlertPayload): { subject: string; html: st
     <div class="price-row">
       <span class="price-new" style="color:#ffffff;">$${payload.newPrice?.toFixed(2)}</span>
     </div>
-    <a href="${eshopLink(payload)}" class="btn btn-primary">View on eShop</a>
+    <a href="${gameLink(payload)}" class="btn btn-primary">View on Blipd</a>
+    <a href="${eshopSearchLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is available now on Nintendo eShop`),
   };

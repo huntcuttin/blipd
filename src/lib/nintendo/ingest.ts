@@ -242,11 +242,30 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
       franchiseCounts.set(name, (franchiseCounts.get(name) ?? 0) + 1);
     }
 
-    const franchiseRows = Array.from(franchiseCounts.entries()).map(([name, count]) => ({
-      name,
-      game_count: count,
-      logo: "",
-    }));
+    // Get a representative cover art for each franchise
+    const franchiseNames = Array.from(franchiseCounts.keys()).filter(
+      (name) => name && name !== "[]" && name.trim() !== ""
+    );
+    const { data: repGames } = await supabase
+      .from("games")
+      .select("franchise, cover_art")
+      .in("franchise", franchiseNames)
+      .not("cover_art", "eq", "");
+
+    const logoMap = new Map<string, string>();
+    for (const g of repGames ?? []) {
+      if (g.franchise && g.cover_art && !logoMap.has(g.franchise)) {
+        logoMap.set(g.franchise, g.cover_art);
+      }
+    }
+
+    const franchiseRows = Array.from(franchiseCounts.entries())
+      .filter(([name]) => name && name !== "[]" && name.trim() !== "")
+      .map(([name, count]) => ({
+        name,
+        game_count: count,
+        logo: logoMap.get(name) || "",
+      }));
 
     if (franchiseRows.length > 0) {
       const { error } = await supabase

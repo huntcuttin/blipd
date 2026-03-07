@@ -60,7 +60,6 @@ export default function SalesPage() {
   const releasedSales = filteredSales
     .filter((g) => g.releaseStatus === "released")
     .sort((a, b) => b.discount - a.discount);
-  const preorderDeals = filteredSales.filter((g) => g.releaseStatus === "upcoming" || g.releaseStatus === "out_today");
   const allDeals = [...releasedSales].sort((a, b) => computeGameScore(b) - computeGameScore(a));
 
   const myGamesCount = onSale.filter((g) => followedGameIds.has(g.id)).length;
@@ -168,17 +167,6 @@ export default function SalesPage() {
                 <Section title="Recently Discounted">
                   <div className="space-y-2">
                     {releasedSales.slice(0, 10).map((game) => (
-                      <GameCard key={game.id} game={game} />
-                    ))}
-                  </div>
-                </Section>
-              )}
-
-              {/* Pre-order Deals */}
-              {preorderDeals.length > 0 && (
-                <Section title="Pre-order Deals">
-                  <div className="space-y-2">
-                    {preorderDeals.map((game) => (
                       <GameCard key={game.id} game={game} />
                     ))}
                   </div>

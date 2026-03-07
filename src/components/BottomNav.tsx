@@ -43,7 +43,7 @@ export default function BottomNav() {
                 <tab.icon
                   className={`w-6 h-6 ${isActive ? "drop-shadow-[0_0_8px_#00ff88]" : ""}`}
                 />
-                {tab.badge && tab.badge > 0 && (
+                {typeof tab.badge === "number" && tab.badge > 0 && (
                   <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#00ff88] text-[#0a0a0a] text-[10px] font-bold px-1">
                     {tab.badge}
                   </span>
