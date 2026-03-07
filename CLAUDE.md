@@ -8,6 +8,7 @@ Nintendo eShop price tracker & alert app. Mobile-first, dark theme with neon gre
 - MVP-first, mobile-first, explicit tradeoffs. No fluff. Direct answers only.
 - Flag risks explicitly. Use tables for schemas and comparisons. Write copy-paste ready code.
 - When in doubt, do less and do it right. Don't scaffold ahead of validated need.
+- **SQL migrations:** Always paste the full SQL directly in chat for the user to copy-paste into Supabase SQL Editor. Never just reference a file path — the user cannot open migration files directly.
 
 ## Tech Stack
 - Next.js 14 (App Router), React 18, TypeScript 5, Tailwind CSS 3.4
@@ -29,6 +30,7 @@ src/
     api/cron/             # Vercel cron endpoints
     game/[slug]/          # Game detail page
     franchise/[name]/     # Franchise detail page
+    onboarding/           # Console selection (post-auth, one-time)
     home/, sales/, alerts/, login/
   components/             # Shared UI components
   lib/
@@ -90,6 +92,10 @@ migrations/               # SQL migration files
 | nsuid | text? | Nintendo store ID, unique |
 | nintendo_url | text? | |
 | last_price_check | timestamptz? | For staleness ordering |
+| switch2_nsuid | text? | nsuid of Switch 2 edition if exists |
+| upgrade_pack_nsuid | text? | nsuid of upgrade pack if exists |
+| upgrade_pack_price | numeric? | Price of upgrade pack |
+| is_suppressed | boolean | Default false, hides duplicate SKUs from list views |
 | created_at, updated_at | timestamptz | |
 
 ### franchises
@@ -119,6 +125,13 @@ migrations/               # SQL migration files
 | dismissed | boolean | Default false |
 
 > **Target state (not yet migrated):** UserAlertState.status valid values: 'seen' | 'remind' | 'dismissed'. 'remind' maps to "Remind me in a few days" — no other snooze mechanic.
+
+### user_profiles
+| Column | Type | Notes |
+|---|---|---|
+| user_id | uuid | PK, FK -> auth.users |
+| console_preference | text? | 'switch' or 'switch2' |
+| created_at, updated_at | timestamptz | |
 
 ### user_game_follows
 | Column | Type | Notes |
@@ -239,6 +252,7 @@ Publisher sets the time per Nintendo docs, but 9 AM PT is the dominant pattern.
 - `sale_started` — sale began
 - `release_today` — game releases today
 - `announced` — new game announced
+- `switch2_edition_announced` — Switch 2 edition first linked to a game
 
 | Alert Type | Color | Hex |
 |---|---|---|
@@ -248,6 +262,7 @@ Publisher sets the time per Nintendo docs, but 9 AM PT is the dominant pattern.
 | out_now | Blue | `#00aaff` |
 | release_today | Blue | `#00aaff` |
 | announced | Purple | `#aa66ff` |
+| switch2_edition_announced | Blue | `#00aaff` |
 
 ## Ingestion Pipeline
 
@@ -274,6 +289,43 @@ Publisher sets the time per Nintendo docs, but 9 AM PT is the dominant pattern.
 
 ### Alert Dedup
 24-hour window per game_id + alert type. Checked via `hasRecentAlert()`.
+
+## Console Onboarding
+- One-time screen after magic link auth (`/onboarding`)
+- Two options: Nintendo Switch / Nintendo Switch 2
+- Stored in `user_profiles.console_preference`
+- If already set, redirects straight to `/home`
+- Auth callback redirects to `/onboarding` (which checks and skips if set)
+- Switch 2 users default to "Switch 2 Only" platform filter on Discover
+
+## Duplicate Game Suppression
+- Games grouped by normalized title (strip "– Nintendo Switch 2 Edition", "Upgrade Pack", regional prefixes)
+- Base game is the canonical entry; Switch 2 / upgrade pack / regional variants get `is_suppressed = true`
+- Base game gets `switch2_nsuid`, `upgrade_pack_nsuid`, `upgrade_pack_price` linked from variants
+- All list views (Trending, Upcoming, Out Now, Sales) filter `is_suppressed = true`
+- GameCard shows [Switch 2] badge when `switch2_nsuid` exists
+- Game detail page shows Switch 2 edition badge + upgrade pack price
+
+## Trending Algorithm (`computeTrendingScore`)
+| Signal | Points |
+|---|---|
+| release_date within 14 days | +50 |
+| release_date within 30 days | +30 |
+| Currently on sale | +25 |
+| All-time low price | +20 |
+| Nintendo publisher | +20 |
+| Major franchise (Zelda, Mario, Pokemon, etc.) | +15 |
+| Metacritic >= 85 | +10 |
+| Released in last 30 days | +10 |
+| Follow count (normalized 0-10) | +10 max |
+| User follows this franchise (personalization) | +20 |
+
+## Discover Tab Structure
+- Sub-tabs: [Trending] [Upcoming] [Out Now]
+- Platform filter: [All Platforms] [Switch 2 Only]
+- Trending: top 20 released games by trending_score descending
+- Upcoming: games releasing in next 60 days, sorted by date ascending
+- Out Now: games released in last 30 days, sorted by date descending
 
 ## Follow System
 - Unlimited game follows for all users — no caps, no tiers
