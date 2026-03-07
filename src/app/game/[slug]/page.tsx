@@ -11,7 +11,7 @@ import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/queri
 export default function GameDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { isFollowingFranchise, toggleFollowFranchise } = useFollow();
+  const { isFollowingFranchise } = useFollow();
 
   const { data: game, loading: gameLoading } = useSupabaseQuery(
     (sb) => getGameBySlug(sb, slug),
@@ -104,8 +104,8 @@ export default function GameDetailPage() {
               </span>
             )}
             {franchise && (
-              <button
-                onClick={() => toggleFollowFranchise(franchise.id)}
+              <Link
+                href={`/franchise/${encodeURIComponent(franchise.name)}`}
                 className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${
                   followingFranchise
                     ? "bg-[#00ff88]/15 text-[#00ff88] shadow-[0_0_8px_#00ff8844]"
@@ -113,7 +113,7 @@ export default function GameDetailPage() {
                 }`}
               >
                 {franchise.name}
-              </button>
+              </Link>
             )}
           </div>
         </div>

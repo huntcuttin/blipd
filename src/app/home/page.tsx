@@ -381,8 +381,11 @@ function MyFranchisesTab({
 
 function FranchiseRow({ franchise }: { franchise: Franchise }) {
   return (
-    <div className="flex items-center justify-between p-3 bg-[#111111] rounded-xl border border-[#222222]">
-      <div className="flex items-center gap-3 min-w-0 flex-1 mr-3">
+    <div className="flex items-center justify-between p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#00ff88]/30 transition-all">
+      <Link
+        href={`/franchise/${encodeURIComponent(franchise.name)}`}
+        className="flex items-center gap-3 min-w-0 flex-1 mr-3"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={franchise.logo}
@@ -393,7 +396,7 @@ function FranchiseRow({ franchise }: { franchise: Franchise }) {
           <h3 className="font-semibold text-white text-sm">{franchise.name}</h3>
           <p className="text-[#666666] text-xs">{franchise.gameCount} games</p>
         </div>
-      </div>
+      </Link>
       <FranchiseFollowButton franchiseId={franchise.id} />
     </div>
   );
