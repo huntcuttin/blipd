@@ -200,7 +200,8 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
     ? "released"
     : computeReleaseStatus(releaseDate);
   const publisher = hit.softwarePublisher || "Unknown";
-  const rawFranchise = hit.franchises && hit.franchises.length > 0 && hit.franchises !== "[]" && hit.franchises.trim() !== "" ? hit.franchises : null;
+  const franchiseStr = typeof hit.franchises === "string" ? hit.franchises : "";
+  const rawFranchise = franchiseStr.length > 0 && franchiseStr !== "[]" && franchiseStr.trim() !== "" ? franchiseStr : null;
   const franchise = rawFranchise || detectFranchise(title);
 
   return {
