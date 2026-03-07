@@ -12,6 +12,7 @@ const alertConfig: Record<
   sale_started: { emoji: "🏷️", label: "SALE STARTED", color: "text-[#FF69B4]", bg: "bg-[#FF69B4]/15" },
   release_today: { emoji: "📅", label: "RELEASE TODAY", color: "text-[#FFA500]", bg: "bg-[#FFA500]/15" },
   announced: { emoji: "📣", label: "ANNOUNCED", color: "text-[#9B59B6]", bg: "bg-[#9B59B6]/15" },
+  switch2_edition_announced: { emoji: "🎮", label: "SWITCH 2", color: "text-[#00aaff]", bg: "bg-[#00aaff]/15" },
 };
 
 export default function AlertCard({

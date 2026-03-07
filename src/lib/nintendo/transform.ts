@@ -148,6 +148,36 @@ const FRANCHISE_KEYWORDS: [RegExp, string][] = [
   [/\bnintendo labo\b/i, "Nintendo Labo"],
 ];
 
+// Patterns to strip when normalizing titles for duplicate matching
+const EDITION_SUFFIXES = [
+  /\s*[–—-]\s*Nintendo Switch™?\s*2\s*Edition\s*(Upgrade\s*Pack)?/i,
+  /\s*[–—-]\s*Nintendo Switch\s*2\s*Edition\s*(Upgrade\s*Pack)?/i,
+  /\s*Upgrade\s*Pack$/i,
+  /\s*[–—-]\s*Switch\s*2\s*Edition$/i,
+];
+const REGIONAL_PREFIX = /^\((English|French|Spanish|German|Italian|Dutch|Japanese|Korean|Chinese|Portuguese|Russian)\)\s*/i;
+
+export function normalizeTitle(title: string): string {
+  let normalized = title;
+  for (const pattern of EDITION_SUFFIXES) {
+    normalized = normalized.replace(pattern, "");
+  }
+  normalized = normalized.replace(REGIONAL_PREFIX, "");
+  return normalized.trim();
+}
+
+export function isSwitch2Edition(title: string): boolean {
+  return /Nintendo Switch™?\s*2\s*Edition/i.test(title) && !/Upgrade\s*Pack/i.test(title);
+}
+
+export function isUpgradePack(title: string): boolean {
+  return /Upgrade\s*Pack/i.test(title);
+}
+
+export function isRegionalVariant(title: string): boolean {
+  return REGIONAL_PREFIX.test(title);
+}
+
 export function detectFranchise(title: string): string | null {
   for (const [pattern, franchise] of FRANCHISE_KEYWORDS) {
     if (pattern.test(title)) return franchise;

@@ -3,11 +3,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import type { ConsolePreference } from "@/lib/types";
+import { getUserProfile } from "@/lib/queries";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  consolePreference: ConsolePreference | null;
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -18,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [consolePreference, setConsolePreference] = useState<ConsolePreference | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -38,6 +42,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
+  // Load console preference when user changes
+  useEffect(() => {
+    if (!user) {
+      setConsolePreference(null);
+      return;
+    }
+    getUserProfile(supabase, user.id).then(({ consolePreference: pref }) => {
+      setConsolePreference(pref);
+    });
+  }, [user, supabase]);
+
   const signInWithMagicLink = async (email: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -53,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signInWithMagicLink, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, consolePreference, signInWithMagicLink, signOut }}>
       {children}
     </AuthContext.Provider>
   );

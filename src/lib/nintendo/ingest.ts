@@ -1,11 +1,22 @@
 import { createAdminClient } from "./admin-client";
 import { fetchAllGames, fetchPrices } from "./client";
-import { algoliaHitToGameRow, computeDiscount, isAllTimeLow, isEnglishGame, isStandaloneGame } from "./transform";
+import {
+  algoliaHitToGameRow,
+  computeDiscount,
+  isAllTimeLow,
+  isEnglishGame,
+  isStandaloneGame,
+  normalizeTitle,
+  isSwitch2Edition,
+  isUpgradePack,
+  isRegionalVariant,
+} from "./transform";
 import {
   generatePriceDropAlert,
   generateAllTimeLowAlert,
   generateSaleStartedAlert,
   generateReleaseAlert,
+  generateSwitch2EditionAlert,
 } from "./alerts";
 import type { AlgoliaHit } from "./types";
 
@@ -226,6 +237,67 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
         upserted += withoutNsuid.length;
       }
     }
+  }
+
+  // Link Switch 2 editions + suppress duplicates
+  console.log("Linking Switch 2 editions and suppressing duplicates...");
+  const { data: allDbGames } = await supabase
+    .from("games")
+    .select("id, title, nsuid, current_price");
+
+  if (allDbGames) {
+    // Get existing switch2_nsuid values to detect new ones
+    const { data: existingLinks } = await supabase
+      .from("games")
+      .select("id, switch2_nsuid")
+      .not("switch2_nsuid", "is", null);
+    const existingSw2Set = new Set((existingLinks ?? []).map((g) => g.id));
+
+    // Group by normalized title
+    const groups = new Map<string, typeof allDbGames>();
+    for (const g of allDbGames) {
+      const key = normalizeTitle(g.title).toLowerCase().trim();
+      const group = groups.get(key) ?? [];
+      group.push(g);
+      groups.set(key, group);
+    }
+
+    for (const [, group] of Array.from(groups.entries())) {
+      if (group.length <= 1) continue;
+
+      // Find the base game (not Switch 2, not upgrade pack, not regional)
+      const base = group.find(
+        (g) => !isSwitch2Edition(g.title) && !isUpgradePack(g.title) && !isRegionalVariant(g.title)
+      );
+      const sw2 = group.find((g) => isSwitch2Edition(g.title));
+      const upgrade = group.find((g) => isUpgradePack(g.title));
+
+      if (!base) continue;
+
+      // Update base game with Switch 2 / upgrade pack links
+      const baseUpdate: Record<string, unknown> = {};
+      if (sw2?.nsuid) baseUpdate.switch2_nsuid = sw2.nsuid;
+      if (upgrade?.nsuid) {
+        baseUpdate.upgrade_pack_nsuid = upgrade.nsuid;
+        baseUpdate.upgrade_pack_price = Number(upgrade.current_price);
+      }
+      if (Object.keys(baseUpdate).length > 0) {
+        await supabase.from("games").update(baseUpdate).eq("id", base.id);
+        // Fire alert if Switch 2 edition is newly linked
+        if (sw2?.nsuid && !existingSw2Set.has(base.id)) {
+          await generateSwitch2EditionAlert(supabase, { id: base.id, title: base.title });
+        }
+      }
+
+      // Suppress all non-base entries
+      const suppressIds = group.filter((g) => g.id !== base.id).map((g) => g.id);
+      if (suppressIds.length > 0) {
+        await supabase.from("games").update({ is_suppressed: true }).in("id", suppressIds);
+      }
+      // Ensure base is not suppressed
+      await supabase.from("games").update({ is_suppressed: false }).eq("id", base.id);
+    }
+    console.log(`  Processed ${groups.size} title groups`);
   }
 
   // Rebuild franchises

@@ -144,6 +144,26 @@ export default function GameDetailPage() {
               </span>
             </div>
           )}
+          {/* Switch 2 / Upgrade Pack editions */}
+          {(game.switch2Nsuid || game.upgradePackPrice != null) && (
+            <div className="mt-3 space-y-1.5">
+              {game.switch2Nsuid && (
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded-full bg-[#00aaff]/15 text-[#00aaff] text-[10px] font-bold">
+                    Switch 2
+                  </span>
+                  <span className="text-[#999999] text-xs">Edition available</span>
+                </div>
+              )}
+              {game.upgradePackPrice != null && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[#999999] text-xs">
+                    Upgrade Pack: <span className="text-white font-medium">${game.upgradePackPrice.toFixed(2)}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
           <p className="text-[#666666] text-xs mt-3">
             {game.releaseStatus === "released"
               ? `Released ${releaseDate.toLocaleDateString("en-US", {

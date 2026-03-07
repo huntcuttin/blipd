@@ -46,7 +46,7 @@ export default function SalesPage() {
       .map((f) => f.name)
   );
 
-  const onSale = allGames.filter((g) => g.isOnSale);
+  const onSale = allGames.filter((g) => g.isOnSale && !g.isSuppressed);
 
   // Apply filter
   const filteredSales =

@@ -23,7 +23,7 @@ export default function BottomNav() {
   ];
 
   // Hide nav on login page
-  if (pathname === "/login") return null;
+  if (pathname === "/login" || pathname === "/onboarding") return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-md border-t border-[#222222]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>

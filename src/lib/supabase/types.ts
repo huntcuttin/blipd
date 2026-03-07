@@ -24,6 +24,10 @@ export interface Database {
           nsuid: string | null;
           nintendo_url: string | null;
           last_price_check: string | null;
+          switch2_nsuid: string | null;
+          upgrade_pack_nsuid: string | null;
+          upgrade_pack_price: number | null;
+          is_suppressed: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -47,6 +51,10 @@ export interface Database {
           nsuid?: string | null;
           nintendo_url?: string | null;
           last_price_check?: string | null;
+          switch2_nsuid?: string | null;
+          upgrade_pack_nsuid?: string | null;
+          upgrade_pack_price?: number | null;
+          is_suppressed?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -130,6 +138,22 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      user_profiles: {
+        Row: {
+          user_id: string;
+          console_preference: "switch" | "switch2" | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          console_preference?: "switch" | "switch2" | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["user_profiles"]["Insert"]>;
+        Relationships: [];
       };
       user_alert_status: {
         Row: {

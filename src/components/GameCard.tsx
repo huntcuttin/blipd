@@ -70,6 +70,13 @@ export default function GameCard({ game }: { game: Game }) {
               </span>
             )}
 
+            {/* Switch 2 badge */}
+            {game.switch2Nsuid && (
+              <span className="px-1.5 py-0.5 rounded-full bg-[#00aaff]/15 text-[#00aaff] text-[10px] font-bold">
+                Switch 2
+              </span>
+            )}
+
             {/* Sale end date badge */}
             {game.isOnSale && game.saleEndDate && (() => {
               const label = getSaleEndLabel(game.saleEndDate);

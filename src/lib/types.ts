@@ -17,6 +17,10 @@ export interface Game {
   priceHistory: { date: string; price: number }[];
   nsuid?: string | null;
   nintendoUrl?: string | null;
+  switch2Nsuid: string | null;
+  upgradePackNsuid: string | null;
+  upgradePackPrice: number | null;
+  isSuppressed: boolean;
 }
 
 export interface Franchise {
@@ -32,7 +36,10 @@ export type AlertType =
   | "out_now"
   | "sale_started"
   | "release_today"
-  | "announced";
+  | "announced"
+  | "switch2_edition_announced";
+
+export type ConsolePreference = "switch" | "switch2";
 
 export interface GameAlert {
   id: string;

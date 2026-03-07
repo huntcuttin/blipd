@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Game, Franchise, GameAlert } from "@/lib/types";
+import type { Game, Franchise, GameAlert, ConsolePreference } from "@/lib/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;
@@ -27,6 +27,10 @@ function mapGame(row: any): Game {
     priceHistory: row.price_history as { date: string; price: number }[],
     nsuid: row.nsuid ?? null,
     nintendoUrl: row.nintendo_url ?? null,
+    switch2Nsuid: row.switch2_nsuid ?? null,
+    upgradePackNsuid: row.upgrade_pack_nsuid ?? null,
+    upgradePackPrice: row.upgrade_pack_price != null ? Number(row.upgrade_pack_price) : null,
+    isSuppressed: row.is_suppressed ?? false,
   };
 }
 
@@ -195,6 +199,23 @@ export async function dismissAlert(supabase: Client, userId: string, alertId: st
   await supabase
     .from("user_alert_status")
     .upsert({ user_id: userId, alert_id: alertId, dismissed: true });
+}
+
+// ── User profile queries ──────────────────────────────────────
+
+export async function getUserProfile(supabase: Client, userId: string): Promise<{ consolePreference: ConsolePreference | null }> {
+  const { data } = await supabase
+    .from("user_profiles")
+    .select("console_preference")
+    .eq("user_id", userId)
+    .single();
+  return { consolePreference: data?.console_preference ?? null };
+}
+
+export async function setConsolePreference(supabase: Client, userId: string, preference: ConsolePreference) {
+  await supabase
+    .from("user_profiles")
+    .upsert({ user_id: userId, console_preference: preference, updated_at: new Date().toISOString() });
 }
 
 // ── Follow queries ────────────────────────────────────────────

@@ -117,6 +117,26 @@ export async function generateSaleStartedAlert(
   return true;
 }
 
+export async function generateSwitch2EditionAlert(
+  supabase: AdminClient,
+  game: GameRef
+): Promise<boolean> {
+  if (await hasRecentAlert(supabase, game.id, "switch2_edition_announced")) return false;
+
+  const { data } = await supabase.from("alerts").insert({
+    game_id: game.id,
+    type: "switch2_edition_announced",
+    headline: `${game.title} — Switch 2 Edition announced`,
+    subtext: "A Nintendo Switch 2 version is now available",
+  }).select("id").single();
+
+  if (data) {
+    const users = await getFollowersWithPref(supabase, game.id, "notify_release");
+    await createAlertForUsers(supabase, data.id, users);
+  }
+  return true;
+}
+
 export async function generateReleaseAlert(
   supabase: AdminClient,
   game: GameRef,
