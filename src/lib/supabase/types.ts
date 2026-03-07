@@ -85,15 +85,11 @@ export interface Database {
         Row: {
           user_id: string;
           game_id: string;
-          notify_release: boolean;
-          notify_price: boolean;
           created_at: string;
         };
         Insert: {
           user_id: string;
           game_id: string;
-          notify_release?: boolean;
-          notify_price?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["user_game_follows"]["Insert"]>;
@@ -117,7 +113,7 @@ export interface Database {
         Row: {
           id: string;
           game_id: string;
-          type: "price_drop" | "all_time_low" | "out_now" | "sale_started" | "release_today" | "announced";
+          type: "price_drop" | "all_time_low" | "out_now" | "sale_started" | "release_today" | "announced" | "switch2_edition_announced";
           headline: string;
           subtext: string;
           created_at: string;
@@ -163,6 +159,7 @@ export interface Database {
           alert_id: string;
           read: boolean;
           dismissed: boolean;
+          remind_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -170,6 +167,7 @@ export interface Database {
           alert_id: string;
           read?: boolean;
           dismissed?: boolean;
+          remind_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["user_alert_status"]["Insert"]>;
