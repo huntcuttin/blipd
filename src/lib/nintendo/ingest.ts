@@ -171,8 +171,20 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
   const qualityHits = standaloneHits.filter(isQualityGame);
   console.log(`  Quality games after filtering: ${qualityHits.length} (filtered out ${standaloneHits.length - qualityHits.length})`);
 
+  // Deduplicate by title — keep the highest-priced listing (most likely the real game, not a free stub)
+  const titleMap = new Map<string, AlgoliaHit>();
+  for (const hit of qualityHits) {
+    const key = hit.title.toLowerCase().trim();
+    const existing = titleMap.get(key);
+    if (!existing || (hit.msrp > existing.msrp)) {
+      titleMap.set(key, hit);
+    }
+  }
+  const dedupedHits = Array.from(titleMap.values());
+  console.log(`  After title dedup: ${dedupedHits.length} (removed ${qualityHits.length - dedupedHits.length} duplicate titles)`);
+
   // Transform and deduplicate slugs
-  const rows = qualityHits.map(algoliaHitToGameRow);
+  const rows = dedupedHits.map(algoliaHitToGameRow);
   const slugCounts = new Map<string, number>();
   for (const row of rows) {
     const count = slugCounts.get(row.slug) ?? 0;

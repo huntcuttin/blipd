@@ -229,7 +229,7 @@ function UpcomingTab({
   }
 
   const trending = [...allGames]
-    .filter((g) => g.releaseStatus === "released")
+    .filter((g) => g.releaseStatus === "released" && g.currentPrice > 0)
     .sort((a, b) => computeGameScore(b) - computeGameScore(a))
     .slice(0, 8);
 
