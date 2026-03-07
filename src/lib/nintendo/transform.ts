@@ -165,7 +165,10 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
   const discount = computeDiscount(currentPrice, msrp);
   const isOnSale = salePrice != null && salePrice < msrp;
   const releaseDate = parseReleaseDate(hit.releaseDateDisplay);
-  const releaseStatus = computeReleaseStatus(releaseDate);
+  // If release date is unknown but game has a real price, it's almost certainly released
+  const releaseStatus = releaseDate === "2099-12-31" && msrp > 0
+    ? "released"
+    : computeReleaseStatus(releaseDate);
   const publisher = hit.softwarePublisher || "Unknown";
   const rawFranchise = hit.franchises && hit.franchises.length > 0 && hit.franchises !== "[]" && hit.franchises.trim() !== "" ? hit.franchises : null;
   const franchise = rawFranchise || detectFranchise(title);
