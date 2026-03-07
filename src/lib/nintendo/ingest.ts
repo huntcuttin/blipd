@@ -489,6 +489,7 @@ export async function runPriceUpdate(options?: {
       original_price: originalPrice,
       discount,
       is_on_sale: isOnSale,
+      sale_end_date: isOnSale && priceInfo.endDate ? priceInfo.endDate.split("T")[0] : null,
       updated_at: new Date().toISOString(),
     };
 
