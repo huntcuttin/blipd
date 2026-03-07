@@ -23,6 +23,11 @@ create table if not exists games (
   price_history jsonb not null default '[]'::jsonb,
   nsuid text unique,
   nintendo_url text,
+  switch2_nsuid text,
+  upgrade_pack_nsuid text,
+  upgrade_pack_price numeric(10,2),
+  is_suppressed boolean not null default false,
+  release_date_source text,
   last_price_check timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -100,6 +105,7 @@ create table if not exists user_alert_status (
   alert_id uuid not null references alerts(id) on delete cascade,
   read boolean not null default false,
   dismissed boolean not null default false,
+  remind_at timestamptz,
   created_at timestamptz not null default now(),
   primary key (user_id, alert_id)
 );
