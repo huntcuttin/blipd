@@ -237,17 +237,17 @@ function DiscoverTab({
   // Filter out suppressed games for all list views
   const visibleGames = allGames.filter((g) => !g.isSuppressed);
 
-  // Platform filter
+  // Platform filter — match switch2_nsuid OR title containing "Switch 2"
   const filtered = platformFilter === "switch2"
-    ? visibleGames.filter((g) => g.switch2Nsuid)
+    ? visibleGames.filter((g) => g.switch2Nsuid || /switch\s*2/i.test(g.title))
     : visibleGames;
 
   const SUB_TABS: DiscoverSubTab[] = ["Trending", "Upcoming", "Out Now"];
 
   return (
-    <>
+    <div className="flex flex-col">
       {/* Sub-tab pills */}
-      <div className="flex gap-2 mb-3">
+      <div className="flex gap-2 mb-4">
         {SUB_TABS.map((tab) => (
           <button
             key={tab}
@@ -263,33 +263,38 @@ function DiscoverTab({
         ))}
       </div>
 
-      {/* Platform filter */}
-      <div className="flex gap-2 mb-4">
-        {(["all", "switch2"] as PlatformFilter[]).map((pf) => (
-          <button
-            key={pf}
-            onClick={() => setPlatformFilter(pf)}
-            className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
-              platformFilter === pf
-                ? "bg-[#222222] text-white"
-                : "text-[#666666] hover:text-white"
-            }`}
-          >
-            {pf === "all" ? "All Platforms" : "Switch 2 Only"}
-          </button>
-        ))}
+      {/* Game list */}
+      <div className="mb-4">
+        {subTab === "Trending" && (
+          <TrendingView games={filtered} followedFranchises={followedFranchises} />
+        )}
+        {subTab === "Upcoming" && (
+          <UpcomingView games={filtered} />
+        )}
+        {subTab === "Out Now" && (
+          <OutNowView games={filtered} />
+        )}
       </div>
 
-      {subTab === "Trending" && (
-        <TrendingView games={filtered} followedFranchises={followedFranchises} />
-      )}
-      {subTab === "Upcoming" && (
-        <UpcomingView games={filtered} />
-      )}
-      {subTab === "Out Now" && (
-        <OutNowView games={filtered} />
-      )}
-    </>
+      {/* Platform toggle — bottom section */}
+      <div className="sticky bottom-20 z-10 py-3">
+        <div className="flex p-1 bg-[#111111] rounded-xl border border-[#222222]">
+          {(["all", "switch2"] as PlatformFilter[]).map((pf) => (
+            <button
+              key={pf}
+              onClick={() => setPlatformFilter(pf)}
+              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                platformFilter === pf
+                  ? "bg-[#1a1a1a] text-white"
+                  : "text-[#666666] hover:text-white"
+              }`}
+            >
+              {pf === "all" ? "All Platforms" : "Switch 2 Only"}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
