@@ -21,7 +21,7 @@ export interface NotifyPrefs {
 interface FollowContextType {
   followedGameIds: Set<string>;
   followedFranchiseIds: Set<string>;
-  toggleFollowGame: (gameId: string) => void;
+  toggleFollowGame: (gameId: string) => { blocked?: "limit_reached" } | void;
   toggleFollowFranchise: (franchiseId: string) => void;
   isFollowingGame: (gameId: string) => boolean;
   isFollowingFranchise: (franchiseId: string) => boolean;
@@ -69,8 +69,10 @@ export function FollowProvider({ children }: { children: ReactNode }) {
 
   const followCount = followedGameIds.size;
 
+  const FREE_FOLLOW_LIMIT = 5;
+
   const toggleFollowGame = useCallback(
-    (gameId: string) => {
+    (gameId: string): { blocked?: "limit_reached" } | void => {
       const supabase = createClient();
       if (followedGameIds.has(gameId)) {
         setFollowedGameIds((prev) => {
@@ -80,6 +82,10 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         });
         if (user) dbUnfollowGame(supabase, user.id, gameId);
         return;
+      }
+      // Enforce free tier follow cap
+      if (followedGameIds.size >= FREE_FOLLOW_LIMIT) {
+        return { blocked: "limit_reached" };
       }
       setFollowedGameIds((prev) => new Set(prev).add(gameId));
       setNotifyPrefsMap((prev) => {

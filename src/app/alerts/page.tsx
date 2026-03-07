@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import AlertCard from "@/components/AlertCard";
 
 import { useAuth } from "@/lib/AuthContext";
@@ -132,8 +133,18 @@ export default function AlertsPage() {
           </div>
           <h2 className="text-lg font-semibold text-white mb-2">No alerts yet</h2>
           <p className="text-[#555555] text-sm text-center max-w-[260px]">
-            Follow games to get notified about price drops, sales, and new releases
+            {user
+              ? "Follow games and we'll let you know when prices drop."
+              : "Sign in and follow games to get notified about price drops, sales, and new releases."}
           </p>
+          {!user && (
+            <Link
+              href="/login"
+              className="mt-4 px-5 py-2.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] text-sm font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
+            >
+              Sign in to get alerts
+            </Link>
+          )}
         </div>
       ) : (
         <>

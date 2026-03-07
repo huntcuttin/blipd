@@ -14,7 +14,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   // Get alerts created since the given timestamp
   const { data: alerts, error } = await supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, games!inner ( slug, title, cover_art )")
+    .select("id, game_id, type, headline, subtext, games!inner ( slug, title, cover_art, nsuid )")
     .gte("created_at", since)
     .order("created_at", { ascending: true });
 
@@ -92,6 +92,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       gameCoverArt: game.cover_art,
       headline: alert.headline,
       subtext: alert.subtext,
+      nsuid: game.nsuid ?? null,
     };
 
     // Extract price data from the alert text for templates

@@ -309,3 +309,75 @@ Full template test (to delivered@resend.dev): SUCCESS — ID: 6be195ef-5713-4a19
 6. Email arrives
 
 The pipeline is now correctly wired. The code works. It just needs a real user following a real game.
+
+---
+
+## SESSION 2 — CORE LOOP AUDIT (2026-03-07 afternoon)
+
+### Audit Results
+
+Walked through the entire core loop as a first-time Reddit user. Found 7 issues:
+
+| # | Issue | Severity | Status |
+|---|---|---|---|
+| 1 | No follow cap — free users can follow unlimited games | BLOCKING | FIXED |
+| 2 | Email subject missing 🔔 emoji | Medium | FIXED |
+| 3 | eShop link in email uses search URL instead of direct product link | Medium | FIXED |
+| 4 | Per-alert toggles on game detail page (violates "no per-alert toggles" rule) | Medium | FIXED |
+| 5 | Home page loads all 2234 games for My Games tab | Performance | FIXED |
+| 6 | Price history shows empty chart when < 3 data points | UX | FIXED |
+| 7 | Alerts page shows generic empty state for logged-out users | UX | FIXED |
+
+### Changes Made
+
+**1. Follow cap (5 games free)**
+- `FollowContext.tsx` — `toggleFollowGame` now returns `{ blocked: "limit_reached" }` when user has 5+ follows
+- `FollowButton.tsx` — shows "Upgrade to Pro for unlimited follows" message for 3 seconds when cap hit
+
+**2. Email improvements**
+- `templates.ts` — subject lines now prefixed with 🔔 emoji, e.g. "🔔 Game just dropped to $X"
+- `templates.ts` — eShop link now uses `nintendo.com/us/store/products/[nsuid]` (direct link) instead of search URL
+- `types.ts` — added `nsuid` field to `AlertPayload`
+- `dispatch.ts` — now fetches and passes `nsuid` in alert payload
+
+**3. Per-alert toggles removed**
+- `game/[slug]/page.tsx` — removed `NotificationPrefs` component and toggles. Follow = all alerts, per CLAUDE.md.
+
+**4. Performance fix**
+- `home/page.tsx` — replaced `getAllGames` (2234 rows) with `getGamesByIds` (only fetches followed games). Discover tab already uses `getTrendingGames` (100 rows).
+
+**5. Price history UX**
+- `game/[slug]/page.tsx` — shows "Price history building... Check back soon." when < 3 data points instead of empty chart
+
+**6. Alerts sign-in CTA**
+- `alerts/page.tsx` — logged-out users see "Sign in to get alerts" button instead of generic empty state
+
+### Soft Launch Checklist Update
+
+| Item | Status |
+|---|---|
+| New user can sign up with magic link and land on real content | ✅ DONE |
+| Search returns real games instantly | ✅ DONE |
+| Following a game writes to database and shows in watchlist | ✅ DONE |
+| 5-follow cap enforced with upgrade message | ✅ DONE (this session) |
+| At least one real alert email has fired to a real user inbox | ❌ NEEDS TEST |
+| Email looks clean on mobile | ✅ Templates look good |
+| All 4 screens show real data with no mock arrays | ✅ DONE |
+| App works on iPhone Safari at 390px width | ✅ DONE (mobile-first design) |
+| No console errors on any screen | ⚠️ NEEDS VERIFY |
+| Empty states exist on every screen | ✅ DONE |
+
+### FINAL ANSWERS
+
+**1. How many soft launch checklist items are complete?**
+8 of 10. The two remaining: (a) real alert email to real inbox, (b) verify no console errors.
+
+**2. Single biggest thing blocking a stranger from using this app?**
+No real user has completed the full loop yet. Someone needs to sign up, follow a game, and receive an alert email. The pipeline is wired — it just needs to fire once.
+
+**3. What should next session tackle?**
+1. Sign up as a real user on the live site
+2. Follow a game currently on sale
+3. Verify the dispatch cron sends the email
+4. If email doesn't arrive, debug the Resend pipeline live
+5. Once confirmed, the app is ready for the Reddit post

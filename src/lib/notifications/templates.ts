@@ -6,9 +6,11 @@ function gameLink(payload: AlertPayload): string {
   return `${APP_URL}/game/${payload.gameSlug || payload.gameId}`;
 }
 
-function eshopSearchLink(payload: AlertPayload): string {
-  const query = encodeURIComponent(payload.gameTitle);
-  return `https://www.nintendo.com/us/search/#q=${query}&cat=gme`;
+function eshopLink(payload: AlertPayload): string {
+  if (payload.nsuid) {
+    return `https://www.nintendo.com/us/store/products/${payload.nsuid}`;
+  }
+  return "https://www.nintendo.com/us/store/";
 }
 
 function layout(body: string, preheader: string): string {
@@ -67,7 +69,7 @@ export function priceDrop(payload: AlertPayload): { subject: string; html: strin
     : "";
 
   return {
-    subject: `${payload.gameTitle} dropped to $${payload.newPrice?.toFixed(2)}`,
+    subject: `🔔 ${payload.gameTitle} just dropped to $${payload.newPrice?.toFixed(2)}`,
     html: layout(`
   <div class="card">
     <div class="badge" style="background:rgba(0,255,136,0.15);color:#00ff88;">Price Drop${pctOff ? ` · ${pctOff} off` : ""}</div>
@@ -78,7 +80,7 @@ export function priceDrop(payload: AlertPayload): { subject: string; html: strin
       ${saved ? `<span style="color:#00ff88;font-size:13px;font-weight:600;">Save ${saved}</span>` : ""}
     </div>
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
-    <a href="${eshopSearchLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
+    <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is now $${payload.newPrice?.toFixed(2)} — save ${saved}`),
   };
@@ -86,7 +88,7 @@ export function priceDrop(payload: AlertPayload): { subject: string; html: strin
 
 export function allTimeLow(payload: AlertPayload): { subject: string; html: string } {
   return {
-    subject: `${payload.gameTitle} — ALL TIME LOW $${payload.newPrice?.toFixed(2)}`,
+    subject: `🔔 ${payload.gameTitle} — ALL TIME LOW $${payload.newPrice?.toFixed(2)}`,
     html: layout(`
   <div class="card">
     <div class="badge" style="background:rgba(0,255,136,0.15);color:#00ff88;">All Time Low</div>
@@ -96,7 +98,7 @@ export function allTimeLow(payload: AlertPayload): { subject: string; html: stri
       <span class="price-new" style="color:#00ff88;">$${payload.newPrice?.toFixed(2)}</span>
     </div>
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
-    <a href="${eshopSearchLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
+    <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is at its lowest price ever: $${payload.newPrice?.toFixed(2)}`),
   };
@@ -108,7 +110,7 @@ export function saleStarted(payload: AlertPayload): { subject: string; html: str
     : "";
 
   return {
-    subject: `${payload.gameTitle} is on sale — ${payload.discount}% off`,
+    subject: `🔔 ${payload.gameTitle} is on sale — ${payload.discount}% off`,
     html: layout(`
   <div class="card">
     <div class="badge" style="background:rgba(255,170,0,0.15);color:#ffaa00;">Sale · ${payload.discount}% off</div>
@@ -118,7 +120,7 @@ export function saleStarted(payload: AlertPayload): { subject: string; html: str
       ${endStr ? `<span style="color:#666666;font-size:13px;">${endStr}</span>` : ""}
     </div>
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
-    <a href="${eshopSearchLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
+    <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is ${payload.discount}% off — now $${payload.newPrice?.toFixed(2)}`),
   };
@@ -126,7 +128,7 @@ export function saleStarted(payload: AlertPayload): { subject: string; html: str
 
 export function releaseToday(payload: AlertPayload): { subject: string; html: string } {
   return {
-    subject: `${payload.gameTitle} is available now on eShop`,
+    subject: `🔔 ${payload.gameTitle} is available now on eShop`,
     html: layout(`
   <div class="card">
     <div class="badge" style="background:rgba(0,170,255,0.15);color:#00aaff;">Available Now</div>
@@ -136,7 +138,7 @@ export function releaseToday(payload: AlertPayload): { subject: string; html: st
       <span class="price-new" style="color:#ffffff;">$${payload.newPrice?.toFixed(2)}</span>
     </div>
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
-    <a href="${eshopSearchLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
+    <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is available now on Nintendo eShop`),
   };

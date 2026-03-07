@@ -11,7 +11,7 @@ import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/queri
 export default function GameDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { isFollowingFranchise, isFollowingGame, getNotifyPrefs, updateNotifyPrefs } = useFollow();
+  const { isFollowingFranchise } = useFollow();
 
   const { data: game, loading: gameLoading } = useSupabaseQuery(
     (sb) => getGameBySlug(sb, slug),
@@ -186,9 +186,6 @@ export default function GameDetailPage() {
         {/* Sticky follow button */}
         <div className="sticky top-0 z-10 py-4 bg-[#0a0a0a]">
           <FollowButton gameId={game.id} size="large" />
-          {isFollowingGame(game.id) && (
-            <NotificationPrefs gameId={game.id} getNotifyPrefs={getNotifyPrefs} updateNotifyPrefs={updateNotifyPrefs} />
-          )}
         </div>
 
         {/* eShop link */}
@@ -212,7 +209,7 @@ export default function GameDetailPage() {
         {/* Price history */}
         <div className="py-4 border-t border-[#222222]">
           <h2 className="text-sm font-bold text-white mb-3">Price History</h2>
-          {game.priceHistory.length > 0 ? (
+          {game.priceHistory.length >= 3 ? (
             <div className="relative">
               {/* Y-axis labels */}
               <div className="absolute left-0 top-0 bottom-5 flex flex-col justify-between text-[9px] text-[#555555] w-8">
@@ -258,7 +255,7 @@ export default function GameDetailPage() {
               </div>
             </div>
           ) : (
-            <p className="text-[#555555] text-xs">No price history available</p>
+            <p className="text-[#555555] text-xs">Price history building... Check back soon.</p>
           )}
         </div>
 
@@ -282,48 +279,3 @@ export default function GameDetailPage() {
   );
 }
 
-function NotificationPrefs({
-  gameId,
-  getNotifyPrefs,
-  updateNotifyPrefs,
-}: {
-  gameId: string;
-  getNotifyPrefs: (id: string) => { notifyRelease: boolean; notifyPrice: boolean };
-  updateNotifyPrefs: (id: string, prefs: { notifyRelease?: boolean; notifyPrice?: boolean }) => void;
-}) {
-  const prefs = getNotifyPrefs(gameId);
-
-  return (
-    <div className="mt-3 space-y-2">
-      <button
-        onClick={() => updateNotifyPrefs(gameId, { notifyRelease: !prefs.notifyRelease })}
-        className="w-full flex items-center justify-between p-3 bg-[#111111] rounded-xl border border-[#222222]"
-      >
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-[#666666]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-          </svg>
-          <span className="text-sm text-white">Notify on release</span>
-        </div>
-        <div className={`w-9 h-5 rounded-full transition-colors ${prefs.notifyRelease ? "bg-[#00ff88]" : "bg-[#333333]"}`}>
-          <div className={`w-4 h-4 rounded-full bg-white mt-0.5 transition-transform ${prefs.notifyRelease ? "translate-x-[18px]" : "translate-x-0.5"}`} />
-        </div>
-      </button>
-      <button
-        onClick={() => updateNotifyPrefs(gameId, { notifyPrice: !prefs.notifyPrice })}
-        className="w-full flex items-center justify-between p-3 bg-[#111111] rounded-xl border border-[#222222]"
-      >
-        <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-[#666666]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
-          </svg>
-          <span className="text-sm text-white">Notify on price drops & sales</span>
-        </div>
-        <div className={`w-9 h-5 rounded-full transition-colors ${prefs.notifyPrice ? "bg-[#00ff88]" : "bg-[#333333]"}`}>
-          <div className={`w-4 h-4 rounded-full bg-white mt-0.5 transition-transform ${prefs.notifyPrice ? "translate-x-[18px]" : "translate-x-0.5"}`} />
-        </div>
-      </button>
-    </div>
-  );
-}

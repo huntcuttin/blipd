@@ -10,10 +10,11 @@ import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getTrendingGames, getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
+import { getTrendingGames, getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { computeTrendingScore } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
+// Game used in DiscoverTab and search; Franchise used in MyFranchisesTab
 
 const TABS = ["Discover", "My Games", "My Franchises"] as const;
 type Tab = (typeof TABS)[number];
@@ -25,7 +26,11 @@ export default function HomePage() {
   const { user, signOut } = useAuth();
   const { followedGameIds, followedFranchiseIds } = useFollow();
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
-  const { data: games } = useSupabaseQuery(getAllGames);
+  const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
+  const { data: followedGamesData } = useSupabaseQuery(
+    (sb) => getGamesByIds(sb, followedIds),
+    [followedIds.join(",")]
+  );
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
 
   // Swipe handling
@@ -67,10 +72,9 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const allGames = games ?? [];
   const allFranchises = franchises ?? [];
+  const followedGames = followedGamesData ?? [];
 
-  const followedGames = allGames.filter((g) => followedGameIds.has(g.id));
   const followedFranchiseList = allFranchises.filter((f) =>
     followedFranchiseIds.has(f.id)
   );

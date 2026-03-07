@@ -14,4 +14,5 @@ export interface AlertPayload {
   newPrice?: number;
   discount?: number;
   saleEndDate?: string | null;
+  nsuid?: string | null;
 }
