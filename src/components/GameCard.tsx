@@ -7,39 +7,51 @@ import FollowButton from "./FollowButton";
 export default function GameCard({ game }: { game: Game }) {
   const daysUntilRelease = getDaysUntil(game.releaseDate);
   const releaseLabel = getReleaseLabel(game, daysUntilRelease);
+  const saleEndLabel = game.isOnSale && game.saleEndDate ? getSaleEndLabel(game.saleEndDate) : null;
+
+  // Pick the single most important badge to show
+  const badge = game.isAllTimeLow
+    ? { label: "ALL TIME LOW", color: "bg-[#FFD700]/15 text-[#FFD700]" }
+    : game.discount > 0
+    ? { label: `-${game.discount}%`, color: "bg-[#00ff88]/15 text-[#00ff88]" }
+    : game.switch2Nsuid
+    ? { label: "Switch 2", color: "bg-[#00aaff]/15 text-[#00aaff]" }
+    : null;
 
   return (
     <Link href={`/game/${game.slug}`} className="block">
       <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#00ff88]/30 transition-all">
-        {/* Cover art */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={game.coverArt}
-          alt={game.title}
-          className="w-[80px] h-[80px] rounded-lg object-cover object-top bg-[#1a1a1a] shrink-0"
-        />
+        {/* Cover art — 16:9 aspect to match Nintendo art */}
+        <div className="w-[100px] shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={game.coverArt}
+            alt={game.title}
+            className="w-full aspect-video rounded-lg object-cover bg-[#1a1a1a]"
+          />
+        </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between">
+        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
           <div>
-            <h3 className="font-semibold text-white text-sm leading-tight truncate">
+            <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2">
               {game.title}
             </h3>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-[#666666] text-xs">{game.publisher}</p>
+            <p className="text-[#666666] text-xs mt-0.5 truncate">
+              {game.publisher}
               {game.metacriticScore !== null && (
-                <span className={`px-1 py-0.5 rounded text-[9px] font-bold leading-none ${
-                  game.metacriticScore >= 75 ? "bg-[#00ce7a]/15 text-[#00ce7a]"
-                  : game.metacriticScore >= 50 ? "bg-[#ffbd3f]/15 text-[#ffbd3f]"
-                  : "bg-[#ff6874]/15 text-[#ff6874]"
-                }`}>
-                  {game.metacriticScore}
+                <span className={
+                  game.metacriticScore >= 75 ? " text-[#00ce7a]"
+                  : game.metacriticScore >= 50 ? " text-[#ffbd3f]"
+                  : " text-[#ff6874]"
+                }>
+                  {" "}· {game.metacriticScore}
                 </span>
               )}
-            </div>
+            </p>
           </div>
 
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <div className="flex items-center gap-2 mt-1.5">
             {/* Price */}
             {game.isOnSale ? (
               <>
@@ -52,50 +64,33 @@ export default function GameCard({ game }: { game: Game }) {
               </>
             ) : (
               <span className="text-white font-bold text-sm">
-                ${game.currentPrice.toFixed(2)}
+                {game.currentPrice > 0 ? `$${game.currentPrice.toFixed(2)}` : "Free"}
               </span>
             )}
 
-            {/* Discount badge */}
-            {game.discount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-[10px] font-bold">
-                -{game.discount}%
+            {/* Single most important badge */}
+            {badge && (
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${badge.color}`}>
+                {badge.label}
               </span>
             )}
 
-            {/* All time low badge */}
-            {game.isAllTimeLow && (
-              <span className="px-1.5 py-0.5 rounded-full bg-[#FFD700]/15 text-[#FFD700] text-[10px] font-bold">
-                ALL TIME LOW
+            {/* Sale end urgency */}
+            {saleEndLabel && (
+              <span className="text-[#ff6874] text-[10px] font-medium">
+                {saleEndLabel}
               </span>
             )}
-
-            {/* Switch 2 badge */}
-            {game.switch2Nsuid && (
-              <span className="px-1.5 py-0.5 rounded-full bg-[#00aaff]/15 text-[#00aaff] text-[10px] font-bold">
-                Switch 2
-              </span>
-            )}
-
-            {/* Sale end date badge */}
-            {game.isOnSale && game.saleEndDate && (() => {
-              const label = getSaleEndLabel(game.saleEndDate);
-              return label ? (
-                <span className="px-1.5 py-0.5 rounded-full bg-[#ff6874]/15 text-[#ff6874] text-[10px] font-bold">
-                  {label}
-                </span>
-              ) : null;
-            })()}
           </div>
 
           {/* Release info */}
           {releaseLabel && (
-            <p className="text-[#666666] text-[10px] mt-0.5">{releaseLabel}</p>
+            <p className="text-[#00aaff] text-[10px] font-medium mt-0.5">{releaseLabel}</p>
           )}
         </div>
 
-        {/* Follow button */}
-        <div className="shrink-0 flex items-center">
+        {/* Follow button — min 44px tap target */}
+        <div className="shrink-0 flex items-center pl-1">
           <FollowButton gameId={game.id} />
         </div>
       </div>
