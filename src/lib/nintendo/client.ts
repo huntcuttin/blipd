@@ -46,21 +46,42 @@ export async function fetchGameCatalog(options: {
   }
 }
 
-// Algolia search caps at 1000 results per query. Split by price ranges
-// to get full catalog coverage.
-const PRICE_RANGES = [
-  "msrp < 10",
-  "msrp >= 10 AND msrp < 30",
-  "msrp >= 30 AND msrp < 60",
-  "msrp >= 60",
-];
+// Algolia search caps at 1000 results per query. We fetch overlapping
+// segments to maximize coverage of quality games:
+// 1. Default query (top 1000 by Algolia relevance — catches popular titles)
+// 2. Major publisher queries (guarantees all Nintendo, Capcom, etc.)
+// 3. Price tier queries ($30+, which pass our quality gate)
 
 const PLATFORM_FILTER = '(platform:"Nintendo Switch" OR platform:"Nintendo Switch 2")';
+const BASE_FILTER = `topLevelCategoryCode:GAMES AND ${PLATFORM_FILTER}`;
+
+// Publishers most likely to have mainline titles we want
+const PUBLISHER_QUERIES = [
+  "Nintendo",
+  "CAPCOM",
+  "Square Enix",
+  "SQUARE ENIX",
+  "SEGA",
+  "Sega",
+  "Bandai Namco Entertainment",
+  "BANDAI NAMCO Entertainment",
+  "Ubisoft",
+  "Konami",
+  "KOEI TECMO",
+  "Atlus",
+  "ATLUS",
+];
+
+// Price tiers that pass our quality gate ($30+ MSRP)
+const PRICE_TIERS = [
+  "price.finalPrice >= 30 AND price.finalPrice < 40",
+  "price.finalPrice >= 40 AND price.finalPrice < 50",
+  "price.finalPrice >= 50 AND price.finalPrice < 60",
+  "price.finalPrice >= 60",
+];
 
 async function fetchAllPages(
   baseFilter: string,
-  onPage?: (page: number, total: number) => void,
-  pageOffset?: number
 ): Promise<AlgoliaSearchResponse["hits"]> {
   const hits: AlgoliaSearchResponse["hits"] = [];
   let page = 0;
@@ -73,11 +94,6 @@ async function fetchAllPages(
     });
 
     hits.push(...result.hits);
-    onPage?.(
-      (pageOffset ?? 0) + page + 1,
-      (pageOffset ?? 0) + result.nbPages
-    );
-
     if (page + 1 >= result.nbPages) break;
     page++;
     await delay(200);
@@ -91,13 +107,10 @@ export async function fetchAllGames(
 ): Promise<AlgoliaSearchResponse["hits"]> {
   const allHits: AlgoliaSearchResponse["hits"] = [];
   const seen = new Set<string>();
-  let pageOffset = 0;
+  let step = 0;
+  const totalSteps = 1 + PUBLISHER_QUERIES.length + PRICE_TIERS.length;
 
-  for (const priceRange of PRICE_RANGES) {
-    const filter = `topLevelCategoryCode:GAMES AND ${PLATFORM_FILTER} AND ${priceRange}`;
-    const hits = await fetchAllPages(filter, onPage, pageOffset);
-    pageOffset += Math.ceil(hits.length / 500);
-
+  function addHits(hits: AlgoliaSearchResponse["hits"]) {
     for (const hit of hits) {
       const key = hit.nsuid || hit.objectID;
       if (!seen.has(key)) {
@@ -105,6 +118,21 @@ export async function fetchAllGames(
         allHits.push(hit);
       }
     }
+    step++;
+    onPage?.(step, totalSteps);
+  }
+
+  // 1. Default query — top 1000 by relevance
+  addHits(await fetchAllPages(BASE_FILTER));
+
+  // 2. Publisher queries — guarantees mainline titles
+  for (const pub of PUBLISHER_QUERIES) {
+    addHits(await fetchAllPages(`${BASE_FILTER} AND softwarePublisher:"${pub}"`));
+  }
+
+  // 3. Price tier queries — catches any $30+ games missed above
+  for (const tier of PRICE_TIERS) {
+    addHits(await fetchAllPages(`${BASE_FILTER} AND ${tier}`));
   }
 
   return allHits;
