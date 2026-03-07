@@ -51,6 +51,7 @@ export interface GameAlert {
   headline: string;
   subtext: string;
   createdAt: string;
+  timestamp: string;
   timestampGroup: "today" | "yesterday" | "this_week" | "earlier";
   read: boolean;
 }

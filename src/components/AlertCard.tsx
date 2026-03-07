@@ -78,8 +78,7 @@ export default function AlertCard({
             {config.emoji} {config.label}
           </span>
           <span className="text-[#555555] text-[10px] ml-auto shrink-0">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {(alert as any).timestamp ?? alert.createdAt}
+            {alert.timestamp}
           </span>
         </div>
 
