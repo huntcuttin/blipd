@@ -1,7 +1,7 @@
 import type { AlertPayload } from "./types";
 
 const ESHOP_FALLBACK = "https://www.nintendo.com/store/games/";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://blipd.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://blipd.vercel.app";
 
 function eshopLink(payload: AlertPayload): string {
   return payload.nintendoUrl || ESHOP_FALLBACK;

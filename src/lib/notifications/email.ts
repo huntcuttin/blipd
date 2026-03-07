@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { getTemplate } from "./templates";
 import type { AlertPayload } from "./types";
 
-const FROM_ADDRESS = "Blipd <alerts@blipd.app>";
+const FROM_ADDRESS = "Blipd <onboarding@resend.dev>";
 
 function getResend(): Resend {
   const key = process.env.RESEND_API_KEY;
