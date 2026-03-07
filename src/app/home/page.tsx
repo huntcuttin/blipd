@@ -231,11 +231,11 @@ function DiscoverTab({
   const trending = useMemo(() => {
     const visible = allGames.filter((g) => !g.isSuppressed);
     return [...visible]
-      .filter((g) => g.releaseStatus === "released" && g.currentPrice > 0)
+      .filter((g) => g.releaseStatus === "released")
       .sort((a, b) =>
         computeTrendingScore(b, { followedFranchises }) - computeTrendingScore(a, { followedFranchises })
       )
-      .slice(0, 20);
+      .slice(0, 40);
   }, [allGames, followedFranchises]);
 
   if (loading) {
