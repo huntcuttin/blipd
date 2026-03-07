@@ -3,27 +3,28 @@
 import { useState } from "react";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getAllGames } from "@/lib/queries";
+import { getRecentReleases, getUpcomingGames } from "@/lib/queries";
 import { useAuth } from "@/lib/AuthContext";
-import type { Game } from "@/lib/types";
 
 type SubTab = "Out Now" | "Coming Soon";
 type PlatformFilter = "all" | "switch2";
 
 export default function UpcomingPage() {
   const { consolePreference } = useAuth();
-  const { data: games, loading, error } = useSupabaseQuery(getAllGames);
+  const { data: recentReleases, loading: recentLoading } = useSupabaseQuery(getRecentReleases);
+  const { data: upcomingGames, loading: upcomingLoading } = useSupabaseQuery(getUpcomingGames);
   const [subTab, setSubTab] = useState<SubTab>("Out Now");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(
     consolePreference === "switch2" ? "switch2" : "all"
   );
 
-  const allGames = (games ?? []).filter((g) => !g.isSuppressed);
+  const loading = subTab === "Out Now" ? recentLoading : upcomingLoading;
+  const rawGames = subTab === "Out Now" ? (recentReleases ?? []) : (upcomingGames ?? []);
 
   const filtered =
     platformFilter === "switch2"
-      ? allGames.filter((g) => g.switch2Nsuid || /switch\s*2/i.test(g.title))
-      : allGames;
+      ? rawGames.filter((g) => g.switch2Nsuid || /switch\s*2/i.test(g.title))
+      : rawGames;
 
   return (
     <div className="px-4">
@@ -56,17 +57,13 @@ export default function UpcomingPage() {
             <GameCardSkeleton key={i} />
           ))}
         </div>
-      ) : error ? (
-        <div className="text-center py-16">
-          <p className="text-[#666666] text-sm">Failed to load games</p>
-        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState subTab={subTab} />
       ) : (
-        <div className="mb-4">
-          {subTab === "Out Now" ? (
-            <OutNowView games={filtered} />
-          ) : (
-            <ComingSoonView games={filtered} />
-          )}
+        <div className="space-y-2 mb-4">
+          {filtered.map((game) => (
+            <GameCard key={game.id} game={game} />
+          ))}
         </div>
       )}
 
@@ -92,84 +89,26 @@ export default function UpcomingPage() {
   );
 }
 
-function OutNowView({ games }: { games: Game[] }) {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
-
-  const outNow = games
-    .filter(
-      (g) =>
-        g.releaseStatus === "released" &&
-        g.releaseDate >= thirtyDaysAgo &&
-        g.releaseDate !== "2099-12-31" &&
-        g.releaseDate !== "2020-01-01"
-    )
-    .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate));
-
-  if (outNow.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-4">
-        <div className="w-14 h-14 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
-          <svg className="w-7 h-7 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+function EmptyState({ subTab }: { subTab: SubTab }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 px-4">
+      <div className="w-14 h-14 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
+        <svg className="w-7 h-7 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          {subTab === "Out Now" ? (
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-          </svg>
-        </div>
-        <h2 className="text-base font-semibold text-white mb-1">No recent releases</h2>
-        <p className="text-[#555555] text-sm text-center max-w-[260px]">
-          No new games released in the last 30 days
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {outNow.map((game) => (
-        <GameCard key={game.id} game={game} />
-      ))}
-    </div>
-  );
-}
-
-function ComingSoonView({ games }: { games: Game[] }) {
-  const now = new Date();
-  const today = now.toISOString().split("T")[0];
-  const sixtyDaysOut = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
-
-  const upcoming = games
-    .filter(
-      (g) =>
-        (g.releaseStatus === "upcoming" || g.releaseStatus === "out_today") &&
-        g.releaseDate >= today &&
-        g.releaseDate <= sixtyDaysOut
-    )
-    .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
-
-  if (upcoming.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-4">
-        <div className="w-14 h-14 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
-          <svg className="w-7 h-7 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          ) : (
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
-          </svg>
-        </div>
-        <h2 className="text-base font-semibold text-white mb-1">Nothing upcoming</h2>
-        <p className="text-[#555555] text-sm text-center max-w-[260px]">
-          No confirmed releases in the next 60 days
-        </p>
+          )}
+        </svg>
       </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {upcoming.map((game) => (
-        <GameCard key={game.id} game={game} />
-      ))}
+      <h2 className="text-base font-semibold text-white mb-1">
+        {subTab === "Out Now" ? "No recent releases" : "Nothing upcoming"}
+      </h2>
+      <p className="text-[#555555] text-sm text-center max-w-[260px]">
+        {subTab === "Out Now"
+          ? "No new games released in the last 30 days"
+          : "No confirmed releases coming soon"}
+      </p>
     </div>
   );
 }

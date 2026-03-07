@@ -75,7 +75,64 @@ function formatTimestamp(createdAt: string): string {
 // ── Game queries ──────────────────────────────────────────────
 
 export async function getAllGames(supabase: Client): Promise<Game[]> {
-  const { data, error } = await supabase.from("games").select("*").order("title");
+  const { data, error } = await supabase.from("games").select("*").order("title").limit(2500);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
+}
+
+export async function getTrendingGames(supabase: Client): Promise<Game[]> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("release_status", "released")
+    .eq("is_suppressed", false)
+    .gt("current_price", 0)
+    .order("updated_at", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
+}
+
+export async function getGamesOnSale(supabase: Client): Promise<Game[]> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("is_on_sale", true)
+    .eq("is_suppressed", false)
+    .order("discount", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
+}
+
+export async function getRecentReleases(supabase: Client): Promise<Game[]> {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("release_status", "released")
+    .eq("is_suppressed", false)
+    .gte("release_date", thirtyDaysAgo)
+    .neq("release_date", "2099-12-31")
+    .neq("release_date", "2020-01-01")
+    .order("release_date", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
+}
+
+export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
+  const today = new Date().toISOString().split("T")[0];
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .in("release_status", ["upcoming", "out_today"])
+    .eq("is_suppressed", false)
+    .gte("release_date", today)
+    .neq("release_date", "2099-12-31")
+    .gt("original_price", 0)
+    .order("release_date", { ascending: true })
+    .limit(100);
   if (error) throw error;
   return (data ?? []).map(mapGame);
 }
@@ -127,11 +184,32 @@ export async function getFranchiseByName(supabase: Client, name: string): Promis
 // ── Alert queries ─────────────────────────────────────────────
 
 export async function getAlerts(supabase: Client, userId?: string): Promise<GameAlert[]> {
-  const { data, error } = await supabase
+  // If user is logged in, only show alerts for games they follow
+  let followedGameIds: Set<string> | null = null;
+  if (userId) {
+    const { data: follows } = await supabase
+      .from("user_game_follows")
+      .select("game_id")
+      .eq("user_id", userId);
+    followedGameIds = new Set((follows ?? []).map((f: { game_id: string }) => f.game_id));
+  }
+
+  let query = supabase
     .from("alerts")
     .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art, slug )")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
+  // If user follows games, filter to those games only
+  if (followedGameIds && followedGameIds.size > 0) {
+    query = query.in("game_id", Array.from(followedGameIds));
+  } else if (userId) {
+    // User is logged in but follows nothing — return empty
+    return [];
+  }
+  // If not logged in, show recent global alerts as a preview (limit already set)
+
+  const { data, error } = await query;
   if (error) throw error;
 
   const readMap = new Map<string, boolean>();

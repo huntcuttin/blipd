@@ -6,7 +6,7 @@ import GameCard, { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } 
 
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
+import { getGamesOnSale, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import type { Game } from "@/lib/types";
 
@@ -39,7 +39,7 @@ export default function SalesPage() {
   const [sort, setSort] = useState<SortMode>("Biggest Discount");
   const { followedGameIds, followedFranchiseIds } = useFollow();
 
-  const { data: games, loading: gamesLoading } = useSupabaseQuery(getAllGames);
+  const { data: games, loading: gamesLoading } = useSupabaseQuery(getGamesOnSale);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
 
   useEffect(() => {
@@ -64,14 +64,13 @@ export default function SalesPage() {
       .map((f) => f.name)
   );
 
-  const onSale = allGames.filter((g) => g.isOnSale && !g.isSuppressed);
-
+  // Games are already filtered to on-sale by the query
   const filteredSales =
     filter === "My Games"
-      ? onSale.filter((g) => followedGameIds.has(g.id))
+      ? allGames.filter((g) => followedGameIds.has(g.id))
       : filter === "My Franchises"
-      ? onSale.filter((g) => g.franchise && followedFranchiseNames.has(g.franchise))
-      : onSale;
+      ? allGames.filter((g) => g.franchise && followedFranchiseNames.has(g.franchise))
+      : allGames;
 
   const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow);
   const sortedSales = sortGames(
@@ -79,8 +78,8 @@ export default function SalesPage() {
     sort
   );
 
-  const myGamesCount = onSale.filter((g) => followedGameIds.has(g.id)).length;
-  const myFranchisesCount = onSale.filter(
+  const myGamesCount = allGames.filter((g) => followedGameIds.has(g.id)).length;
+  const myFranchisesCount = allGames.filter(
     (g) => g.franchise && followedFranchiseNames.has(g.franchise)
   ).length;
 

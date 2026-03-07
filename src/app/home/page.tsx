@@ -10,7 +10,7 @@ import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
+import { getTrendingGames, getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { computeTrendingScore } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
@@ -24,7 +24,8 @@ export default function HomePage() {
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { user, signOut } = useAuth();
   const { followedGameIds, followedFranchiseIds } = useFollow();
-  const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getAllGames);
+  const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
+  const { data: games } = useSupabaseQuery(getAllGames);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
 
   // Swipe handling
@@ -191,9 +192,9 @@ export default function HomePage() {
           >
             {activeTab === "Discover" && (
               <DiscoverTab
-                allGames={allGames}
-                loading={gamesLoading}
-                error={gamesError}
+                trendingGames={trendingData ?? []}
+                loading={trendingLoading}
+                error={trendingError}
                 followedFranchises={new Set(
                   allFranchises.filter((f) => followedFranchiseIds.has(f.id)).map((f) => f.name)
                 )}
@@ -218,25 +219,23 @@ export default function HomePage() {
 // ── Discover Tab ──────────────────────────────────────────────
 
 function DiscoverTab({
-  allGames,
+  trendingGames,
   loading,
   error,
   followedFranchises,
 }: {
-  allGames: Game[];
+  trendingGames: Game[];
   loading: boolean;
   error: Error | null;
   followedFranchises: Set<string>;
 }) {
-  const trending = useMemo(() => {
-    const visible = allGames.filter((g) => !g.isSuppressed);
-    return [...visible]
-      .filter((g) => g.releaseStatus === "released")
+  const sorted = useMemo(() => {
+    return [...trendingGames]
       .sort((a, b) =>
         computeTrendingScore(b, { followedFranchises }) - computeTrendingScore(a, { followedFranchises })
       )
       .slice(0, 40);
-  }, [allGames, followedFranchises]);
+  }, [trendingGames, followedFranchises]);
 
   if (loading) {
     return (
@@ -248,27 +247,19 @@ function DiscoverTab({
     );
   }
 
-  if (error || allGames.length === 0) {
+  if (error || sorted.length === 0) {
     return (
       <div className="text-center py-16">
         <p className="text-[#666666] text-sm">
-          {error ? "Failed to load games" : "No games available"}
+          {error ? "Failed to load games" : "No trending games"}
         </p>
-      </div>
-    );
-  }
-
-  if (trending.length === 0) {
-    return (
-      <div className="text-center py-16">
-        <p className="text-[#666666] text-sm">No trending games</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      {trending.map((game) => (
+      {sorted.map((game) => (
         <GameCard key={game.id} game={game} />
       ))}
     </div>
