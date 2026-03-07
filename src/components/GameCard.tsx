@@ -60,7 +60,11 @@ export default memo(function GameCard({ game }: { game: Game }) {
               </>
             ) : (
               <span className="text-white font-bold text-base">
-                {game.currentPrice > 0 ? `$${game.currentPrice.toFixed(2)}` : "Free"}
+                {game.currentPrice > 0
+                  ? `$${game.currentPrice.toFixed(2)}`
+                  : game.originalPrice > 0
+                  ? `$${game.originalPrice.toFixed(2)}`
+                  : ""}
               </span>
             )}
           </div>

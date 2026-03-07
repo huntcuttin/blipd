@@ -215,6 +215,35 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     igdbDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status });
   }
 
+  // Find which games already exist (by nsuid) so we don't overwrite their prices
+  const existingNsuids = new Set<string>();
+  const existingSlugs = new Set<string>();
+  const { data: existingByNsuid } = await supabase
+    .from("games")
+    .select("nsuid")
+    .not("nsuid", "is", null);
+  for (const g of existingByNsuid ?? []) {
+    if (g.nsuid) existingNsuids.add(g.nsuid);
+  }
+  const { data: existingBySlug } = await supabase
+    .from("games")
+    .select("slug");
+  for (const g of existingBySlug ?? []) {
+    existingSlugs.add(g.slug);
+  }
+
+  // Strip price fields from rows that already exist in DB
+  // (price update cron handles prices — catalog sync should not overwrite them)
+  const PRICE_FIELDS = ["current_price", "original_price", "discount", "is_on_sale", "is_all_time_low", "price_history"];
+
+  function stripPriceFields(row: Record<string, unknown>) {
+    const stripped = { ...row };
+    for (const field of PRICE_FIELDS) {
+      delete stripped[field];
+    }
+    return stripped;
+  }
+
   // Upsert in batches of 100
   const BATCH_SIZE = 100;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
@@ -225,9 +254,13 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     const withoutNsuid = batch.filter((r) => !r.nsuid);
 
     if (withNsuid.length > 0) {
+      // For existing games, strip price fields; for new games, include them
+      const upsertRows = withNsuid.map((r) =>
+        existingNsuids.has(r.nsuid!) ? stripPriceFields(r) : r
+      );
       const { error } = await supabase
         .from("games")
-        .upsert(withNsuid, { onConflict: "nsuid", ignoreDuplicates: false });
+        .upsert(upsertRows, { onConflict: "nsuid", ignoreDuplicates: false });
       if (error) {
         console.error(`  Batch error (nsuid) at index ${i}:`, error.message);
         errors++;
@@ -237,9 +270,12 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     }
 
     if (withoutNsuid.length > 0) {
+      const upsertRows = withoutNsuid.map((r) =>
+        existingSlugs.has(r.slug) ? stripPriceFields(r) : r
+      );
       const { error } = await supabase
         .from("games")
-        .upsert(withoutNsuid, { onConflict: "slug", ignoreDuplicates: false });
+        .upsert(upsertRows, { onConflict: "slug", ignoreDuplicates: false });
       if (error) {
         console.error(`  Batch error (slug) at index ${i}:`, error.message);
         errors++;
