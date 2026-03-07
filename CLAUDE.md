@@ -67,6 +67,8 @@ migrations/               # SQL migration files
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser + server | Supabase anon/public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | server only | Admin operations (ingestion, seeds) |
 | `CRON_SECRET` | server only | Auth header for Vercel cron endpoints |
+| `TWITCH_CLIENT_ID` | server only | IGDB API auth (from dev.twitch.tv) |
+| `TWITCH_CLIENT_SECRET` | server only | IGDB API auth |
 
 ## Data Model
 
@@ -96,6 +98,7 @@ migrations/               # SQL migration files
 | upgrade_pack_nsuid | text? | nsuid of upgrade pack if exists |
 | upgrade_pack_price | numeric? | Price of upgrade pack |
 | is_suppressed | boolean | Default false, hides duplicate SKUs from list views |
+| release_date_source | text | 'igdb', 'eshop', 'manual', 'unknown' |
 | created_at, updated_at | timestamptz | |
 
 ### franchises
@@ -354,6 +357,17 @@ Publisher sets the time per Nintendo docs, but 9 AM PT is the dominant pattern.
 Burst windows fire every 5 min (filling gaps between the 10-min base) to catch releases faster during the two primary eShop drop windows.
 
 Auth: `Bearer $CRON_SECRET` header, verified in route handler.
+
+## IGDB Release Date Sync
+- Source: IGDB API (free tier, Twitch OAuth, 4 req/sec)
+- File: `src/lib/igdb.ts` — token caching, game search, release date fetch
+- Cron: `/api/cron/sync-release-dates` — processes 50 games per run
+- External cron via cron-job.org (NOT vercel.json): `0 3 * * *` (3am UTC daily)
+- URL: `https://blipd.vercel.app/api/cron/sync-release-dates`
+- Header: `Authorization: Bearer $CRON_SECRET`
+- Matching: exact title → stripped trademarks → single-result confidence
+- Games with `release_date_source = 'igdb'` are protected from catalog sync overwriting
+- IGDB platform ID for Switch: 130
 
 ## Key Files
 - `src/lib/nintendo/client.ts` — Algolia + Price API fetchers

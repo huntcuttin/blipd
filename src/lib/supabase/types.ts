@@ -28,6 +28,7 @@ export interface Database {
           upgrade_pack_nsuid: string | null;
           upgrade_pack_price: number | null;
           is_suppressed: boolean;
+          release_date_source: string;
           created_at: string;
           updated_at: string;
         };
@@ -55,6 +56,7 @@ export interface Database {
           upgrade_pack_nsuid?: string | null;
           upgrade_pack_price?: number | null;
           is_suppressed?: boolean;
+          release_date_source?: string;
           created_at?: string;
           updated_at?: string;
         };

@@ -205,6 +205,16 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     }
   }
 
+  // Save IGDB-sourced release dates before upsert (upsert will overwrite them)
+  const { data: igdbDates } = await supabase
+    .from("games")
+    .select("id, release_date, release_status")
+    .eq("release_date_source", "igdb");
+  const igdbDateMap = new Map<string, { release_date: string; release_status: string }>();
+  for (const g of igdbDates ?? []) {
+    igdbDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status });
+  }
+
   // Upsert in batches of 100
   const BATCH_SIZE = 100;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
@@ -236,6 +246,21 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
       } else {
         upserted += withoutNsuid.length;
       }
+    }
+  }
+
+  // Restore IGDB-sourced release dates that were overwritten by upsert
+  if (igdbDateMap.size > 0) {
+    console.log(`  Restoring ${igdbDateMap.size} IGDB-sourced release dates...`);
+    for (const [id, dates] of Array.from(igdbDateMap.entries())) {
+      await supabase
+        .from("games")
+        .update({
+          release_date: dates.release_date,
+          release_status: dates.release_status,
+          release_date_source: "igdb",
+        })
+        .eq("id", id);
     }
   }
 
