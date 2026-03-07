@@ -10,18 +10,23 @@ import {
   unfollowGame as dbUnfollowGame,
   followFranchise as dbFollowFranchise,
   unfollowFranchise as dbUnfollowFranchise,
+  updateFollowPreferences as dbUpdatePrefs,
 } from "@/lib/queries";
 
-const MAX_FREE_FOLLOWS = 5;
+export interface NotifyPrefs {
+  notifyRelease: boolean;
+  notifyPrice: boolean;
+}
 
 interface FollowContextType {
   followedGameIds: Set<string>;
   followedFranchiseIds: Set<string>;
-  toggleFollowGame: (gameId: string) => boolean;
+  toggleFollowGame: (gameId: string) => void;
   toggleFollowFranchise: (franchiseId: string) => void;
   isFollowingGame: (gameId: string) => boolean;
   isFollowingFranchise: (franchiseId: string) => boolean;
-  isAtLimit: boolean;
+  getNotifyPrefs: (gameId: string) => NotifyPrefs;
+  updateNotifyPrefs: (gameId: string, prefs: Partial<NotifyPrefs>) => void;
   followCount: number;
   loading: boolean;
 }
@@ -32,6 +37,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [followedGameIds, setFollowedGameIds] = useState<Set<string>>(new Set());
   const [followedFranchiseIds, setFollowedFranchiseIds] = useState<Set<string>>(new Set());
+  const [notifyPrefsMap, setNotifyPrefsMap] = useState<Map<string, NotifyPrefs>>(new Map());
   const [loading, setLoading] = useState(false);
 
   // Load follows from Supabase when user logs in
@@ -39,6 +45,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setFollowedGameIds(new Set());
       setFollowedFranchiseIds(new Set());
+      setNotifyPrefsMap(new Map());
       return;
     }
 
@@ -48,18 +55,22 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       getUserGameFollows(supabase, user.id),
       getUserFranchiseFollows(supabase, user.id),
     ])
-      .then(([gameIds, franchiseIds]) => {
-        setFollowedGameIds(new Set(gameIds));
+      .then(([gameFollows, franchiseIds]) => {
+        setFollowedGameIds(new Set(gameFollows.map((f) => f.gameId)));
+        const prefsMap = new Map<string, NotifyPrefs>();
+        for (const f of gameFollows) {
+          prefsMap.set(f.gameId, { notifyRelease: f.notifyRelease, notifyPrice: f.notifyPrice });
+        }
+        setNotifyPrefsMap(prefsMap);
         setFollowedFranchiseIds(new Set(franchiseIds));
       })
       .finally(() => setLoading(false));
   }, [user]);
 
   const followCount = followedGameIds.size;
-  const isAtLimit = followCount >= MAX_FREE_FOLLOWS;
 
   const toggleFollowGame = useCallback(
-    (gameId: string): boolean => {
+    (gameId: string) => {
       const supabase = createClient();
       if (followedGameIds.has(gameId)) {
         setFollowedGameIds((prev) => {
@@ -68,12 +79,15 @@ export function FollowProvider({ children }: { children: ReactNode }) {
           return next;
         });
         if (user) dbUnfollowGame(supabase, user.id, gameId);
-        return true;
+        return;
       }
-      if (followedGameIds.size >= MAX_FREE_FOLLOWS) return false;
       setFollowedGameIds((prev) => new Set(prev).add(gameId));
+      setNotifyPrefsMap((prev) => {
+        const next = new Map(prev);
+        next.set(gameId, { notifyRelease: true, notifyPrice: true });
+        return next;
+      });
       if (user) dbFollowGame(supabase, user.id, gameId);
-      return true;
     },
     [followedGameIds, user]
   );
@@ -106,6 +120,28 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     [followedFranchiseIds]
   );
 
+  const getNotifyPrefs = useCallback(
+    (gameId: string): NotifyPrefs =>
+      notifyPrefsMap.get(gameId) ?? { notifyRelease: true, notifyPrice: true },
+    [notifyPrefsMap]
+  );
+
+  const updateNotifyPrefs = useCallback(
+    (gameId: string, prefs: Partial<NotifyPrefs>) => {
+      setNotifyPrefsMap((prev) => {
+        const next = new Map(prev);
+        const current = prev.get(gameId) ?? { notifyRelease: true, notifyPrice: true };
+        next.set(gameId, { ...current, ...prefs });
+        return next;
+      });
+      if (user) {
+        const supabase = createClient();
+        dbUpdatePrefs(supabase, user.id, gameId, prefs);
+      }
+    },
+    [user]
+  );
+
   return (
     <FollowContext.Provider
       value={{
@@ -115,7 +151,8 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         toggleFollowFranchise,
         isFollowingGame,
         isFollowingFranchise,
-        isAtLimit,
+        getNotifyPrefs,
+        updateNotifyPrefs,
         followCount,
         loading,
       }}

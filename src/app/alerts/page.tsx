@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AlertCard from "@/components/AlertCard";
-import UpsellBanner from "@/components/UpsellBanner";
+
 import { useAuth } from "@/lib/AuthContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getAlerts, markAlertRead } from "@/lib/queries";
@@ -84,11 +84,6 @@ export default function AlertsPage() {
             </span>
           )}
         </div>
-      </div>
-
-      {/* Upsell banner */}
-      <div className="mb-4">
-        <UpsellBanner variant="top" />
       </div>
 
       {isEmpty ? (

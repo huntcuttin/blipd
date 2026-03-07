@@ -7,11 +7,12 @@ import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardCompact } from "@/components/GameCard";
 import FollowButton from "@/components/FollowButton";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
-import UpsellBanner from "@/components/UpsellBanner";
+
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
+import { computeGameScore } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
 
 type DateGroup = "today" | "tomorrow" | "this_week" | "next_week" | "later";
@@ -44,7 +45,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>("Discover");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
-  const { followedGameIds, followedFranchiseIds, isAtLimit } = useFollow();
+  const { followedGameIds, followedFranchiseIds } = useFollow();
 
   const { data: games } = useSupabaseQuery(getAllGames);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
@@ -186,7 +187,7 @@ export default function HomePage() {
             className="min-h-[60vh]"
           >
             {activeTab === "Discover" && (
-              <UpcomingTab allGames={allGames} isAtLimit={isAtLimit} />
+              <UpcomingTab allGames={allGames} />
             )}
             {activeTab === "My Games" && (
               <MyGamesTab games={followedGames} />
@@ -208,13 +209,11 @@ export default function HomePage() {
 
 function UpcomingTab({
   allGames,
-  isAtLimit,
 }: {
   allGames: Game[];
-  isAtLimit: boolean;
 }) {
   const upcomingGames = allGames
-    .filter((g) => g.releaseStatus === "upcoming" || g.releaseStatus === "out_today")
+    .filter((g) => (g.releaseStatus === "upcoming" || g.releaseStatus === "out_today") && g.releaseDate < "2099-01-01")
     .sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime());
 
   const groupedUpcoming: Record<DateGroup, Game[]> = {
@@ -224,7 +223,15 @@ function UpcomingTab({
     groupedUpcoming[getDateGroup(game.releaseDate)].push(game);
   });
 
-  const trending = allGames.filter((g) => g.releaseStatus === "released").slice(0, 8);
+  // Sort each group by ranking score (highest first)
+  for (const group of Object.values(groupedUpcoming)) {
+    group.sort((a, b) => computeGameScore(b) - computeGameScore(a));
+  }
+
+  const trending = [...allGames]
+    .filter((g) => g.releaseStatus === "released")
+    .sort((a, b) => computeGameScore(b) - computeGameScore(a))
+    .slice(0, 8);
 
   return (
     <>
@@ -250,12 +257,6 @@ function UpcomingTab({
               </div>
             );
           })}
-        </div>
-      )}
-
-      {isAtLimit && (
-        <div className="mb-4">
-          <UpsellBanner />
         </div>
       )}
 

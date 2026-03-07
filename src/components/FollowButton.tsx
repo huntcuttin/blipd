@@ -1,7 +1,6 @@
 "use client";
 
 import { useFollow } from "@/lib/FollowContext";
-import { useState } from "react";
 
 export default function FollowButton({
   gameId,
@@ -10,18 +9,13 @@ export default function FollowButton({
   gameId: string;
   size?: "default" | "large";
 }) {
-  const { isFollowingGame, toggleFollowGame, isAtLimit } = useFollow();
+  const { isFollowingGame, toggleFollowGame } = useFollow();
   const following = isFollowingGame(gameId);
-  const [showLimitToast, setShowLimitToast] = useState(false);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const success = toggleFollowGame(gameId);
-    if (!success) {
-      setShowLimitToast(true);
-      setTimeout(() => setShowLimitToast(false), 2000);
-    }
+    toggleFollowGame(gameId);
   };
 
   const isLarge = size === "large";
@@ -37,27 +31,6 @@ export default function FollowButton({
         <CheckIcon className={isLarge ? "w-5 h-5" : "w-3.5 h-3.5"} />
         Following
       </button>
-    );
-  }
-
-  if (isAtLimit && !following) {
-    return (
-      <div className="relative">
-        <button
-          onClick={handleClick}
-          className={`flex items-center gap-1.5 font-semibold rounded-lg border border-[#444444] text-[#444444] transition-all ${
-            isLarge ? "px-6 py-3 text-base w-full justify-center" : "px-3 py-1.5 text-xs"
-          }`}
-        >
-          <LockIcon className={isLarge ? "w-5 h-5" : "w-3.5 h-3.5"} />
-          Follow
-        </button>
-        {showLimitToast && (
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[#111111] border border-[#00ff88]/30 rounded-lg text-xs text-white whitespace-nowrap shadow-[0_0_12px_#00ff8844] z-50">
-            Upgrade to Blipd Pro for unlimited follows
-          </div>
-        )}
-      </div>
     );
   }
 
@@ -86,14 +59,6 @@ function CheckIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-    </svg>
-  );
-}
-
-function LockIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
     </svg>
   );
 }

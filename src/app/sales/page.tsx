@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardCompact } from "@/components/GameCard";
-import UpsellBanner from "@/components/UpsellBanner";
+
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
+import { computeGameScore } from "@/lib/ranking";
 import type { Game } from "@/lib/types";
 
 const FILTERS = ["All", "My Games", "My Franchises"] as const;
@@ -17,7 +18,7 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const [filter, setFilter] = useState<Filter>("All");
-  const { followedGameIds, followedFranchiseIds, isAtLimit } = useFollow();
+  const { followedGameIds, followedFranchiseIds } = useFollow();
 
   const { data: games } = useSupabaseQuery(getAllGames);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
@@ -56,7 +57,11 @@ export default function SalesPage() {
       : onSale;
 
   const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow);
-  const biggestDiscounts = [...filteredSales].sort((a, b) => b.discount - a.discount);
+  const releasedSales = filteredSales
+    .filter((g) => g.releaseStatus === "released")
+    .sort((a, b) => b.discount - a.discount);
+  const preorderDeals = filteredSales.filter((g) => g.releaseStatus === "upcoming" || g.releaseStatus === "out_today");
+  const allDeals = [...releasedSales].sort((a, b) => computeGameScore(b) - computeGameScore(a));
 
   const myGamesCount = onSale.filter((g) => followedGameIds.has(g.id)).length;
   const myFranchisesCount = onSale.filter(
@@ -158,27 +163,33 @@ export default function SalesPage() {
                 </Section>
               )}
 
-              {/* Biggest Discounts */}
-              <Section title="Biggest Discounts">
-                <div className="space-y-2">
-                  {biggestDiscounts.slice(0, 10).map((game) => (
-                    <GameCard key={game.id} game={game} />
-                  ))}
-                </div>
-              </Section>
-
-              {/* Upsell */}
-              {isAtLimit && (
-                <div className="my-4">
-                  <UpsellBanner />
-                </div>
+              {/* Recently Discounted */}
+              {releasedSales.length > 0 && (
+                <Section title="Recently Discounted">
+                  <div className="space-y-2">
+                    {releasedSales.slice(0, 10).map((game) => (
+                      <GameCard key={game.id} game={game} />
+                    ))}
+                  </div>
+                </Section>
               )}
 
-              {/* All On Sale */}
-              {filteredSales.length > biggestDiscounts.slice(0, 10).length && (
-                <Section title="All On Sale">
+              {/* Pre-order Deals */}
+              {preorderDeals.length > 0 && (
+                <Section title="Pre-order Deals">
                   <div className="space-y-2">
-                    {filteredSales.map((game) => (
+                    {preorderDeals.map((game) => (
+                      <GameCard key={game.id} game={game} />
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              {/* All Deals */}
+              {allDeals.length > releasedSales.slice(0, 10).length && (
+                <Section title="All Deals">
+                  <div className="space-y-2">
+                    {allDeals.map((game) => (
                       <GameCard key={game.id} game={game} />
                     ))}
                   </div>
