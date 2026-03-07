@@ -111,3 +111,29 @@ create policy "Users can upsert own alert status"
   on user_alert_status for insert with check (auth.uid() = user_id);
 create policy "Users can update own alert status"
   on user_alert_status for update using (auth.uid() = user_id);
+
+-- ── User profiles ───────────────────────────────────────────
+create table if not exists user_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  console_preference text,
+  updated_at timestamptz not null default now()
+);
+
+alter table user_profiles enable row level security;
+create policy "Users can view own profile"
+  on user_profiles for select using (auth.uid() = user_id);
+create policy "Users can insert own profile"
+  on user_profiles for insert with check (auth.uid() = user_id);
+create policy "Users can update own profile"
+  on user_profiles for update using (auth.uid() = user_id);
+
+-- ── Notification log ────────────────────────────────────────
+create table if not exists notification_log (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  alert_id uuid references alerts(id) on delete cascade,
+  channel text not null default 'email',
+  status text not null default 'sent',
+  error text,
+  created_at timestamptz not null default now()
+);
