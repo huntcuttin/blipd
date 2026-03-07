@@ -81,6 +81,11 @@ export default function HomePage() {
   const unfollowedFranchises = allFranchises.filter(
     (f) => !followedFranchiseIds.has(f.id)
   );
+  const followedFranchiseNames = useMemo(
+    () => new Set(followedFranchiseList.map((f) => f.name)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [followedFranchiseList.length, followedFranchiseIds]
+  );
 
   return (
     <div className="px-4">
@@ -199,9 +204,7 @@ export default function HomePage() {
                 trendingGames={trendingData ?? []}
                 loading={trendingLoading}
                 error={trendingError}
-                followedFranchises={new Set(
-                  allFranchises.filter((f) => followedFranchiseIds.has(f.id)).map((f) => f.name)
-                )}
+                followedFranchises={followedFranchiseNames}
               />
             )}
             {activeTab === "My Games" && (
