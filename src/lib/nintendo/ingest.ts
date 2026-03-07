@@ -458,7 +458,16 @@ export async function runPriceUpdate(options?: {
     }
   }
 
-  // Process each game
+  // Mark ALL polled games so they don't clog the queue on next run
+  const allPolledIds = games.map((g) => g.id);
+  if (allPolledIds.length > 0) {
+    await supabase
+      .from("games")
+      .update({ last_price_check: new Date().toISOString() })
+      .in("id", allPolledIds);
+  }
+
+  // Process each game that got a price response
   const gameIds: string[] = [];
   for (const game of games) {
     const priceInfo = priceMap.get(game.nsuid!);
@@ -523,14 +532,6 @@ export async function runPriceUpdate(options?: {
         }
       }
     }
-  }
-
-  // Bulk update last_price_check
-  if (gameIds.length > 0) {
-    await supabase
-      .from("games")
-      .update({ last_price_check: new Date().toISOString() })
-      .in("id", gameIds);
   }
 
   console.log(`Price update complete: ${games.length} checked, ${priceChanges} changes, ${alertsCreated} alerts`);
