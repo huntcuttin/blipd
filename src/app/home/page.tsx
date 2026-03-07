@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
@@ -12,8 +12,7 @@ import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { computeTrendingScore } from "@/lib/ranking";
-import { useAuth } from "@/lib/AuthContext";
-import type { Game, Franchise, ConsolePreference } from "@/lib/types";
+import type { Game, Franchise } from "@/lib/types";
 
 const TABS = ["Discover", "My Games", "My Franchises"] as const;
 type Tab = (typeof TABS)[number];
@@ -23,8 +22,6 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { followedGameIds, followedFranchiseIds } = useFollow();
-  const { consolePreference } = useAuth();
-
   const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getAllGames);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
 
@@ -172,7 +169,6 @@ export default function HomePage() {
                 followedFranchises={new Set(
                   allFranchises.filter((f) => followedFranchiseIds.has(f.id)).map((f) => f.name)
                 )}
-                consolePreference={consolePreference}
               />
             )}
             {activeTab === "My Games" && (
@@ -193,27 +189,17 @@ export default function HomePage() {
 
 // ── Discover Tab ──────────────────────────────────────────────
 
-type DiscoverSubTab = "Trending" | "Upcoming" | "Out Now";
-type PlatformFilter = "all" | "switch2";
-
 function DiscoverTab({
   allGames,
   loading,
   error,
   followedFranchises,
-  consolePreference,
 }: {
   allGames: Game[];
   loading: boolean;
   error: Error | null;
   followedFranchises: Set<string>;
-  consolePreference: ConsolePreference | null;
 }) {
-  const [subTab, setSubTab] = useState<DiscoverSubTab>("Trending");
-  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(
-    consolePreference === "switch2" ? "switch2" : "all"
-  );
-
   if (loading) {
     return (
       <div className="space-y-3">
@@ -234,72 +220,9 @@ function DiscoverTab({
     );
   }
 
-  // Filter out suppressed games for all list views
   const visibleGames = allGames.filter((g) => !g.isSuppressed);
 
-  // Platform filter — match switch2_nsuid OR title containing "Switch 2"
-  const filtered = platformFilter === "switch2"
-    ? visibleGames.filter((g) => g.switch2Nsuid || /switch\s*2/i.test(g.title))
-    : visibleGames;
-
-  const SUB_TABS: DiscoverSubTab[] = ["Trending", "Upcoming", "Out Now"];
-
-  return (
-    <div className="flex flex-col">
-      {/* Sub-tab pills */}
-      <div className="flex gap-2 mb-4">
-        {SUB_TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setSubTab(tab)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              subTab === tab
-                ? "bg-[#00ff88]/15 text-[#00ff88]"
-                : "bg-[#1a1a1a] text-[#666666] hover:text-white"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Game list */}
-      <div className="mb-4">
-        {subTab === "Trending" && (
-          <TrendingView games={filtered} followedFranchises={followedFranchises} />
-        )}
-        {subTab === "Upcoming" && (
-          <UpcomingView games={filtered} />
-        )}
-        {subTab === "Out Now" && (
-          <OutNowView games={filtered} />
-        )}
-      </div>
-
-      {/* Platform toggle — bottom section */}
-      <div className="sticky bottom-20 z-10 py-3">
-        <div className="flex p-1 bg-[#111111] rounded-xl border border-[#222222]">
-          {(["all", "switch2"] as PlatformFilter[]).map((pf) => (
-            <button
-              key={pf}
-              onClick={() => setPlatformFilter(pf)}
-              className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-                platformFilter === pf
-                  ? "bg-[#1a1a1a] text-white"
-                  : "text-[#666666] hover:text-white"
-              }`}
-            >
-              {pf === "all" ? "All Platforms" : "Switch 2 Only"}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TrendingView({ games, followedFranchises }: { games: Game[]; followedFranchises: Set<string> }) {
-  const trending = [...games]
+  const trending = [...visibleGames]
     .filter((g) => g.releaseStatus === "released" && g.currentPrice > 0)
     .sort((a, b) =>
       computeTrendingScore(b, { followedFranchises }) - computeTrendingScore(a, { followedFranchises })
@@ -307,7 +230,11 @@ function TrendingView({ games, followedFranchises }: { games: Game[]; followedFr
     .slice(0, 20);
 
   if (trending.length === 0) {
-    return <EmptyState text="No trending games" />;
+    return (
+      <div className="text-center py-16">
+        <p className="text-[#666666] text-sm">No trending games</p>
+      </div>
+    );
   }
 
   return (
@@ -315,67 +242,6 @@ function TrendingView({ games, followedFranchises }: { games: Game[]; followedFr
       {trending.map((game) => (
         <GameCard key={game.id} game={game} />
       ))}
-    </div>
-  );
-}
-
-function UpcomingView({ games }: { games: Game[] }) {
-  const now = new Date();
-  const sixtyDaysOut = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-
-  const upcoming = games
-    .filter(
-      (g) =>
-        (g.releaseStatus === "upcoming" || g.releaseStatus === "out_today") &&
-        g.releaseDate >= now.toISOString().split("T")[0] &&
-        g.releaseDate <= sixtyDaysOut
-    )
-    .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
-
-  if (upcoming.length === 0) {
-    return <EmptyState text="No upcoming games in the next 60 days" />;
-  }
-
-  return (
-    <div className="space-y-2">
-      {upcoming.map((game) => (
-        <GameCard key={game.id} game={game} />
-      ))}
-    </div>
-  );
-}
-
-function OutNowView({ games }: { games: Game[] }) {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-
-  const outNow = games
-    .filter(
-      (g) =>
-        g.releaseStatus === "released" &&
-        g.releaseDate >= thirtyDaysAgo &&
-        g.releaseDate !== "2099-12-31" &&
-        g.releaseDate !== "2020-01-01"
-    )
-    .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate));
-
-  if (outNow.length === 0) {
-    return <EmptyState text="No new releases in the last 30 days" />;
-  }
-
-  return (
-    <div className="space-y-2">
-      {outNow.map((game) => (
-        <GameCard key={game.id} game={game} />
-      ))}
-    </div>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="text-center py-16">
-      <p className="text-[#666666] text-sm">{text}</p>
     </div>
   );
 }
