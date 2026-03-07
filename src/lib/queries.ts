@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Game, Franchise, GameAlert, ConsolePreference } from "@/lib/types";
+import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs } from "@/lib/types";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { DEFAULT_NOTIFY_PREFS } from "@/lib/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;
@@ -41,6 +43,17 @@ function mapFranchise(row: any): Franchise {
     name: row.name,
     gameCount: row.game_count,
     logo: row.logo,
+    popularityScore: row.popularity_score ?? 0,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapNotifyPrefs(row: any): NotifyPrefs {
+  return {
+    announcements: row.notify_announcements ?? true,
+    sales: row.notify_sales ?? true,
+    allTimeLow: row.notify_all_time_low ?? true,
+    releases: row.notify_releases ?? true,
   };
 }
 
@@ -170,7 +183,7 @@ export async function getGamesByIds(supabase: Client, ids: string[]): Promise<Ga
 // ── Franchise queries ─────────────────────────────────────────
 
 export async function getAllFranchises(supabase: Client): Promise<Franchise[]> {
-  const { data, error } = await supabase.from("franchises").select("*").order("name");
+  const { data, error } = await supabase.from("franchises").select("*").order("popularity_score", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapFranchise);
 }
@@ -307,23 +320,42 @@ export async function setConsolePreference(supabase: Client, userId: string, pre
 
 // ── Follow queries ────────────────────────────────────────────
 
-export async function getUserGameFollows(supabase: Client, userId: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("user_game_follows")
-    .select("game_id")
-    .eq("user_id", userId);
-  if (error) throw error;
-  return (data ?? []).map((r: { game_id: string }) => r.game_id);
+export interface GameFollowRecord {
+  gameId: string;
+  prefs: NotifyPrefs;
 }
 
-export async function getUserFranchiseFollows(supabase: Client, userId: string): Promise<string[]> {
+export async function getUserGameFollows(supabase: Client, userId: string): Promise<GameFollowRecord[]> {
   const { data, error } = await supabase
-    .from("user_franchise_follows")
-    .select("franchise_id")
+    .from("user_game_follows")
+    .select("game_id, notify_announcements, notify_sales, notify_all_time_low, notify_releases")
     .eq("user_id", userId);
   if (error) throw error;
-  return (data ?? []).map((r: { franchise_id: string }) => r.franchise_id);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((r: any) => ({
+    gameId: r.game_id,
+    prefs: mapNotifyPrefs(r),
+  }));
 }
+
+export interface FranchiseFollowRecord {
+  franchiseId: string;
+  prefs: NotifyPrefs;
+}
+
+export async function getUserFranchiseFollows(supabase: Client, userId: string): Promise<FranchiseFollowRecord[]> {
+  const { data, error } = await supabase
+    .from("user_franchise_follows")
+    .select("franchise_id, notify_announcements, notify_sales, notify_all_time_low, notify_releases")
+    .eq("user_id", userId);
+  if (error) throw error;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((r: any) => ({
+    franchiseId: r.franchise_id,
+    prefs: mapNotifyPrefs(r),
+  }));
+}
+
 
 export async function followGame(supabase: Client, userId: string, gameId: string) {
   await supabase.from("user_game_follows").insert({ user_id: userId, game_id: gameId });
@@ -339,5 +371,23 @@ export async function followFranchise(supabase: Client, userId: string, franchis
 
 export async function unfollowFranchise(supabase: Client, userId: string, franchiseId: string) {
   await supabase.from("user_franchise_follows").delete().eq("user_id", userId).eq("franchise_id", franchiseId);
+}
+
+export async function updateGameFollowPrefs(supabase: Client, userId: string, gameId: string, prefs: Partial<NotifyPrefs>) {
+  const update: Record<string, boolean> = {};
+  if (prefs.announcements !== undefined) update.notify_announcements = prefs.announcements;
+  if (prefs.sales !== undefined) update.notify_sales = prefs.sales;
+  if (prefs.allTimeLow !== undefined) update.notify_all_time_low = prefs.allTimeLow;
+  if (prefs.releases !== undefined) update.notify_releases = prefs.releases;
+  await supabase.from("user_game_follows").update(update).eq("user_id", userId).eq("game_id", gameId);
+}
+
+export async function updateFranchiseFollowPrefs(supabase: Client, userId: string, franchiseId: string, prefs: Partial<NotifyPrefs>) {
+  const update: Record<string, boolean> = {};
+  if (prefs.announcements !== undefined) update.notify_announcements = prefs.announcements;
+  if (prefs.sales !== undefined) update.notify_sales = prefs.sales;
+  if (prefs.allTimeLow !== undefined) update.notify_all_time_low = prefs.allTimeLow;
+  if (prefs.releases !== undefined) update.notify_releases = prefs.releases;
+  await supabase.from("user_franchise_follows").update(update).eq("user_id", userId).eq("franchise_id", franchiseId);
 }
 

@@ -389,14 +389,44 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
       }
     }
 
+    // Count games on sale per franchise for popularity scoring
+    const { data: saleData } = await supabase
+      .from("games")
+      .select("franchise")
+      .not("franchise", "is", null)
+      .eq("is_on_sale", true);
+    const saleCounts = new Map<string, number>();
+    for (const row of saleData ?? []) {
+      const name = row.franchise as string;
+      saleCounts.set(name, (saleCounts.get(name) ?? 0) + 1);
+    }
+
+    // Count followers per franchise for popularity scoring
+    const { data: followData } = await supabase
+      .from("user_franchise_follows")
+      .select("franchise_id, franchises!inner ( name )");
+    const followerCounts = new Map<string, number>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const row of (followData ?? []) as any[]) {
+      const name = row.franchises?.name as string;
+      if (name) followerCounts.set(name, (followerCounts.get(name) ?? 0) + 1);
+    }
+
     const validFranchise = (name: string) => name && name !== "[]" && name.trim() !== "";
     const franchiseRows = Array.from(franchiseCounts.entries())
       .filter(([name]) => validFranchise(name))
-      .map(([name, count]) => ({
-        name,
-        game_count: count,
-        logo: logoMap.get(name) || "",
-      }));
+      .map(([name, count]) => {
+        // Popularity = game_count * 2 + on_sale_count * 5 + follower_count * 10
+        const onSale = saleCounts.get(name) ?? 0;
+        const followers = followerCounts.get(name) ?? 0;
+        const popularity = count * 2 + onSale * 5 + followers * 10;
+        return {
+          name,
+          game_count: count,
+          logo: logoMap.get(name) || "",
+          popularity_score: popularity,
+        };
+      });
 
     if (franchiseRows.length > 0) {
       const { error } = await supabase

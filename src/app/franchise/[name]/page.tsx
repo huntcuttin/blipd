@@ -4,12 +4,16 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import GameCard from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
+import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
+import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getFranchiseByName, getGamesByFranchise } from "@/lib/queries";
+import type { NotifyPrefs } from "@/lib/types";
 
 export default function FranchiseDetailPage() {
   const params = useParams();
   const name = decodeURIComponent(params.name as string);
+  const { isFollowingFranchise, getFranchisePrefs, updateFranchisePrefs } = useFollow();
 
   const { data: franchise, loading } = useSupabaseQuery(
     (sb) => getFranchiseByName(sb, name),
@@ -118,6 +122,17 @@ export default function FranchiseDetailPage() {
         <div className="py-4 border-b border-[#222222]">
           <FranchiseFollowButton franchiseId={franchise.id} size="large" />
         </div>
+
+        {/* Notification preferences */}
+        {isFollowingFranchise(franchise.id) && (
+          <div className="py-3 border-b border-[#222222]">
+            <h2 className="text-xs font-bold text-[#666666] tracking-wider mb-2">NOTIFY ME ABOUT</h2>
+            <NotifyPrefsPanel
+              prefs={getFranchisePrefs(franchise.id)}
+              onChange={(key: keyof NotifyPrefs, value: boolean) => updateFranchisePrefs(franchise.id, { [key]: value })}
+            />
+          </div>
+        )}
 
         {/* On Sale section */}
         {onSale.length > 0 && (

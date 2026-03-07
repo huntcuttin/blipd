@@ -2,10 +2,31 @@ import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { sendAlertToUsers } from "./send";
 import type { AlertPayload } from "./types";
 
+// Map alert types to the notification preference column that controls them
+function getPrefColumn(alertType: string): string {
+  switch (alertType) {
+    case "price_drop":
+    case "sale_started":
+    case "sale_ending":
+      return "notify_sales";
+    case "all_time_low":
+      return "notify_all_time_low";
+    case "release_today":
+    case "out_now":
+      return "notify_releases";
+    case "announced":
+    case "switch2_edition_announced":
+      return "notify_announcements";
+    default:
+      return "notify_sales"; // safe fallback
+  }
+}
+
 /**
  * Dispatches notifications for all alerts created since the given timestamp.
  * Designed to run after the alert generation pipeline completes.
  * Queries recent alerts, finds users following the affected game, and sends notifications.
+ * Respects per-follow notification preferences.
  */
 export async function dispatchRecentAlerts(since: string): Promise<number> {
   const supabase = createAdminClient();
@@ -28,6 +49,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   for (const alert of alerts) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const game = alert.games as any;
+    const prefCol = getPrefColumn(alert.type);
 
     // Check if notifications were already sent for this alert
     const { data: existingLogs } = await supabase
@@ -41,13 +63,14 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       continue;
     }
 
-    // Find users following this game via user_game_follows
+    // Find users following this game who have this pref enabled
     const { data: followers } = await supabase
       .from("user_game_follows")
       .select("user_id")
-      .eq("game_id", alert.game_id);
+      .eq("game_id", alert.game_id)
+      .eq(prefCol, true);
 
-    // Also find users following the game's franchise
+    // Also find users following the game's franchise with this pref enabled
     const { data: gameData } = await supabase
       .from("games")
       .select("franchise")
@@ -56,7 +79,6 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
 
     let franchiseFollowerIds: string[] = [];
     if (gameData?.franchise) {
-      // Get franchise id
       const { data: franchise } = await supabase
         .from("franchises")
         .select("id")
@@ -67,7 +89,8 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
         const { data: franchiseFollowers } = await supabase
           .from("user_franchise_follows")
           .select("user_id")
-          .eq("franchise_id", franchise.id);
+          .eq("franchise_id", franchise.id)
+          .eq(prefCol, true);
         franchiseFollowerIds = (franchiseFollowers ?? []).map((f: { user_id: string }) => f.user_id);
       }
     }
@@ -77,7 +100,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     const allUserIds = Array.from(new Set([...gameFollowerIds, ...franchiseFollowerIds]));
 
     if (allUserIds.length === 0) {
-      console.log(`  No followers for game ${game.title} — skipping`);
+      console.log(`  No followers for game ${game.title} (pref: ${prefCol}) — skipping`);
       continue;
     }
 

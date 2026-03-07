@@ -23,11 +23,26 @@ export interface Game {
   isSuppressed: boolean;
 }
 
+export interface NotifyPrefs {
+  announcements: boolean;
+  sales: boolean;
+  allTimeLow: boolean;
+  releases: boolean;
+}
+
+export const DEFAULT_NOTIFY_PREFS: NotifyPrefs = {
+  announcements: true,
+  sales: true,
+  allTimeLow: true,
+  releases: true,
+};
+
 export interface Franchise {
   id: string;
   name: string;
   gameCount: number;
   logo: string;
+  popularityScore: number;
 }
 
 export type AlertType =

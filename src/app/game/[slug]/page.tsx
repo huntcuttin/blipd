@@ -4,14 +4,16 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import FollowButton from "@/components/FollowButton";
 import AlertCard from "@/components/AlertCard";
+import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/queries";
+import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { isFollowingFranchise } = useFollow();
+  const { isFollowingFranchise, isFollowingGame, getGamePrefs, updateGamePrefs } = useFollow();
 
   const { data: game, loading: gameLoading } = useSupabaseQuery(
     (sb) => getGameBySlug(sb, slug),
@@ -187,6 +189,17 @@ export default function GameDetailPage() {
         <div className="sticky top-0 z-10 py-4 bg-[#0a0a0a]">
           <FollowButton gameId={game.id} size="large" />
         </div>
+
+        {/* Notification preferences */}
+        {isFollowingGame(game.id) && (
+          <div className="pb-3 border-b border-[#222222]">
+            <h2 className="text-xs font-bold text-[#666666] tracking-wider mb-2">NOTIFY ME ABOUT</h2>
+            <NotifyPrefsPanel
+              prefs={getGamePrefs(game.id)}
+              onChange={(key: keyof NotifyPrefs, value: boolean) => updateGamePrefs(game.id, { [key]: value })}
+            />
+          </div>
+        )}
 
         {/* eShop link */}
         <div className="py-3">

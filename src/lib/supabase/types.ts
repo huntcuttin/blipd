@@ -85,11 +85,19 @@ export interface Database {
         Row: {
           user_id: string;
           game_id: string;
+          notify_announcements: boolean;
+          notify_sales: boolean;
+          notify_all_time_low: boolean;
+          notify_releases: boolean;
           created_at: string;
         };
         Insert: {
           user_id: string;
           game_id: string;
+          notify_announcements?: boolean;
+          notify_sales?: boolean;
+          notify_all_time_low?: boolean;
+          notify_releases?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["user_game_follows"]["Insert"]>;
@@ -99,11 +107,19 @@ export interface Database {
         Row: {
           user_id: string;
           franchise_id: string;
+          notify_announcements: boolean;
+          notify_sales: boolean;
+          notify_all_time_low: boolean;
+          notify_releases: boolean;
           created_at: string;
         };
         Insert: {
           user_id: string;
           franchise_id: string;
+          notify_announcements?: boolean;
+          notify_sales?: boolean;
+          notify_all_time_low?: boolean;
+          notify_releases?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["user_franchise_follows"]["Insert"]>;

@@ -100,7 +100,7 @@ Digest sent a few hours after sale drops. Lists all followed games on sale with 
 
 ## UX Decisions (Locked — Don't Re-litigate)
 
-- Follow a game = receive ALL alert types for it. No per-alert toggles.
+- Follow a game or franchise = per-category notification preferences (announcements, sales, all-time low, releases). Default all-on, customizable from detail page.
 - No "Buy Now" CTA. Alerts are passive. Purchase happens on console.
 - Alert action wording: "Remind me in a few days" (not "snooze")
 - Unseen alerts dashboard in-app — not a storefront
