@@ -51,12 +51,18 @@ export default function FranchiseDetailPage() {
     <div className="pb-4">
       {/* Header with franchise logo */}
       <div className="relative h-48 bg-[#1a1a1a] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={franchise.logo}
-          alt={franchise.name}
-          className="w-full h-full object-cover object-center opacity-40 scale-110 blur-sm"
-        />
+        {franchise.logo ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={franchise.logo}
+              alt={franchise.name}
+              className="w-full h-full object-cover object-center opacity-40 scale-110 blur-sm"
+            />
+          </>
+        ) : (
+          <div className="w-full h-full bg-[#1a1a1a]" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
 
         {/* Back button */}
@@ -81,12 +87,18 @@ export default function FranchiseDetailPage() {
 
         {/* Franchise info overlay */}
         <div className="absolute bottom-4 left-4 right-4 flex items-end gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={franchise.logo}
-            alt={franchise.name}
-            className="w-16 h-16 rounded-2xl object-cover bg-[#1a1a1a] border border-[#333333] shrink-0"
-          />
+          {franchise.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={franchise.logo}
+              alt={franchise.name}
+              className="w-16 h-16 rounded-2xl object-cover bg-[#1a1a1a] border border-[#333333] shrink-0"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-2xl bg-[#1a1a1a] border border-[#333333] flex items-center justify-center shrink-0">
+              <span className="text-[#666666] text-lg font-bold">{franchise.name.slice(0, 2).toUpperCase()}</span>
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-white leading-tight">
               {franchise.name}
