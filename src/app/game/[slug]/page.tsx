@@ -191,6 +191,24 @@ export default function GameDetailPage() {
           )}
         </div>
 
+        {/* eShop link */}
+        <div className="py-3">
+          <a
+            href={game.nsuid
+              ? `https://www.nintendo.com/us/store/products/${game.nsuid}`
+              : "https://www.nintendo.com/us/store/"
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#111111] border border-[#222222] text-[#999999] text-sm font-medium hover:border-[#333333] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+            View on Nintendo eShop
+          </a>
+        </div>
+
         {/* Price history */}
         <div className="py-4 border-t border-[#222222]">
           <h2 className="text-sm font-bold text-white mb-3">Price History</h2>

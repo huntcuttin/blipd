@@ -5,7 +5,7 @@ import type { AlertPayload } from "./types";
 /**
  * Dispatches notifications for all alerts created since the given timestamp.
  * Designed to run after the alert generation pipeline completes.
- * Queries recent alerts, finds affected users, and sends notifications.
+ * Queries recent alerts, finds users following the affected game, and sends notifications.
  */
 export async function dispatchRecentAlerts(since: string): Promise<number> {
   const supabase = createAdminClient();
@@ -23,18 +23,11 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     return 0;
   }
 
+  console.log(`  Found ${alerts.length} alerts to dispatch since ${since}`);
+
   for (const alert of alerts) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const game = alert.games as any;
-
-    // Get users who have this alert (via user_alert_status)
-    const { data: statuses } = await supabase
-      .from("user_alert_status")
-      .select("user_id")
-      .eq("alert_id", alert.id);
-
-    const userIds = (statuses ?? []).map((s: { user_id: string }) => s.user_id);
-    if (userIds.length === 0) continue;
 
     // Check if notifications were already sent for this alert
     const { data: existingLogs } = await supabase
@@ -43,7 +36,52 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       .eq("alert_id", alert.id)
       .limit(1);
 
-    if (existingLogs && existingLogs.length > 0) continue;
+    if (existingLogs && existingLogs.length > 0) {
+      console.log(`  Skipping alert ${alert.id} — already dispatched`);
+      continue;
+    }
+
+    // Find users following this game via user_game_follows
+    const { data: followers } = await supabase
+      .from("user_game_follows")
+      .select("user_id")
+      .eq("game_id", alert.game_id);
+
+    // Also find users following the game's franchise
+    const { data: gameData } = await supabase
+      .from("games")
+      .select("franchise")
+      .eq("id", alert.game_id)
+      .single();
+
+    let franchiseFollowerIds: string[] = [];
+    if (gameData?.franchise) {
+      // Get franchise id
+      const { data: franchise } = await supabase
+        .from("franchises")
+        .select("id")
+        .eq("name", gameData.franchise)
+        .single();
+
+      if (franchise) {
+        const { data: franchiseFollowers } = await supabase
+          .from("user_franchise_follows")
+          .select("user_id")
+          .eq("franchise_id", franchise.id);
+        franchiseFollowerIds = (franchiseFollowers ?? []).map((f: { user_id: string }) => f.user_id);
+      }
+    }
+
+    // Merge and deduplicate user IDs
+    const gameFollowerIds = (followers ?? []).map((f: { user_id: string }) => f.user_id);
+    const allUserIds = Array.from(new Set([...gameFollowerIds, ...franchiseFollowerIds]));
+
+    if (allUserIds.length === 0) {
+      console.log(`  No followers for game ${game.title} — skipping`);
+      continue;
+    }
+
+    console.log(`  Dispatching "${alert.type}" for "${game.title}" to ${allUserIds.length} users`);
 
     const payload: AlertPayload = {
       alertId: alert.id,
@@ -69,9 +107,10 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     const endMatch = alert.subtext.match(/Ends (.+)/);
     if (endMatch) payload.saleEndDate = endMatch[1];
 
-    await sendAlertToUsers(userIds, payload);
-    dispatched += userIds.length;
+    await sendAlertToUsers(allUserIds, payload);
+    dispatched += allUserIds.length;
   }
 
+  console.log(`  Dispatch complete: ${dispatched} notifications sent`);
   return dispatched;
 }

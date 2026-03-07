@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════════
--- blipd – Supabase schema
+-- blippd – Supabase schema
 -- Run this in your Supabase SQL Editor (https://supabase.com/dashboard)
 -- ══════════════════════════════════════════════════════════════
 

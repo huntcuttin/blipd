@@ -203,6 +203,13 @@ export async function dismissAlert(supabase: Client, userId: string, alertId: st
     .upsert({ user_id: userId, alert_id: alertId, dismissed: true });
 }
 
+export async function remindAlert(supabase: Client, userId: string, alertId: string) {
+  const remindAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase
+    .from("user_alert_status")
+    .upsert({ user_id: userId, alert_id: alertId, read: true, remind_at: remindAt });
+}
+
 // ── User profile queries ──────────────────────────────────────
 
 export async function getUserProfile(supabase: Client, userId: string): Promise<{ consolePreference: ConsolePreference | null }> {

@@ -178,6 +178,14 @@ export function isRegionalVariant(title: string): boolean {
   return REGIONAL_PREFIX.test(title);
 }
 
+const FRANCHISE_NAME_MAP: Record<string, string> = {
+  "Pokémon": "Pokemon",
+};
+
+function normalizeFranchiseName(name: string): string {
+  return FRANCHISE_NAME_MAP[name] || name;
+}
+
 export function detectFranchise(title: string): string | null {
   for (const [pattern, franchise] of FRANCHISE_KEYWORDS) {
     if (pattern.test(title)) return franchise;
@@ -202,7 +210,9 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
   const publisher = hit.softwarePublisher || "Unknown";
   const franchiseStr = typeof hit.franchises === "string" ? hit.franchises : "";
   const rawFranchise = franchiseStr.length > 0 && franchiseStr !== "[]" && franchiseStr.trim() !== "" ? franchiseStr : null;
-  const franchise = rawFranchise || detectFranchise(title);
+  const detectedFranchise = rawFranchise || detectFranchise(title);
+  // Normalize known variants (e.g. "Pokémon" → "Pokemon" to match detectFranchise output)
+  const franchise = detectedFranchise ? normalizeFranchiseName(detectedFranchise) : null;
 
   return {
     nsuid: hit.nsuid || null,

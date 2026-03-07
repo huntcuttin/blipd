@@ -34,7 +34,7 @@ export default function Logo({
           className="font-bold text-white tracking-tight"
           style={{ fontSize: size * 0.65 }}
         >
-          blipd
+          blippd
         </span>
       )}
     </div>

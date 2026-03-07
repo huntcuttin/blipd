@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { getTemplate } from "./templates";
 import type { AlertPayload } from "./types";
 
-const FROM_ADDRESS = "Blipd <onboarding@resend.dev>";
+const FROM_ADDRESS = "Blippd <alerts@blippd.app>";
 
 function getResend(): Resend {
   const key = process.env.RESEND_API_KEY;
@@ -47,6 +47,27 @@ export async function sendEmailAlert(
   if (!template) {
     console.warn(`No email template for alert type: ${payload.alertType}`);
     return false;
+  }
+
+  // 24h dedup: check if we already sent this alert type for this game to this user
+  try {
+    const supabase = createAdminClient();
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentLogs } = await supabase
+      .from("notification_log")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("alert_id", payload.alertId)
+      .eq("status", "sent")
+      .gte("created_at", twentyFourHoursAgo)
+      .limit(1);
+
+    if (recentLogs && recentLogs.length > 0) {
+      console.log(`  Skipping duplicate email for alert ${payload.alertId} to user ${userId}`);
+      return false;
+    }
+  } catch {
+    // Non-fatal — proceed with sending
   }
 
   const email = await getUserEmail(userId);

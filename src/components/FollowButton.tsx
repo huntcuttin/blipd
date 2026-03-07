@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 
 export default function FollowButton({
@@ -9,12 +11,18 @@ export default function FollowButton({
   gameId: string;
   size?: "default" | "large";
 }) {
+  const { user } = useAuth();
   const { isFollowingGame, toggleFollowGame } = useFollow();
+  const router = useRouter();
   const following = isFollowingGame(gameId);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     toggleFollowGame(gameId);
   };
 

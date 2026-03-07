@@ -47,7 +47,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] px-6">
-      <h1 className="text-2xl font-bold text-white mb-2">Welcome to blipd</h1>
+      <h1 className="text-2xl font-bold text-white mb-2">Welcome to blippd</h1>
       <p className="text-[#666666] text-sm text-center mb-10">
         Which console do you play on?
       </p>

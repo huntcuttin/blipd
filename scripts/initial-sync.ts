@@ -3,7 +3,7 @@ config({ path: ".env.local" });
 import { runFullCatalogSync, runPriceUpdate } from "../src/lib/nintendo/ingest";
 
 async function main() {
-  console.log("=== Blipd Initial Sync ===\n");
+  console.log("=== Blippd Initial Sync ===\n");
 
   console.log("Step 1: Catalog sync from Nintendo Algolia...");
   const catalogResult = await runFullCatalogSync();

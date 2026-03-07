@@ -17,7 +17,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "blipd — Never miss a Nintendo drop.",
+  title: "blippd — Never miss a Nintendo drop.",
   description: "Track Nintendo eShop prices, get alerts when they drop.",
 };
 

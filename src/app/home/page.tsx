@@ -7,6 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
+import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getAllGames, getAllFranchises, searchGames } from "@/lib/queries";
@@ -21,6 +22,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>("Discover");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
+  const { user, signOut } = useAuth();
   const { followedGameIds, followedFranchiseIds } = useFollow();
   const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getAllGames);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
@@ -80,11 +82,31 @@ export default function HomePage() {
       {/* Header */}
       <div className="flex items-center justify-between py-4">
         <Logo size={28} />
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder="Search games..."
-        />
+        <div className="flex items-center gap-2">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search games..."
+          />
+          {user ? (
+            <button
+              onClick={signOut}
+              className="shrink-0 w-8 h-8 rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center text-[#666666] hover:text-white hover:border-[#333333] transition-all"
+              title="Sign out"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+              </svg>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="shrink-0 px-3 py-1.5 rounded-full bg-[#00ff88] text-[#0a0a0a] text-xs font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Search results override */}

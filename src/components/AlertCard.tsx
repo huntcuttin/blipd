@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { GameAlert, AlertType } from "@/lib/types";
 
@@ -19,14 +20,24 @@ const alertConfig: Record<
 export default function AlertCard({
   alert,
   onTap,
+  onRemind,
 }: {
   alert: GameAlert;
   onTap?: (id: string) => void;
+  onRemind?: (id: string) => void;
 }) {
   const config = alertConfig[alert.type];
+  const [reminded, setReminded] = useState(false);
 
   const handleClick = () => {
     if (!alert.read) onTap?.(alert.id);
+  };
+
+  const handleRemind = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setReminded(true);
+    onRemind?.(alert.id);
   };
 
   const inner = (
@@ -80,6 +91,19 @@ export default function AlertCard({
           {alert.headline}
         </h3>
         <p className="text-[#555555] text-xs mt-0.5">{alert.subtext}</p>
+
+        {/* Remind action — only show on unread alerts */}
+        {!alert.read && onRemind && !reminded && (
+          <button
+            onClick={handleRemind}
+            className="mt-1.5 text-[10px] text-[#666666] hover:text-[#00ff88] transition-colors"
+          >
+            Remind me in a few days
+          </button>
+        )}
+        {reminded && (
+          <p className="mt-1.5 text-[10px] text-[#00ff88]">Reminder set</p>
+        )}
       </div>
     </div>
   );
