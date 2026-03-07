@@ -1,6 +1,6 @@
 import type { AlertPayload } from "./types";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://blippd.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.blippd.app";
 
 function gameLink(payload: AlertPayload): string {
   return `${APP_URL}/game/${payload.gameSlug || payload.gameId}`;
@@ -53,7 +53,6 @@ function layout(body: string, preheader: string): string {
   <div class="footer">
     <a href="${APP_URL}/alerts">View all alerts</a>
     <p>
-      <a href="${APP_URL}/settings/notifications">Unsubscribe</a> ·
       <a href="${APP_URL}">blippd.app</a>
     </p>
   </div>
@@ -150,6 +149,7 @@ export function getTemplate(alertType: string): ((payload: AlertPayload) => { su
     case "all_time_low": return allTimeLow;
     case "sale_started": return saleStarted;
     case "release_today": return releaseToday;
+    case "out_now": return releaseToday;
     default: return null;
   }
 }
