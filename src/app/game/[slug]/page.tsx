@@ -44,7 +44,7 @@ export default function GameDetailPage() {
           href="/home"
           className="inline-block mt-4 text-sm text-[#00ff88] hover:underline"
         >
-          &larr; Back to Browse
+          &larr; Back to Home
         </Link>
       </div>
     );

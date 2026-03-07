@@ -97,7 +97,7 @@ export default function AlertsPage() {
             Your alerts will appear here
           </p>
           <p className="text-[#666666] text-xs">
-            Follow games on Browse to get started
+            Follow games on the Discover tab to get started
           </p>
         </div>
       ) : (
