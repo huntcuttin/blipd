@@ -340,13 +340,10 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     }
 
     // Get a representative cover art for each franchise
-    const franchiseNames = Array.from(franchiseCounts.keys()).filter(
-      (name) => name && name !== "[]" && name.trim() !== ""
-    );
     const { data: repGames } = await supabase
       .from("games")
       .select("franchise, cover_art")
-      .in("franchise", franchiseNames)
+      .not("franchise", "is", null)
       .not("cover_art", "eq", "");
 
     const logoMap = new Map<string, string>();
@@ -356,8 +353,9 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
       }
     }
 
+    const validFranchise = (name: string) => name && name !== "[]" && name.trim() !== "";
     const franchiseRows = Array.from(franchiseCounts.entries())
-      .filter(([name]) => name && name !== "[]" && name.trim() !== "")
+      .filter(([name]) => validFranchise(name))
       .map(([name, count]) => ({
         name,
         game_count: count,
