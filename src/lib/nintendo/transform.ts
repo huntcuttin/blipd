@@ -143,7 +143,7 @@ const FRANCHISE_KEYWORDS: [RegExp, string][] = [
   [/\bring fit\b/i, "Ring Fit"],
   [/\bnintendo switch sports\b/i, "Nintendo Switch Sports"],
   [/\b1-2-switch\b/i, "1-2-Switch"],
-  [/\barms\b/i, "ARMS"],
+  [/^ARMS(?:\s|™|$)/, "ARMS"],
   [/\bcaptain toad\b/i, "Captain Toad"],
   [/\bnintendo labo\b/i, "Nintendo Labo"],
 ];

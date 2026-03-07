@@ -24,16 +24,14 @@ async function hasRecentAlert(
   return (data?.length ?? 0) > 0;
 }
 
-async function getFollowersWithPref(
+async function getFollowers(
   supabase: AdminClient,
-  gameId: string,
-  prefColumn: "notify_release" | "notify_price"
+  gameId: string
 ): Promise<string[]> {
   const { data } = await supabase
     .from("user_game_follows")
     .select("user_id")
-    .eq("game_id", gameId)
-    .eq(prefColumn, true);
+    .eq("game_id", gameId);
   return (data ?? []).map((r: { user_id: string }) => r.user_id);
 }
 
@@ -64,7 +62,7 @@ export async function generatePriceDropAlert(
   }).select("id").single();
 
   if (data) {
-    const users = await getFollowersWithPref(supabase, game.id, "notify_price");
+    const users = await getFollowers(supabase, game.id);
     await createAlertForUsers(supabase, data.id, users);
   }
   return true;
@@ -85,7 +83,7 @@ export async function generateAllTimeLowAlert(
   }).select("id").single();
 
   if (data) {
-    const users = await getFollowersWithPref(supabase, game.id, "notify_price");
+    const users = await getFollowers(supabase, game.id);
     await createAlertForUsers(supabase, data.id, users);
   }
   return true;
@@ -111,7 +109,7 @@ export async function generateSaleStartedAlert(
   }).select("id").single();
 
   if (data) {
-    const users = await getFollowersWithPref(supabase, game.id, "notify_price");
+    const users = await getFollowers(supabase, game.id);
     await createAlertForUsers(supabase, data.id, users);
   }
   return true;
@@ -131,7 +129,7 @@ export async function generateSwitch2EditionAlert(
   }).select("id").single();
 
   if (data) {
-    const users = await getFollowersWithPref(supabase, game.id, "notify_release");
+    const users = await getFollowers(supabase, game.id);
     await createAlertForUsers(supabase, data.id, users);
   }
   return true;
@@ -157,7 +155,7 @@ export async function generateReleaseAlert(
   }).select("id").single();
 
   if (data) {
-    const users = await getFollowersWithPref(supabase, game.id, "notify_release");
+    const users = await getFollowers(supabase, game.id);
     await createAlertForUsers(supabase, data.id, users);
   }
   return true;
