@@ -37,6 +37,7 @@ function getPrefColumn(alertType: string): PrefColumn {
     case "switch2_edition_announced":
       return "notify_announcements";
     default:
+      console.warn(`Unknown alert type "${alertType}" — defaulting to notify_sales`);
       return "notify_sales";
   }
 }
