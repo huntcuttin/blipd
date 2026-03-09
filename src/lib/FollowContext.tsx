@@ -86,9 +86,10 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         setFollowedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
         setGamePrefsMap((prev) => { const next = new Map(prev); next.delete(gameId); return next; });
         if (user) {
-          dbUnfollowGame(supabase, user.id, gameId).catch((err) =>
-            console.error("Failed to unfollow game:", err)
-          );
+          dbUnfollowGame(supabase, user.id, gameId).catch(() => {
+            setFollowedGameIds((prev) => new Set(prev).add(gameId));
+            setGamePrefsMap((prev) => new Map(prev).set(gameId, { ...DEFAULT_NOTIFY_PREFS }));
+          });
         }
         return;
       }
@@ -98,9 +99,10 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       setFollowedGameIds((prev) => new Set(prev).add(gameId));
       setGamePrefsMap((prev) => new Map(prev).set(gameId, { ...DEFAULT_NOTIFY_PREFS }));
       if (user) {
-        dbFollowGame(supabase, user.id, gameId).catch((err) =>
-          console.error("Failed to follow game:", err)
-        );
+        dbFollowGame(supabase, user.id, gameId).catch(() => {
+          setFollowedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
+          setGamePrefsMap((prev) => { const next = new Map(prev); next.delete(gameId); return next; });
+        });
       }
     },
     [followedGameIds, user, isProUser]
@@ -113,17 +115,19 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         setFollowedFranchiseIds((prev) => { const next = new Set(prev); next.delete(franchiseId); return next; });
         setFranchisePrefsMap((prev) => { const next = new Map(prev); next.delete(franchiseId); return next; });
         if (user) {
-          dbUnfollowFranchise(supabase, user.id, franchiseId).catch((err) =>
-            console.error("Failed to unfollow franchise:", err)
-          );
+          dbUnfollowFranchise(supabase, user.id, franchiseId).catch(() => {
+            setFollowedFranchiseIds((prev) => new Set(prev).add(franchiseId));
+            setFranchisePrefsMap((prev) => new Map(prev).set(franchiseId, { ...DEFAULT_NOTIFY_PREFS }));
+          });
         }
       } else {
         setFollowedFranchiseIds((prev) => new Set(prev).add(franchiseId));
         setFranchisePrefsMap((prev) => new Map(prev).set(franchiseId, { ...DEFAULT_NOTIFY_PREFS }));
         if (user) {
-          dbFollowFranchise(supabase, user.id, franchiseId).catch((err) =>
-            console.error("Failed to follow franchise:", err)
-          );
+          dbFollowFranchise(supabase, user.id, franchiseId).catch(() => {
+            setFollowedFranchiseIds((prev) => { const next = new Set(prev); next.delete(franchiseId); return next; });
+            setFranchisePrefsMap((prev) => { const next = new Map(prev); next.delete(franchiseId); return next; });
+          });
         }
       }
     },

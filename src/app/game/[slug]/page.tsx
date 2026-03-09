@@ -10,7 +10,7 @@ import GameCoverImage from "@/components/GameCoverImage";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/queries";
-import { formatPrice, formatShortDate, isPlaceholderDate } from "@/lib/format";
+import { formatPrice, formatShortDate, formatLongDate, isPlaceholderDate } from "@/lib/format";
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailPage() {
@@ -60,7 +60,6 @@ export default function GameDetailPage() {
   }
 
   const followingFranchise = franchise ? isFollowingFranchise(franchise.id) : false;
-  const releaseDate = new Date(game.releaseDate);
   const placeholderDate = isPlaceholderDate(game.releaseDate);
   const priceHistory = game.priceHistory;
   const maxPrice = priceHistory.length > 0 ? Math.max(...priceHistory.map((p) => p.price)) : 0;
@@ -141,7 +140,7 @@ export default function GameDetailPage() {
         <div className="py-4 border-b border-[#222222]">
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold text-white">
-              {game.currentPrice === 0 ? "Free" : formatPrice(game.currentPrice)}
+              {game.currentPrice === 0 && game.originalPrice === 0 ? "Free" : formatPrice(game.currentPrice)}
             </span>
             {game.isOnSale && (
               <>
@@ -193,20 +192,10 @@ export default function GameDetailPage() {
             {placeholderDate
               ? "Release date TBD"
               : game.releaseStatus === "released"
-              ? `Released ${releaseDate.toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                  timeZone: "UTC",
-                })}`
+              ? `Released ${formatLongDate(game.releaseDate)}`
               : game.releaseStatus === "out_today"
               ? "Released today"
-              : `Releasing ${releaseDate.toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                  timeZone: "UTC",
-                })}`}
+              : `Releasing ${formatLongDate(game.releaseDate)}`}
           </p>
         </div>
 

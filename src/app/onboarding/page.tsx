@@ -20,21 +20,29 @@ export default function OnboardingPage() {
       return;
     }
     const supabase = createClient();
-    getUserProfile(supabase, user.id).then(({ consolePreference }) => {
-      if (consolePreference) {
-        router.replace("/home");
-      } else {
+    getUserProfile(supabase, user.id)
+      .then(({ consolePreference }) => {
+        if (consolePreference) {
+          router.replace("/home");
+        } else {
+          setChecking(false);
+        }
+      })
+      .catch(() => {
         setChecking(false);
-      }
-    });
+      });
   }, [user, authLoading, router]);
 
   async function handleSelect(preference: ConsolePreference) {
     if (!user || saving) return;
     setSaving(true);
-    const supabase = createClient();
-    await setConsolePreference(supabase, user.id, preference);
-    router.replace("/home");
+    try {
+      const supabase = createClient();
+      await setConsolePreference(supabase, user.id, preference);
+      router.replace("/home");
+    } catch {
+      setSaving(false);
+    }
   }
 
   if (authLoading || checking) {

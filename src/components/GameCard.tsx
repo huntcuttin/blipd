@@ -58,7 +58,9 @@ export default memo(function GameCard({ game }: { game: Game }) {
               </>
             ) : (
               <span className="text-white font-bold text-sm">
-                {game.currentPrice > 0
+                {game.currentPrice === 0 && game.originalPrice === 0
+                  ? "Free"
+                  : game.currentPrice > 0
                   ? formatPrice(game.currentPrice)
                   : game.originalPrice > 0
                   ? formatPrice(game.originalPrice)
@@ -142,7 +144,7 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
               </>
             ) : (
               <span className="text-white font-bold text-xs">
-                {game.currentPrice > 0 ? formatPrice(game.currentPrice) : ""}
+                {game.currentPrice === 0 && game.originalPrice === 0 ? "Free" : game.currentPrice > 0 ? formatPrice(game.currentPrice) : ""}
               </span>
             )}
           </div>
@@ -181,11 +183,7 @@ function getDaysUntil(dateStr: string): number {
 }
 
 function getSaleEndLabel(dateStr: string): string | null {
-  const target = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-  const days = Math.round((targetDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const days = getDaysUntil(dateStr);
   if (days <= 0) return "Ends today";
   if (days === 1) return "Ends tomorrow";
   if (days <= 14) return `Ends in ${days} days`;

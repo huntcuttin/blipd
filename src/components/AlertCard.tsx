@@ -26,7 +26,7 @@ export default function AlertCard({
   onTap?: (id: string) => void;
   onRemind?: (id: string) => void;
 }) {
-  const config = alertConfig[alert.type];
+  const config = alertConfig[alert.type] ?? { emoji: "📢", label: alert.type.toUpperCase(), color: "text-[#888888]", bg: "bg-[#888888]/15" };
   const [reminded, setReminded] = useState(false);
 
   const handleClick = () => {
