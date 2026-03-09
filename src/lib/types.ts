@@ -51,6 +51,7 @@ export type AlertType =
   | "all_time_low"
   | "out_now"
   | "sale_started"
+  | "sale_ending"
   | "release_today"
   | "announced"
   | "switch2_edition_announced";

@@ -147,6 +147,28 @@ export function releaseToday(payload: AlertPayload): { subject: string; html: st
   };
 }
 
+export function saleEnding(payload: AlertPayload): { subject: string; html: string } {
+  const endStr = payload.saleEndDate ? formatShortDate(payload.saleEndDate) : "soon";
+  const discountStr = payload.discount ? `${payload.discount}%` : "";
+
+  return {
+    subject: `⏰ ${payload.gameTitle} sale ends ${endStr}`,
+    html: layout(`
+  <div class="card">
+    <div class="badge" style="background:rgba(255,104,116,0.15);color:#ff6874;">Sale Ending${discountStr ? ` · ${discountStr} off` : ""}</div>
+    <h1 class="game-title">${payload.gameTitle}</h1>
+    <div class="price-row">
+      <span class="price-new" style="color:#ff6874;">${formatPrice(payload.newPrice, "")}</span>
+      <span class="price-old">${formatPrice(payload.oldPrice, "")}</span>
+    </div>
+    <p style="color:#ff6874;font-size:13px;font-weight:600;margin:0 0 16px;">Sale ends ${endStr} — don't miss it</p>
+    <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
+    <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
+  </div>`,
+  `${payload.gameTitle} is ${discountStr} off but the sale ends ${endStr}`),
+  };
+}
+
 export function switch2Edition(payload: AlertPayload): { subject: string; html: string } {
   return {
     subject: `🔔 ${payload.gameTitle} — Switch 2 Edition announced`,
@@ -182,6 +204,7 @@ export function getTemplate(alertType: string): ((payload: AlertPayload) => { su
     case "price_drop": return priceDrop;
     case "all_time_low": return allTimeLow;
     case "sale_started": return saleStarted;
+    case "sale_ending": return saleEnding;
     case "release_today": return releaseToday;
     case "out_now": return releaseToday;
     case "switch2_edition_announced": return switch2Edition;

@@ -18,6 +18,7 @@ import {
   generateSaleStartedAlert,
   generateReleaseAlert,
   generateSwitch2EditionAlert,
+  generateSaleEndingAlert,
 } from "./alerts";
 import type { AlgoliaHit } from "./types";
 
@@ -578,6 +579,41 @@ export async function runPriceUpdate(options?: {
           }
           if (allTimeLow) {
             if (await generateAllTimeLowAlert(supabase, ref, newPrice, followers)) alertsCreated++;
+          }
+        }
+      }
+    }
+  }
+
+  // Check for sales ending soon (within 48 hours) — fire sale_ending alerts
+  if (shouldAlert) {
+    const { data: endingSoon } = await supabase
+      .from("games")
+      .select("id, title, current_price, original_price, discount, sale_end_date")
+      .eq("is_on_sale", true)
+      .eq("is_suppressed", false)
+      .not("sale_end_date", "is", null);
+
+    if (endingSoon) {
+      const now = Date.now();
+      const fortyEightHours = 48 * 60 * 60 * 1000;
+
+      for (const game of endingSoon) {
+        if (!game.sale_end_date) continue;
+        const endTime = new Date(game.sale_end_date).getTime();
+        const timeLeft = endTime - now;
+
+        // Fire alert if sale ends within 48 hours and hasn't ended yet
+        if (timeLeft > 0 && timeLeft <= fortyEightHours) {
+          const ref = { id: game.id, title: game.title };
+          if (await generateSaleEndingAlert(
+            supabase, ref,
+            Number(game.current_price),
+            Number(game.original_price),
+            game.discount ?? 0,
+            game.sale_end_date
+          )) {
+            alertsCreated++;
           }
         }
       }

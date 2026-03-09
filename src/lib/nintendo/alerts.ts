@@ -153,6 +153,29 @@ export async function generateSwitch2EditionAlert(
   }, followers);
 }
 
+export async function generateSaleEndingAlert(
+  supabase: AdminClient,
+  game: GameRef,
+  currentPrice: number,
+  originalPrice: number,
+  discount: number,
+  saleEndDate: string,
+  followers?: string[]
+): Promise<boolean> {
+  const daysLeft = Math.ceil(
+    (new Date(saleEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+  );
+  const urgency = daysLeft <= 1 ? "ends today" : `ends in ${daysLeft} days`;
+  return insertAndDispatch(supabase, game, "sale_ending", {
+    headline: `${game.title} sale ${urgency}`,
+    subtext: `${formatPrice(currentPrice, "")} (${discount}% off) — was ${formatPrice(originalPrice, "")}`,
+    new_price: currentPrice,
+    old_price: originalPrice,
+    discount,
+    sale_end_date: saleEndDate,
+  }, followers);
+}
+
 export async function generateReleaseAlert(
   supabase: AdminClient,
   game: GameRef,

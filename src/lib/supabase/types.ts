@@ -135,7 +135,7 @@ export interface Database {
         Row: {
           id: string;
           game_id: string;
-          type: "price_drop" | "all_time_low" | "out_now" | "sale_started" | "release_today" | "announced" | "switch2_edition_announced";
+          type: "price_drop" | "all_time_low" | "out_now" | "sale_started" | "sale_ending" | "release_today" | "announced" | "switch2_edition_announced";
           headline: string;
           subtext: string;
           new_price: number | null;
