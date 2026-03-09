@@ -511,6 +511,7 @@ export async function runPriceUpdate(options?: {
     const priceInfo = priceMap.get(game.nsuid!);
     if (!priceInfo) continue;
 
+    const isFirstPriceCheck = game.current_price == null;
     const oldPrice = Number(game.current_price);
     const newPrice = priceInfo.discount ?? priceInfo.regular;
     const originalPrice = priceInfo.regular;
@@ -518,7 +519,7 @@ export async function runPriceUpdate(options?: {
     const discount = computeDiscount(newPrice, originalPrice);
     const history = (game.price_history as { date: string; price: number }[]) || [];
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const priceChanged = Math.abs(newPrice - oldPrice) >= 0.01;
+    const priceChanged = !isFirstPriceCheck && Math.abs(newPrice - oldPrice) >= 0.01;
 
     // Build update object
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

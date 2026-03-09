@@ -10,7 +10,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { data: alerts } = useSupabaseQuery(
-    (sb) => getAlerts(sb, user?.id),
+    (sb) => user ? getAlerts(sb, user.id) : Promise.resolve([]),
     [user?.id]
   );
 

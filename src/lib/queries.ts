@@ -301,7 +301,7 @@ export async function markAlertRead(supabase: Client, userId: string, alertId: s
 export async function dismissAlert(supabase: Client, userId: string, alertId: string) {
   const { error } = await supabase
     .from("user_alert_status")
-    .upsert({ user_id: userId, alert_id: alertId, dismissed: true });
+    .upsert({ user_id: userId, alert_id: alertId, read: true, dismissed: true });
   if (error) throw error;
 }
 

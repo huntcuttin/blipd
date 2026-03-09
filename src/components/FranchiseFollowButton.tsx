@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 
 export default function FranchiseFollowButton({
@@ -9,12 +11,18 @@ export default function FranchiseFollowButton({
   franchiseId: string;
   size?: "default" | "large";
 }) {
+  const { user } = useAuth();
   const { isFollowingFranchise, toggleFollowFranchise } = useFollow();
+  const router = useRouter();
   const following = isFollowingFranchise(franchiseId);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     toggleFollowFranchise(franchiseId);
   };
 
