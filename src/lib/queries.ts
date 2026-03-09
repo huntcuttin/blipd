@@ -159,16 +159,46 @@ export async function getGameBySlug(supabase: Client, slug: string): Promise<Gam
 }
 
 export async function searchGames(supabase: Client, query: string): Promise<Game[]> {
-  // Escape ILIKE special characters (% and _) so they're treated as literals
-  const escaped = query.replace(/[%_]/g, "\\$&");
-  const { data, error } = await supabase
-    .from("games")
-    .select("*")
-    .ilike("title", `%${escaped}%`)
-    .order("title")
-    .limit(20);
-  if (error) throw error;
-  return (data ?? []).map(mapGame);
+  // Try Algolia first for relevance-ranked results, fall back to ILIKE
+  try {
+    const { fetchGameCatalog } = await import("@/lib/nintendo/client");
+    const PLATFORM_FILTER = '(platform:"Nintendo Switch" OR platform:"Nintendo Switch 2")';
+    const result = await fetchGameCatalog({
+      query,
+      hitsPerPage: 30,
+      filters: `topLevelCategoryCode:GAMES AND ${PLATFORM_FILTER}`,
+    });
+
+    const nsuids = result.hits.map((h) => h.nsuid).filter(Boolean) as string[];
+    if (nsuids.length === 0) return [];
+
+    // Look up only games we track in our DB, preserving Algolia's ranking order
+    const { data, error } = await supabase
+      .from("games")
+      .select("*")
+      .in("nsuid", nsuids)
+      .limit(20);
+
+    if (error) throw error;
+
+    const byNsuid = new Map((data ?? []).map((g) => [g.nsuid, g]));
+    return nsuids
+      .map((nsuid) => byNsuid.get(nsuid))
+      .filter((g): g is NonNullable<typeof g> => !!g)
+      .slice(0, 20)
+      .map(mapGame);
+  } catch {
+    // Algolia unavailable — fall back to DB ILIKE
+    const escaped = query.replace(/[%_]/g, "\\$&");
+    const { data, error } = await supabase
+      .from("games")
+      .select("*")
+      .ilike("title", `%${escaped}%`)
+      .order("title")
+      .limit(20);
+    if (error) throw error;
+    return (data ?? []).map(mapGame);
+  }
 }
 
 export async function getGamesByFranchise(supabase: Client, franchiseName: string): Promise<Game[]> {
