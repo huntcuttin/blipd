@@ -74,14 +74,14 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       .filter((f): f is string => !!f)
   ));
 
-  // Batch: dedup check, game followers, franchise IDs — all in parallel
+  // Batch: dedup check (per user+alert), game followers, franchise IDs — all in parallel
   const FOLLOW_COLS = "user_id, game_id, notify_sales, notify_all_time_low, notify_releases, notify_announcements";
   const FRANCHISE_FOLLOW_COLS = "user_id, franchise_id, notify_sales, notify_all_time_low, notify_releases, notify_announcements";
 
   const [sentLogsResult, gameFollowsResult, franchiseIdsResult] = await Promise.all([
     alertIds.length > 0
-      ? supabase.from("notification_log").select("alert_id").in("alert_id", alertIds).eq("status", "sent")
-      : Promise.resolve({ data: [] as { alert_id: string }[] }),
+      ? supabase.from("notification_log").select("alert_id, user_id").in("alert_id", alertIds).eq("status", "sent")
+      : Promise.resolve({ data: [] as { alert_id: string; user_id: string }[] }),
     gameIds.length > 0
       ? supabase.from("user_game_follows").select(FOLLOW_COLS).in("game_id", gameIds)
       : Promise.resolve({ data: [] as (FollowRow & { game_id: string })[] }),
@@ -90,7 +90,10 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
 
-  const alreadySent = new Set((sentLogsResult.data ?? []).map((l) => l.alert_id));
+  // Track which (alert_id, user_id) pairs were already sent
+  const alreadySentPairs = new Set(
+    (sentLogsResult.data ?? []).map((l) => `${l.alert_id}:${l.user_id}`)
+  );
 
   // Index game followers by game_id
   const gameFollowsByGame = new Map<string, FollowRow[]>();
@@ -122,11 +125,6 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   }
 
   for (const alert of alerts) {
-    if (alreadySent.has(alert.id)) {
-      console.log(`  Skipping alert ${alert.id} — already dispatched`);
-      continue;
-    }
-
     const game = alert.games as unknown as AlertGame;
     const prefCol = getPrefColumn(alert.type);
 
@@ -142,7 +140,9 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
           .map((f) => f.user_id)
       : [];
 
-    const allUserIds = Array.from(new Set([...gameFollowerIds, ...franchiseFollowerIds]));
+    // Deduplicate and exclude users already sent this alert
+    const allUserIds = Array.from(new Set([...gameFollowerIds, ...franchiseFollowerIds]))
+      .filter((uid) => !alreadySentPairs.has(`${alert.id}:${uid}`));
 
     if (allUserIds.length === 0) {
       console.log(`  No followers for game ${game.title} (pref: ${prefCol}) — skipping`);

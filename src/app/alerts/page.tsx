@@ -36,10 +36,10 @@ const FILTER_TYPES: Record<AlertFilter, AlertType[] | null> = {
 };
 
 export default function AlertsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { data: fetchedAlerts, error: alertsError } = useSupabaseQuery(
-    (sb) => getAlerts(sb, user?.id),
-    [user?.id]
+    (sb) => authLoading ? Promise.resolve([]) : getAlerts(sb, user?.id),
+    [user?.id, authLoading]
   );
 
   const [localAlerts, setLocalAlerts] = useState<GameAlert[]>([]);

@@ -229,6 +229,7 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
   if (error) throw error;
 
   const readMap = new Map<string, boolean>();
+  const dismissedSet = new Set<string>();
   if (userId) {
     const { data: statuses } = await supabase
       .from("user_alert_status")
@@ -238,25 +239,28 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
     if (statuses) {
       for (const s of statuses) {
         readMap.set(s.alert_id, s.read);
+        if (s.dismissed) dismissedSet.add(s.alert_id);
       }
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data ?? []).map((row: any) => ({
-    id: row.id,
-    gameId: row.game_id,
-    gameTitle: row.games.title,
-    gameCoverArt: row.games.cover_art,
-    gameSlug: row.games.slug,
-    type: row.type,
-    headline: row.headline,
-    subtext: row.subtext,
-    createdAt: row.created_at,
-    timestampGroup: computeTimestampGroup(row.created_at),
-    timestamp: formatTimestamp(row.created_at),
-    read: readMap.get(row.id) ?? false,
-  }));
+  return (data ?? [])
+    .filter((row: { id: string }) => !dismissedSet.has(row.id))
+    .map((row: any) => ({
+      id: row.id,
+      gameId: row.game_id,
+      gameTitle: row.games.title,
+      gameCoverArt: row.games.cover_art,
+      gameSlug: row.games.slug,
+      type: row.type,
+      headline: row.headline,
+      subtext: row.subtext,
+      createdAt: row.created_at,
+      timestampGroup: computeTimestampGroup(row.created_at),
+      timestamp: formatTimestamp(row.created_at),
+      read: readMap.get(row.id) ?? false,
+    }));
 }
 
 export async function getAlertsForGame(supabase: Client, gameId: string): Promise<GameAlert[]> {

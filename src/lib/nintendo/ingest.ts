@@ -524,10 +524,19 @@ export async function runPriceUpdate(options?: {
       updated_at: new Date().toISOString(),
     };
 
-    // Append to price history if price changed or new month
+    // Update price history: replace same-month entry or append new month
     const lastEntry = history[history.length - 1];
     if (priceChanged || !lastEntry || lastEntry.date !== currentMonth) {
-      update.price_history = [...history, { date: currentMonth, price: newPrice }];
+      let newHistory: { date: string; price: number }[];
+      if (lastEntry && lastEntry.date === currentMonth) {
+        // Same month — update in place instead of appending duplicate
+        newHistory = [...history.slice(0, -1), { date: currentMonth, price: newPrice }];
+      } else {
+        newHistory = [...history, { date: currentMonth, price: newPrice }];
+      }
+      // Cap at 120 months (10 years) of history
+      if (newHistory.length > 120) newHistory = newHistory.slice(-120);
+      update.price_history = newHistory;
     }
 
     // Check all-time low
@@ -556,15 +565,16 @@ export async function runPriceUpdate(options?: {
           const ref = { id: game.id, title: game.title };
           const followers = await getFollowers(supabase, game.id);
 
+          // Prioritize alerts: price_drop subsumes sale_started to avoid triple-alerting
           if (isPriceDrop) {
             if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers)) alertsCreated++;
+          } else if (isNewSale) {
+            // Only fire sale_started when it's not also a price drop (e.g. game goes on sale at same tracked price)
+            if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, priceInfo.endDate, followers))
+              alertsCreated++;
           }
           if (allTimeLow) {
             if (await generateAllTimeLowAlert(supabase, ref, newPrice, followers)) alertsCreated++;
-          }
-          if (isNewSale) {
-            if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, priceInfo.endDate, followers))
-              alertsCreated++;
           }
         }
       }

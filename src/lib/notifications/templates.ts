@@ -105,8 +105,9 @@ export function allTimeLow(payload: AlertPayload): { subject: string; html: stri
 }
 
 export function saleStarted(payload: AlertPayload): { subject: string; html: string } {
-  // saleEndDate is already a formatted string from dispatch (e.g. "Mar 7, 2026"), use as-is
-  const endStr = payload.saleEndDate ? `Ends ${payload.saleEndDate}` : "";
+  const endStr = payload.saleEndDate
+    ? `Ends ${new Date(payload.saleEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+    : "";
   const discountStr = payload.discount ? `${payload.discount}%` : "";
 
   return {

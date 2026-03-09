@@ -45,11 +45,15 @@ export async function sendAlertToUsers(
   userIds: string[],
   payload: AlertPayload
 ): Promise<void> {
-  const BATCH_SIZE = 5;
+  const BATCH_SIZE = 3; // Resend free tier: 3 emails/second
   for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
     const batch = userIds.slice(i, i + BATCH_SIZE);
     await Promise.allSettled(
       batch.map((userId) => sendAlert(userId, payload))
     );
+    // Pause between batches to stay within Resend rate limits
+    if (i + BATCH_SIZE < userIds.length) {
+      await new Promise((r) => setTimeout(r, 1100));
+    }
   }
 }
