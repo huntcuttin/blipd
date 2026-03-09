@@ -50,7 +50,7 @@ async function insertAndDispatch(
   type: string,
   headline: string,
   subtext: string,
-  followers: string[]
+  followers?: string[]
 ): Promise<boolean> {
   if (await hasRecentAlert(supabase, game.id, type)) return false;
 
@@ -63,8 +63,9 @@ async function insertAndDispatch(
     return false;
   }
 
-  if (followers.length > 0) {
-    const rows = followers.map((uid) => ({ user_id: uid, alert_id: data.id, read: false }));
+  const users = followers ?? await getFollowers(supabase, game.id);
+  if (users.length > 0) {
+    const rows = users.map((uid) => ({ user_id: uid, alert_id: data.id, read: false }));
     const { error: statusError } = await supabase.from("user_alert_status").insert(rows);
     if (statusError) {
       console.error(`createAlertForUsers failed for alert ${data.id}:`, statusError.message);
@@ -78,7 +79,7 @@ export async function generatePriceDropAlert(
   game: GameRef,
   oldPrice: number,
   newPrice: number,
-  followers: string[]
+  followers?: string[]
 ): Promise<boolean> {
   const savings = formatPrice(oldPrice - newPrice, "");
   return insertAndDispatch(supabase, game, "price_drop",
@@ -91,7 +92,7 @@ export async function generateAllTimeLowAlert(
   supabase: AdminClient,
   game: GameRef,
   price: number,
-  followers: string[]
+  followers?: string[]
 ): Promise<boolean> {
   return insertAndDispatch(supabase, game, "all_time_low",
     `${game.title} — ALL TIME LOW`,
@@ -105,7 +106,7 @@ export async function generateSaleStartedAlert(
   discount: number,
   salePrice: number,
   saleEndDate: string | null,
-  followers: string[]
+  followers?: string[]
 ): Promise<boolean> {
   const endStr = saleEndDate
     ? ` · Ends ${new Date(saleEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
@@ -119,7 +120,7 @@ export async function generateSaleStartedAlert(
 export async function generateSwitch2EditionAlert(
   supabase: AdminClient,
   game: GameRef,
-  followers: string[]
+  followers?: string[]
 ): Promise<boolean> {
   return insertAndDispatch(supabase, game, "switch2_edition_announced",
     `${game.title} — Switch 2 Edition announced`,
@@ -132,7 +133,7 @@ export async function generateReleaseAlert(
   game: GameRef,
   type: "release_today" | "out_now",
   price: number,
-  followers: string[]
+  followers?: string[]
 ): Promise<boolean> {
   const headline = type === "out_now"
     ? `${game.title} is available now`

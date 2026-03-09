@@ -177,7 +177,7 @@ export default function GameDetailPage() {
               {game.upgradePackPrice != null && (
                 <div className="flex items-center gap-2">
                   <span className="text-[#999999] text-xs">
-                    Upgrade Pack: <span className="text-white font-medium">${game.upgradePackPrice.toFixed(2)}</span>
+                    Upgrade Pack: <span className="text-white font-medium">{formatPrice(game.upgradePackPrice)}</span>
                   </span>
                 </div>
               )}
