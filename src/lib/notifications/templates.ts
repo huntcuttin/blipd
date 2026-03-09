@@ -67,6 +67,7 @@ export function priceDrop(payload: AlertPayload): { subject: string; html: strin
   const saved = payload.oldPrice && payload.newPrice
     ? formatPrice(payload.oldPrice - payload.newPrice, "")
     : "";
+  const endStr = payload.saleEndDate ? `Ends ${formatShortDate(payload.saleEndDate)}` : "";
 
   return {
     subject: `🔔 ${payload.gameTitle} just dropped to ${formatPrice(payload.newPrice, "")}`,
@@ -79,6 +80,7 @@ export function priceDrop(payload: AlertPayload): { subject: string; html: strin
       <span class="price-old">${formatPrice(payload.oldPrice, "")}</span>
       ${saved ? `<span style="color:#00ff88;font-size:13px;font-weight:600;">Save ${saved}</span>` : ""}
     </div>
+    ${endStr ? `<p style="color:#666666;font-size:13px;margin:0 0 16px;">${endStr}</p>` : ""}
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
     <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
@@ -160,6 +162,21 @@ export function switch2Edition(payload: AlertPayload): { subject: string; html: 
   };
 }
 
+export function announced(payload: AlertPayload): { subject: string; html: string } {
+  return {
+    subject: `🔔 ${payload.gameTitle} — New announcement`,
+    html: layout(`
+  <div class="card">
+    <div class="badge" style="background:rgba(155,89,182,0.15);color:#9B59B6;">Announcement</div>
+    <h1 class="game-title">${payload.gameTitle}</h1>
+    <p class="subtext">${payload.headline}</p>
+    <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
+    <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
+  </div>`,
+  `${payload.gameTitle} — ${payload.headline}`),
+  };
+}
+
 export function getTemplate(alertType: string): ((payload: AlertPayload) => { subject: string; html: string }) | null {
   switch (alertType) {
     case "price_drop": return priceDrop;
@@ -168,7 +185,7 @@ export function getTemplate(alertType: string): ((payload: AlertPayload) => { su
     case "release_today": return releaseToday;
     case "out_now": return releaseToday;
     case "switch2_edition_announced": return switch2Edition;
-    case "announced": return switch2Edition;
+    case "announced": return announced;
     default: return null;
   }
 }

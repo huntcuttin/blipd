@@ -570,7 +570,7 @@ export async function runPriceUpdate(options?: {
 
           // Prioritize alerts: price_drop subsumes sale_started to avoid triple-alerting
           if (isPriceDrop) {
-            if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers)) alertsCreated++;
+            if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers, isOnSale ? priceInfo.endDate : null)) alertsCreated++;
           } else if (isNewSale) {
             // Only fire sale_started when it's not also a price drop (e.g. game goes on sale at same tracked price)
             if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, priceInfo.endDate, followers))

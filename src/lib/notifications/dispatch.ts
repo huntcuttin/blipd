@@ -81,14 +81,24 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   const [sentLogsResult, gameFollowsResult, franchiseIdsResult] = await Promise.all([
     alertIds.length > 0
       ? supabase.from("notification_log").select("alert_id, user_id").in("alert_id", alertIds).eq("status", "sent")
-      : Promise.resolve({ data: [] as { alert_id: string; user_id: string }[] }),
+      : Promise.resolve({ data: [] as { alert_id: string; user_id: string }[], error: null }),
     gameIds.length > 0
       ? supabase.from("user_game_follows").select(FOLLOW_COLS).in("game_id", gameIds)
-      : Promise.resolve({ data: [] as (FollowRow & { game_id: string })[] }),
+      : Promise.resolve({ data: [] as (FollowRow & { game_id: string })[], error: null }),
     franchiseNames.length > 0
       ? supabase.from("franchises").select("id, name").in("name", franchiseNames)
-      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
   ]);
+
+  if (sentLogsResult.error) console.error("Failed to fetch sent logs:", sentLogsResult.error.message);
+  if (gameFollowsResult.error) console.error("Failed to fetch game follows:", gameFollowsResult.error.message);
+  if (franchiseIdsResult.error) console.error("Failed to fetch franchise IDs:", franchiseIdsResult.error.message);
+
+  // If game follows query failed, we can't determine who to notify — abort
+  if (gameFollowsResult.error) {
+    console.error("Aborting dispatch: game follows query failed");
+    return 0;
+  }
 
   // Track which (alert_id, user_id) pairs were already sent
   const alreadySentPairs = new Set(

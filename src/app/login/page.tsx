@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/AuthContext";
@@ -9,28 +10,46 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
-  const { signInWithMagicLink } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { user, loading, signInWithMagicLink } = useAuth();
+  const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) router.replace("/home");
+  }, [user, loading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email.trim() || submitting) return;
     setError("");
-    const { error } = await signInWithMagicLink(email);
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
+    setSubmitting(true);
+    try {
+      const { error } = await signInWithMagicLink(email.trim());
+      if (error) {
+        setError(error.message);
+      } else {
+        setSent(true);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  // Don't render form while checking auth
+  if (loading || user) return null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#0a0a0a] -mb-20 relative">
       {/* Back button */}
       <Link
         href="/home"
-        className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#00ff88]/30 transition-all"
+        aria-label="Back to home"
+        className="absolute top-4 left-4 w-11 h-11 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#00ff88]/30 transition-all"
       >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
       </Link>
@@ -48,22 +67,30 @@ export default function LoginPage() {
       {!sent ? (
         <div className="w-full max-w-sm mt-8">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="w-full px-4 py-3.5 rounded-xl bg-[#111111] border border-[#222222] text-white placeholder:text-[#666666] focus:outline-none focus:border-[#00ff88] focus:shadow-[0_0_12px_#00ff8844] transition-all text-sm"
-            />
+            <div>
+              <label htmlFor="login-email" className="sr-only">Email address</label>
+              <input
+                id="login-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                aria-describedby={error ? "login-error" : undefined}
+                className="w-full px-4 py-3.5 rounded-xl bg-[#111111] border border-[#222222] text-white placeholder:text-[#666666] focus:outline-none focus:border-[#00ff88] focus:shadow-[0_0_12px_#00ff8844] transition-all text-sm"
+              />
+            </div>
             {error && (
-              <p className="text-red-400 text-xs">{error}</p>
+              <p id="login-error" role="alert" className="text-red-400 text-xs">{error}</p>
             )}
             <button
               type="submit"
-              className="w-full py-3.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844]"
+              disabled={submitting}
+              className="w-full py-3.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send Magic Link
+              {submitting ? "Sending…" : "Send Magic Link"}
             </button>
           </form>
           <p className="text-[#666666] text-xs text-center mt-4">
@@ -78,7 +105,7 @@ export default function LoginPage() {
           </div>
         </div>
       ) : (
-        <div className="text-center mt-8 w-full max-w-sm">
+        <div className="text-center mt-8 w-full max-w-sm" role="status" aria-live="polite">
           <div className="w-16 h-16 rounded-full bg-[#00ff88]/10 flex items-center justify-center mx-auto mb-4 shadow-[0_0_12px_#00ff8844]">
             <svg
               className="w-8 h-8 text-[#00ff88]"
@@ -86,6 +113,7 @@ export default function LoginPage() {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -101,7 +129,7 @@ export default function LoginPage() {
           </p>
           <button
             onClick={() => setSent(false)}
-            className="mt-6 text-sm text-[#00ff88] hover:underline transition-colors"
+            className="mt-6 text-sm text-[#00ff88] hover:underline transition-colors py-2"
           >
             Use a different email
           </button>
@@ -120,6 +148,7 @@ function ValueProp({ text }: { text: string }) {
         viewBox="0 0 24 24"
         strokeWidth={2}
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"

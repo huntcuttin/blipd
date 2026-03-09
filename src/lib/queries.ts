@@ -325,9 +325,10 @@ export async function getUserProfile(supabase: Client, userId: string): Promise<
 }
 
 export async function setConsolePreference(supabase: Client, userId: string, preference: ConsolePreference) {
-  await supabase
+  const { error } = await supabase
     .from("user_profiles")
     .upsert({ user_id: userId, console_preference: preference, updated_at: new Date().toISOString() });
+  if (error) throw error;
 }
 
 // ── Follow queries ────────────────────────────────────────────

@@ -94,15 +94,18 @@ export async function generatePriceDropAlert(
   oldPrice: number,
   newPrice: number,
   discount: number,
-  followers?: string[]
+  followers?: string[],
+  saleEndDate?: string | null
 ): Promise<boolean> {
   const savings = formatPrice(oldPrice - newPrice, "");
+  const endStr = saleEndDate ? ` · Ends ${formatShortDate(saleEndDate)}` : "";
   return insertAndDispatch(supabase, game, "price_drop", {
     headline: `${game.title} dropped to ${formatPrice(newPrice, "")}`,
-    subtext: `Was ${formatPrice(oldPrice, "")} · Save ${savings}`,
+    subtext: `Was ${formatPrice(oldPrice, "")} · Save ${savings}${endStr}`,
     new_price: newPrice,
     old_price: oldPrice,
     discount,
+    sale_end_date: saleEndDate ?? null,
   }, followers);
 }
 
