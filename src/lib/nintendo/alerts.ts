@@ -44,18 +44,32 @@ export async function getFollowers(
   return (data ?? []).map((r: { user_id: string }) => r.user_id);
 }
 
+interface AlertData {
+  headline: string;
+  subtext: string;
+  new_price?: number | null;
+  old_price?: number | null;
+  discount?: number | null;
+  sale_end_date?: string | null;
+}
+
 async function insertAndDispatch(
   supabase: AdminClient,
   game: GameRef,
   type: string,
-  headline: string,
-  subtext: string,
+  alert: AlertData,
   followers?: string[]
 ): Promise<boolean> {
   if (await hasRecentAlert(supabase, game.id, type)) return false;
 
   const { data, error } = await supabase.from("alerts").insert({
-    game_id: game.id, type, headline, subtext,
+    game_id: game.id, type,
+    headline: alert.headline,
+    subtext: alert.subtext,
+    new_price: alert.new_price ?? null,
+    old_price: alert.old_price ?? null,
+    discount: alert.discount ?? null,
+    sale_end_date: alert.sale_end_date ?? null,
   }).select("id").single();
 
   if (error || !data) {
@@ -82,10 +96,13 @@ export async function generatePriceDropAlert(
   followers?: string[]
 ): Promise<boolean> {
   const savings = formatPrice(oldPrice - newPrice, "");
-  return insertAndDispatch(supabase, game, "price_drop",
-    `${game.title} dropped to ${formatPrice(newPrice, "")}`,
-    `Was ${formatPrice(oldPrice, "")} · Save ${savings}`,
-    followers);
+  return insertAndDispatch(supabase, game, "price_drop", {
+    headline: `${game.title} dropped to ${formatPrice(newPrice, "")}`,
+    subtext: `Was ${formatPrice(oldPrice, "")} · Save ${savings}`,
+    new_price: newPrice,
+    old_price: oldPrice,
+    discount: Math.round((1 - newPrice / oldPrice) * 100),
+  }, followers);
 }
 
 export async function generateAllTimeLowAlert(
@@ -94,10 +111,11 @@ export async function generateAllTimeLowAlert(
   price: number,
   followers?: string[]
 ): Promise<boolean> {
-  return insertAndDispatch(supabase, game, "all_time_low",
-    `${game.title} — ALL TIME LOW`,
-    `${formatPrice(price, "")} · Lowest price ever recorded`,
-    followers);
+  return insertAndDispatch(supabase, game, "all_time_low", {
+    headline: `${game.title} — ALL TIME LOW`,
+    subtext: `${formatPrice(price, "")} · Lowest price ever recorded`,
+    new_price: price,
+  }, followers);
 }
 
 export async function generateSaleStartedAlert(
@@ -111,10 +129,13 @@ export async function generateSaleStartedAlert(
   const endStr = saleEndDate
     ? ` · Ends ${new Date(saleEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
     : "";
-  return insertAndDispatch(supabase, game, "sale_started",
-    `${game.title} sale — ${discount}% off`,
-    `${formatPrice(salePrice, "")}${endStr}`,
-    followers);
+  return insertAndDispatch(supabase, game, "sale_started", {
+    headline: `${game.title} sale — ${discount}% off`,
+    subtext: `${formatPrice(salePrice, "")}${endStr}`,
+    new_price: salePrice,
+    discount,
+    sale_end_date: saleEndDate,
+  }, followers);
 }
 
 export async function generateSwitch2EditionAlert(
@@ -122,10 +143,10 @@ export async function generateSwitch2EditionAlert(
   game: GameRef,
   followers?: string[]
 ): Promise<boolean> {
-  return insertAndDispatch(supabase, game, "switch2_edition_announced",
-    `${game.title} — Switch 2 Edition announced`,
-    "A Nintendo Switch 2 version is now available",
-    followers);
+  return insertAndDispatch(supabase, game, "switch2_edition_announced", {
+    headline: `${game.title} — Switch 2 Edition announced`,
+    subtext: "A Nintendo Switch 2 version is now available",
+  }, followers);
 }
 
 export async function generateReleaseAlert(
@@ -138,8 +159,9 @@ export async function generateReleaseAlert(
   const headline = type === "out_now"
     ? `${game.title} is available now`
     : `${game.title} releases today`;
-  return insertAndDispatch(supabase, game, type,
+  return insertAndDispatch(supabase, game, type, {
     headline,
-    `${formatPrice(price, "")} on Nintendo eShop`,
-    followers);
+    subtext: `${formatPrice(price, "")} on Nintendo eShop`,
+    new_price: price,
+  }, followers);
 }

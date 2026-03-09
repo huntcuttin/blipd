@@ -46,6 +46,7 @@ create table if not exists franchises (
   name text unique not null,
   game_count integer not null default 0,
   logo text not null,
+  popularity_score integer not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -92,6 +93,10 @@ create table if not exists alerts (
   type text not null,
   headline text not null,
   subtext text not null,
+  new_price numeric,
+  old_price numeric,
+  discount integer,
+  sale_end_date text,
   created_at timestamptz not null default now()
 );
 

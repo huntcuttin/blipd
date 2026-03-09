@@ -69,6 +69,7 @@ export interface Database {
           name: string;
           game_count: number;
           logo: string;
+          popularity_score: number;
           created_at: string;
         };
         Insert: {
@@ -76,6 +77,7 @@ export interface Database {
           name: string;
           game_count: number;
           logo: string;
+          popularity_score?: number;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["franchises"]["Insert"]>;
@@ -132,6 +134,10 @@ export interface Database {
           type: "price_drop" | "all_time_low" | "out_now" | "sale_started" | "release_today" | "announced" | "switch2_edition_announced";
           headline: string;
           subtext: string;
+          new_price: number | null;
+          old_price: number | null;
+          discount: number | null;
+          sale_end_date: string | null;
           created_at: string;
         };
         Insert: {
@@ -140,6 +146,10 @@ export interface Database {
           type: string;
           headline: string;
           subtext: string;
+          new_price?: number | null;
+          old_price?: number | null;
+          discount?: number | null;
+          sale_end_date?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["alerts"]["Insert"]>;
@@ -152,6 +162,28 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      notification_log: {
+        Row: {
+          id: string;
+          user_id: string;
+          alert_id: string | null;
+          channel: string;
+          status: string;
+          error: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          alert_id?: string | null;
+          channel?: string;
+          status?: string;
+          error?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["notification_log"]["Insert"]>;
+        Relationships: [];
       };
       user_profiles: {
         Row: {

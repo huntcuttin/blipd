@@ -35,7 +35,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   // Get alerts created since the given timestamp
   const { data: alerts, error } = await supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, games!inner ( slug, title, cover_art, nsuid )")
+    .select("id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid )")
     .gte("created_at", since)
     .order("created_at", { ascending: true });
 
@@ -119,25 +119,13 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       nsuid: game.nsuid ?? null,
     };
 
-    // Extract price data from alert text for email templates
-    // Search both headline and subtext since different alert types put prices in different places
-    const combined = `${alert.headline} ${alert.subtext}`;
-
-    // newPrice: first $ amount in headline, or first in subtext
-    const headlinePrice = alert.headline.match(/\$(\d+\.\d{2})/);
-    const subtextPrice = alert.subtext.match(/\$(\d+\.\d{2})/);
-    if (headlinePrice) payload.newPrice = parseFloat(headlinePrice[1]);
-    else if (subtextPrice) payload.newPrice = parseFloat(subtextPrice[1]);
-
-    const oldPriceMatch = alert.subtext.match(/Was \$(\d+\.\d{2})/);
-    if (oldPriceMatch) payload.oldPrice = parseFloat(oldPriceMatch[1]);
-
-    const discountMatch = combined.match(/(\d+)% off/);
-    if (discountMatch) payload.discount = parseInt(discountMatch[1]);
-
-    // Extract sale end date — look for ISO-style date or formatted date with year
-    const endMatch = alert.subtext.match(/Ends (.+?)(?:\s·|$)/);
-    if (endMatch) payload.saleEndDate = endMatch[1];
+    // Use structured price fields from the alerts table
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = alert as any;
+    if (a.new_price != null) payload.newPrice = Number(a.new_price);
+    if (a.old_price != null) payload.oldPrice = Number(a.old_price);
+    if (a.discount != null) payload.discount = Number(a.discount);
+    if (a.sale_end_date) payload.saleEndDate = a.sale_end_date;
 
     await sendAlertToUsers(allUserIds, payload);
     dispatched += allUserIds.length;
