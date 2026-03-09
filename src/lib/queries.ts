@@ -158,10 +158,12 @@ export async function getGameBySlug(supabase: Client, slug: string): Promise<Gam
 }
 
 export async function searchGames(supabase: Client, query: string): Promise<Game[]> {
+  // Escape ILIKE special characters (% and _) so they're treated as literals
+  const escaped = query.replace(/[%_]/g, "\\$&");
   const { data, error } = await supabase
     .from("games")
     .select("*")
-    .ilike("title", `%${query}%`)
+    .ilike("title", `%${escaped}%`)
     .order("title")
     .limit(20);
   if (error) throw error;

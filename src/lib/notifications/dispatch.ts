@@ -51,11 +51,12 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     const game = alert.games as any;
     const prefCol = getPrefColumn(alert.type);
 
-    // Check if notifications were already sent for this alert
+    // Check if notifications were already successfully sent for this alert
     const { data: existingLogs } = await supabase
       .from("notification_log")
       .select("id")
       .eq("alert_id", alert.id)
+      .eq("status", "sent")
       .limit(1);
 
     if (existingLogs && existingLogs.length > 0) {

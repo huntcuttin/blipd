@@ -5,10 +5,13 @@ import type { AlertPayload } from "./types";
 
 const FROM_ADDRESS = "Blippd <alerts@blippd.app>";
 
+let resendClient: Resend | null = null;
 function getResend(): Resend {
+  if (resendClient) return resendClient;
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error("Missing RESEND_API_KEY");
-  return new Resend(key);
+  resendClient = new Resend(key);
+  return resendClient;
 }
 
 async function getUserEmail(userId: string): Promise<string | null> {

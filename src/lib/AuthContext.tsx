@@ -25,12 +25,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -48,9 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setConsolePreference(null);
       return;
     }
-    getUserProfile(supabase, user.id).then(({ consolePreference: pref }) => {
-      setConsolePreference(pref);
-    });
+    getUserProfile(supabase, user.id)
+      .then(({ consolePreference: pref }) => {
+        setConsolePreference(pref);
+      })
+      .catch((err) => {
+        console.error("Failed to load user profile:", err);
+      });
   }, [user, supabase]);
 
   const signInWithMagicLink = async (email: string) => {

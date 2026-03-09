@@ -39,13 +39,17 @@ export async function sendAlert(
 /**
  * Sends an alert to multiple users. Used by the alert generation pipeline
  * after creating an alert and resolving its affected users.
+ * Processes in batches of 5 to respect Resend rate limits.
  */
 export async function sendAlertToUsers(
   userIds: string[],
   payload: AlertPayload
 ): Promise<void> {
-  // Send in parallel but don't let one failure block others
-  await Promise.allSettled(
-    userIds.map((userId) => sendAlert(userId, payload))
-  );
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+    const batch = userIds.slice(i, i + BATCH_SIZE);
+    await Promise.allSettled(
+      batch.map((userId) => sendAlert(userId, payload))
+    );
+  }
 }
