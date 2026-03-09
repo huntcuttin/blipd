@@ -19,7 +19,7 @@ import {
 interface FollowContextType {
   followedGameIds: Set<string>;
   followedFranchiseIds: Set<string>;
-  toggleFollowGame: (gameId: string) => { blocked?: "limit_reached" } | void;
+  toggleFollowGame: (gameId: string) => void;
   toggleFollowFranchise: (franchiseId: string) => void;
   isFollowingGame: (gameId: string) => boolean;
   isFollowingFranchise: (franchiseId: string) => boolean;
@@ -27,7 +27,6 @@ interface FollowContextType {
   getFranchisePrefs: (franchiseId: string) => NotifyPrefs;
   updateGamePrefs: (gameId: string, prefs: Partial<NotifyPrefs>) => void;
   updateFranchisePrefs: (franchiseId: string, prefs: Partial<NotifyPrefs>) => void;
-  followCount: number;
   loading: boolean;
 }
 
@@ -73,14 +72,8 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, [user]);
 
-  const followCount = followedGameIds.size;
-  const FREE_FOLLOW_LIMIT = 5;
-  // TODO: Check user's Pro subscription status from user_profiles or Stripe
-  // For now, Pro bypass is not implemented — will be added with Stripe integration (v1.5)
-  const isProUser = false;
-
   const toggleFollowGame = useCallback(
-    (gameId: string): { blocked?: "limit_reached" } | void => {
+    (gameId: string): void => {
       const supabase = createClient();
       if (followedGameIds.has(gameId)) {
         const savedPrefs = gamePrefsMap.get(gameId) ?? { ...DEFAULT_NOTIFY_PREFS };
@@ -94,9 +87,6 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         }
         return;
       }
-      if (!isProUser && followedGameIds.size >= FREE_FOLLOW_LIMIT) {
-        return { blocked: "limit_reached" };
-      }
       setFollowedGameIds((prev) => new Set(prev).add(gameId));
       setGamePrefsMap((prev) => new Map(prev).set(gameId, { ...DEFAULT_NOTIFY_PREFS }));
       if (user) {
@@ -106,7 +96,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [followedGameIds, gamePrefsMap, user, isProUser]
+    [followedGameIds, gamePrefsMap, user]
   );
 
   const toggleFollowFranchise = useCallback(
@@ -203,12 +193,11 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     getFranchisePrefs,
     updateGamePrefs,
     updateFranchisePrefs,
-    followCount,
     loading,
   }), [
     followedGameIds, followedFranchiseIds, toggleFollowGame, toggleFollowFranchise,
     isFollowingGame, isFollowingFranchise, getGamePrefs, getFranchisePrefs,
-    updateGamePrefs, updateFranchisePrefs, followCount, loading,
+    updateGamePrefs, updateFranchisePrefs, loading,
   ]);
 
   return (

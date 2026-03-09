@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
@@ -17,7 +16,6 @@ export default function FollowButton({
   const { isFollowingGame, toggleFollowGame } = useFollow();
   const router = useRouter();
   const following = isFollowingGame(gameId);
-  const [showLimit, setShowLimit] = useState(false);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -26,24 +24,10 @@ export default function FollowButton({
       router.push("/login");
       return;
     }
-    const result = toggleFollowGame(gameId);
-    if (result?.blocked === "limit_reached") {
-      setShowLimit(true);
-      setTimeout(() => setShowLimit(false), 3000);
-    }
+    toggleFollowGame(gameId);
   };
 
   const isLarge = size === "large";
-
-  if (showLimit) {
-    return (
-      <div className={`flex items-center justify-center gap-1.5 font-medium rounded-lg bg-[#ffaa00]/15 border border-[#ffaa00]/30 text-[#ffaa00] ${
-        isLarge ? "px-6 py-3 text-sm w-full" : "min-h-[36px] px-3 py-1.5 text-[10px]"
-      }`}>
-        Upgrade to Pro for unlimited follows
-      </div>
-    );
-  }
 
   if (following) {
     return (
@@ -71,4 +55,3 @@ export default function FollowButton({
     </button>
   );
 }
-
