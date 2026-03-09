@@ -25,8 +25,9 @@ export default function TermsPage() {
         <section>
           <h2 className="text-white font-semibold text-base mb-2">Free &amp; Pro tiers</h2>
           <p>
-            Free users can follow up to 5 games. Pro subscribers ($3/month) get unlimited
-            follows and priority alerts. You can cancel anytime.
+            Blippd is free to use with unlimited game follows and email alerts. A Pro tier
+            ($3/month) is planned for instant alerts and additional features. You can cancel
+            anytime.
           </p>
         </section>
 
