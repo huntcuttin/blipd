@@ -3,7 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, isPlaceholderDate } from "@/lib/format";
 import FollowButton from "./FollowButton";
 
 export default memo(function GameCard({ game }: { game: Game }) {
@@ -206,6 +206,7 @@ function getSaleEndLabel(dateStr: string): string | null {
 function getReleaseLabel(game: Game, daysUntil: number): string | null {
   if (game.releaseStatus === "out_today") return "Out Now";
   if (game.releaseStatus === "upcoming") {
+    if (!game.releaseDate || isPlaceholderDate(game.releaseDate)) return "TBA";
     if (daysUntil === 0) return "Releases today";
     if (daysUntil === 1) return "Out tomorrow";
     if (daysUntil <= 7) return `Out in ${daysUntil} days`;

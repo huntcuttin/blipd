@@ -65,7 +65,7 @@ function layout(body: string, preheader: string): string {
 export function priceDrop(payload: AlertPayload): { subject: string; html: string } {
   const pctOff = payload.discount ? `${payload.discount}%` : "";
   const saved = payload.oldPrice && payload.newPrice
-    ? `$${(payload.oldPrice - payload.newPrice).toFixed(2)}`
+    ? formatPrice(payload.oldPrice - payload.newPrice, "")
     : "";
 
   return {

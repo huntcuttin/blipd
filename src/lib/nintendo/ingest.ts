@@ -12,6 +12,7 @@ import {
   isRegionalVariant,
 } from "./transform";
 import {
+  getFollowers,
   generatePriceDropAlert,
   generateAllTimeLowAlert,
   generateSaleStartedAlert,
@@ -346,7 +347,8 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
         await supabase.from("games").update(baseUpdate).eq("id", base.id);
         // Fire alert if Switch 2 edition is newly linked
         if (sw2?.nsuid && !existingSw2Set.has(base.id)) {
-          await generateSwitch2EditionAlert(supabase, { id: base.id, title: base.title });
+          const sw2Followers = await getFollowers(supabase, base.id);
+          await generateSwitch2EditionAlert(supabase, { id: base.id, title: base.title }, sw2Followers);
         }
       }
 
@@ -550,15 +552,16 @@ export async function runPriceUpdate(options?: {
 
       if (shouldAlert) {
         const ref = { id: game.id, title: game.title };
+        const followers = await getFollowers(supabase, game.id);
 
         if (newPrice < oldPrice) {
-          if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice)) alertsCreated++;
+          if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, followers)) alertsCreated++;
         }
         if (allTimeLow) {
-          if (await generateAllTimeLowAlert(supabase, ref, newPrice)) alertsCreated++;
+          if (await generateAllTimeLowAlert(supabase, ref, newPrice, followers)) alertsCreated++;
         }
         if (isOnSale && !game.is_on_sale) {
-          if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, priceInfo.endDate))
+          if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, priceInfo.endDate, followers))
             alertsCreated++;
         }
       }
@@ -587,11 +590,13 @@ export async function runReleaseStatusUpdate(): Promise<number> {
         .from("games")
         .update({ release_status: "out_today", updated_at: new Date().toISOString() })
         .eq("id", game.id);
+      const releaseFollowers = await getFollowers(supabase, game.id);
       await generateReleaseAlert(
         supabase,
         { id: game.id, title: game.title },
         "release_today",
-        Number(game.current_price)
+        Number(game.current_price),
+        releaseFollowers
       );
       updated++;
     }
