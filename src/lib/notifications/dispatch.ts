@@ -2,8 +2,27 @@ import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { sendAlertToUsers } from "./send";
 import type { AlertPayload } from "./types";
 
+const PREF_COLUMNS = ["notify_sales", "notify_all_time_low", "notify_releases", "notify_announcements"] as const;
+type PrefColumn = (typeof PREF_COLUMNS)[number];
+
+interface FollowRow {
+  user_id: string;
+  notify_sales: boolean;
+  notify_all_time_low: boolean;
+  notify_releases: boolean;
+  notify_announcements: boolean;
+}
+
+interface AlertGame {
+  slug: string;
+  title: string;
+  cover_art: string | null;
+  nsuid: string | null;
+  franchise: string | null;
+}
+
 // Map alert types to the notification preference column that controls them
-function getPrefColumn(alertType: string): string {
+function getPrefColumn(alertType: string): PrefColumn {
   switch (alertType) {
     case "price_drop":
     case "sale_started":
@@ -18,7 +37,7 @@ function getPrefColumn(alertType: string): string {
     case "switch2_edition_announced":
       return "notify_announcements";
     default:
-      return "notify_sales"; // safe fallback
+      return "notify_sales";
   }
 }
 
@@ -46,32 +65,59 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
 
   console.log(`  Found ${alerts.length} alerts to dispatch since ${since}`);
 
-  // Batch dedup check: get all alert IDs that were already dispatched
+  // Collect unique IDs for batch queries
   const alertIds = alerts.map((a) => a.id);
-  const { data: sentLogs } = alertIds.length > 0
-    ? await supabase
-        .from("notification_log")
-        .select("alert_id")
-        .in("alert_id", alertIds)
-        .eq("status", "sent")
-    : { data: [] };
-  const alreadySent = new Set((sentLogs ?? []).map((l: { alert_id: string }) => l.alert_id));
-
-  // Pre-fetch franchise IDs for all unique franchise names in this batch
+  const gameIds = Array.from(new Set(alerts.map((a) => a.game_id)));
   const franchiseNames = Array.from(new Set(
     alerts
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((a) => (a.games as any)?.franchise as string | null)
+      .map((a) => (a.games as unknown as AlertGame)?.franchise)
       .filter((f): f is string => !!f)
   ));
+
+  // Batch: dedup check, game followers, franchise IDs — all in parallel
+  const FOLLOW_COLS = "user_id, game_id, notify_sales, notify_all_time_low, notify_releases, notify_announcements";
+  const FRANCHISE_FOLLOW_COLS = "user_id, franchise_id, notify_sales, notify_all_time_low, notify_releases, notify_announcements";
+
+  const [sentLogsResult, gameFollowsResult, franchiseIdsResult] = await Promise.all([
+    alertIds.length > 0
+      ? supabase.from("notification_log").select("alert_id").in("alert_id", alertIds).eq("status", "sent")
+      : Promise.resolve({ data: [] as { alert_id: string }[] }),
+    gameIds.length > 0
+      ? supabase.from("user_game_follows").select(FOLLOW_COLS).in("game_id", gameIds)
+      : Promise.resolve({ data: [] as (FollowRow & { game_id: string })[] }),
+    franchiseNames.length > 0
+      ? supabase.from("franchises").select("id, name").in("name", franchiseNames)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+
+  const alreadySent = new Set((sentLogsResult.data ?? []).map((l) => l.alert_id));
+
+  // Index game followers by game_id
+  const gameFollowsByGame = new Map<string, FollowRow[]>();
+  for (const f of (gameFollowsResult.data ?? []) as (FollowRow & { game_id: string })[]) {
+    const list = gameFollowsByGame.get(f.game_id) ?? [];
+    list.push(f);
+    gameFollowsByGame.set(f.game_id, list);
+  }
+
+  // Map franchise names to IDs
   const franchiseIdMap = new Map<string, string>();
-  if (franchiseNames.length > 0) {
-    const { data: franchiseRows } = await supabase
-      .from("franchises")
-      .select("id, name")
-      .in("name", franchiseNames);
-    for (const f of franchiseRows ?? []) {
-      franchiseIdMap.set(f.name, f.id);
+  for (const f of (franchiseIdsResult.data ?? []) as { id: string; name: string }[]) {
+    franchiseIdMap.set(f.name, f.id);
+  }
+
+  // Batch: franchise followers (need franchise IDs first)
+  const allFranchiseIds = Array.from(new Set(franchiseIdMap.values()));
+  const franchiseFollowsByFranchise = new Map<string, FollowRow[]>();
+  if (allFranchiseIds.length > 0) {
+    const { data: franchiseFollows } = await supabase
+      .from("user_franchise_follows")
+      .select(FRANCHISE_FOLLOW_COLS)
+      .in("franchise_id", allFranchiseIds);
+    for (const f of (franchiseFollows ?? []) as (FollowRow & { franchise_id: string })[]) {
+      const list = franchiseFollowsByFranchise.get(f.franchise_id) ?? [];
+      list.push(f);
+      franchiseFollowsByFranchise.set(f.franchise_id, list);
     }
   }
 
@@ -81,31 +127,21 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       continue;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const game = alert.games as any;
+    const game = alert.games as unknown as AlertGame;
     const prefCol = getPrefColumn(alert.type);
 
-    // Fetch game followers and franchise followers in parallel
+    // Filter pre-fetched followers by the relevant notification preference
+    const gameFollowerIds = (gameFollowsByGame.get(alert.game_id) ?? [])
+      .filter((f) => f[prefCol])
+      .map((f) => f.user_id);
+
     const franchiseId = game.franchise ? franchiseIdMap.get(game.franchise) : undefined;
-    const [{ data: followers }, franchiseResult] = await Promise.all([
-      supabase
-        .from("user_game_follows")
-        .select("user_id")
-        .eq("game_id", alert.game_id)
-        .eq(prefCol, true),
-      franchiseId
-        ? supabase
-            .from("user_franchise_follows")
-            .select("user_id")
-            .eq("franchise_id", franchiseId)
-            .eq(prefCol, true)
-        : Promise.resolve({ data: [] as { user_id: string }[] }),
-    ]);
+    const franchiseFollowerIds = franchiseId
+      ? (franchiseFollowsByFranchise.get(franchiseId) ?? [])
+          .filter((f) => f[prefCol])
+          .map((f) => f.user_id)
+      : [];
 
-    const franchiseFollowerIds = (franchiseResult.data ?? []).map((f: { user_id: string }) => f.user_id);
-
-    // Merge and deduplicate user IDs
-    const gameFollowerIds = (followers ?? []).map((f: { user_id: string }) => f.user_id);
     const allUserIds = Array.from(new Set([...gameFollowerIds, ...franchiseFollowerIds]));
 
     if (allUserIds.length === 0) {
@@ -121,13 +157,12 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       gameId: alert.game_id,
       gameSlug: game.slug,
       gameTitle: game.title,
-      gameCoverArt: game.cover_art,
+      gameCoverArt: game.cover_art ?? "",
       headline: alert.headline,
       subtext: alert.subtext,
       nsuid: game.nsuid ?? null,
     };
 
-    // Use structured price fields from the alerts table
     if (alert.new_price != null) payload.newPrice = Number(alert.new_price);
     if (alert.old_price != null) payload.oldPrice = Number(alert.old_price);
     if (alert.discount != null) payload.discount = Number(alert.discount);

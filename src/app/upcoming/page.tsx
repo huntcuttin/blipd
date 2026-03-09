@@ -4,6 +4,7 @@ import { useState } from "react";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getRecentReleases, getUpcomingGames } from "@/lib/queries";
+import QueryError from "@/components/QueryError";
 import { useAuth } from "@/lib/AuthContext";
 
 type SubTab = "Out Now" | "Coming Soon";
@@ -53,10 +54,7 @@ export default function UpcomingPage() {
 
       {/* Content */}
       {queryError ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4">
-          <p className="text-[#ff6874] text-sm font-medium mb-1">Failed to load games</p>
-          <p className="text-[#555555] text-xs">Check your connection and try again</p>
-        </div>
+        <QueryError subject="games" />
       ) : loading ? (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import AlertCard from "@/components/AlertCard";
 
+import QueryError from "@/components/QueryError";
 import { useAuth } from "@/lib/AuthContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getAlerts, markAlertRead, remindAlert } from "@/lib/queries";
@@ -125,10 +126,7 @@ export default function AlertsPage() {
       </div>
 
       {alertsError ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4">
-          <p className="text-[#ff6874] text-sm font-medium mb-1">Failed to load alerts</p>
-          <p className="text-[#555555] text-xs">Check your connection and try again</p>
-        </div>
+        <QueryError subject="alerts" />
       ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center py-20 px-4">
           <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">

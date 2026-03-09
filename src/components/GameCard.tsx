@@ -1,10 +1,11 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
 import { formatPrice, isPlaceholderDate } from "@/lib/format";
 import FollowButton from "./FollowButton";
+import GameCoverImage from "./GameCoverImage";
 
 export default memo(function GameCard({ game }: { game: Game }) {
   const daysUntilRelease = getDaysUntil(game.releaseDate);
@@ -14,21 +15,9 @@ export default memo(function GameCard({ game }: { game: Game }) {
   return (
     <Link href={`/game/${game.slug}`} className="block">
       <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors">
-        {/* Cover art — 16:9, larger */}
+        {/* Cover art */}
         <div className="w-[110px] shrink-0">
-          {game.coverArt ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={game.coverArt}
-              alt={game.title}
-              loading="lazy"
-              onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }}
-              className="w-full aspect-[16/10] rounded-lg object-cover bg-[#1a1a1a]"
-            />
-          ) : null}
-          <div className={`w-full aspect-[16/10] rounded-lg bg-[#1a1a1a] flex items-center justify-center${game.coverArt ? " hidden" : ""}`}>
-            <span className="text-[#333333] text-xs">No image</span>
-          </div>
+          <GameCoverImage src={game.coverArt} alt={game.title} className="w-full aspect-[16/10] rounded-lg object-cover bg-[#1a1a1a]" />
         </div>
 
         {/* Info */}
@@ -133,19 +122,7 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
   return (
     <Link href={`/game/${game.slug}`} className="block shrink-0">
       <div className="w-[150px] bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors overflow-hidden">
-        {game.coverArt ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={game.coverArt}
-            alt={game.title}
-            loading="lazy"
-            onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextElementSibling?.classList.remove("hidden"); }}
-            className="w-full aspect-[16/10] object-cover bg-[#1a1a1a]"
-          />
-        ) : null}
-        <div className={`w-full aspect-[16/10] bg-[#1a1a1a] flex items-center justify-center${game.coverArt ? " hidden" : ""}`}>
-          <span className="text-[#333333] text-[10px]">No image</span>
-        </div>
+        <GameCoverImage src={game.coverArt} alt={game.title} className="w-full aspect-[16/10] object-cover bg-[#1a1a1a]" />
         <div className="p-2.5">
           <h3 className="font-semibold text-white text-xs leading-tight truncate">
             {game.title}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } from "@/components/GameCard";
 
+import QueryError from "@/components/QueryError";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGamesOnSale, getAllFranchises, searchGames } from "@/lib/queries";
@@ -118,10 +119,7 @@ export default function SalesPage() {
           )}
         </div>
       ) : gamesError ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4">
-          <p className="text-[#ff6874] text-sm font-medium mb-1">Failed to load sales</p>
-          <p className="text-[#555555] text-xs">Check your connection and try again</p>
-        </div>
+        <QueryError subject="sales" />
       ) : gamesLoading ? (
         <div className="space-y-6">
           <div>
