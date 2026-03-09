@@ -11,14 +11,15 @@ type PlatformFilter = "all" | "switch2";
 
 export default function UpcomingPage() {
   const { consolePreference } = useAuth();
-  const { data: recentReleases, loading: recentLoading } = useSupabaseQuery(getRecentReleases);
-  const { data: upcomingGames, loading: upcomingLoading } = useSupabaseQuery(getUpcomingGames);
+  const { data: recentReleases, loading: recentLoading, error: recentError } = useSupabaseQuery(getRecentReleases);
+  const { data: upcomingGames, loading: upcomingLoading, error: upcomingError } = useSupabaseQuery(getUpcomingGames);
   const [subTab, setSubTab] = useState<SubTab>("Out Now");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(
     consolePreference === "switch2" ? "switch2" : "all"
   );
 
   const loading = subTab === "Out Now" ? recentLoading : upcomingLoading;
+  const queryError = subTab === "Out Now" ? recentError : upcomingError;
   const rawGames = subTab === "Out Now" ? (recentReleases ?? []) : (upcomingGames ?? []);
 
   const filtered =
@@ -51,7 +52,12 @@ export default function UpcomingPage() {
       </div>
 
       {/* Content */}
-      {loading ? (
+      {queryError ? (
+        <div className="flex flex-col items-center justify-center py-20 px-4">
+          <p className="text-[#ff6874] text-sm font-medium mb-1">Failed to load games</p>
+          <p className="text-[#555555] text-xs">Check your connection and try again</p>
+        </div>
+      ) : loading ? (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <GameCardSkeleton key={i} />

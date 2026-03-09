@@ -36,7 +36,7 @@ const FILTER_TYPES: Record<AlertFilter, AlertType[] | null> = {
 
 export default function AlertsPage() {
   const { user } = useAuth();
-  const { data: fetchedAlerts } = useSupabaseQuery(
+  const { data: fetchedAlerts, error: alertsError } = useSupabaseQuery(
     (sb) => getAlerts(sb, user?.id),
     [user?.id]
   );
@@ -98,7 +98,7 @@ export default function AlertsPage() {
     grouped[alert.timestampGroup].push(alert);
   });
 
-  const isEmpty = alerts.length === 0;
+  const isEmpty = alerts.length === 0 && !alertsError;
 
   return (
     <div className="px-4">
@@ -124,7 +124,12 @@ export default function AlertsPage() {
         </div>
       </div>
 
-      {isEmpty ? (
+      {alertsError ? (
+        <div className="flex flex-col items-center justify-center py-20 px-4">
+          <p className="text-[#ff6874] text-sm font-medium mb-1">Failed to load alerts</p>
+          <p className="text-[#555555] text-xs">Check your connection and try again</p>
+        </div>
+      ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center py-20 px-4">
           <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
             <svg className="w-8 h-8 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

@@ -35,7 +35,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   // Get alerts created since the given timestamp
   const { data: alerts, error } = await supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid )")
+    .select("id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, franchise )")
     .gte("created_at", since)
     .order("created_at", { ascending: true });
 
@@ -46,55 +46,63 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
 
   console.log(`  Found ${alerts.length} alerts to dispatch since ${since}`);
 
+  // Batch dedup check: get all alert IDs that were already dispatched
+  const alertIds = alerts.map((a) => a.id);
+  const { data: sentLogs } = alertIds.length > 0
+    ? await supabase
+        .from("notification_log")
+        .select("alert_id")
+        .in("alert_id", alertIds)
+        .eq("status", "sent")
+    : { data: [] };
+  const alreadySent = new Set((sentLogs ?? []).map((l: { alert_id: string }) => l.alert_id));
+
+  // Pre-fetch franchise IDs for all unique franchise names in this batch
+  const franchiseNames = Array.from(new Set(
+    alerts
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((a) => (a.games as any)?.franchise as string | null)
+      .filter((f): f is string => !!f)
+  ));
+  const franchiseIdMap = new Map<string, string>();
+  if (franchiseNames.length > 0) {
+    const { data: franchiseRows } = await supabase
+      .from("franchises")
+      .select("id, name")
+      .in("name", franchiseNames);
+    for (const f of franchiseRows ?? []) {
+      franchiseIdMap.set(f.name, f.id);
+    }
+  }
+
   for (const alert of alerts) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const game = alert.games as any;
-    const prefCol = getPrefColumn(alert.type);
-
-    // Check if notifications were already successfully sent for this alert
-    const { data: existingLogs } = await supabase
-      .from("notification_log")
-      .select("id")
-      .eq("alert_id", alert.id)
-      .eq("status", "sent")
-      .limit(1);
-
-    if (existingLogs && existingLogs.length > 0) {
+    if (alreadySent.has(alert.id)) {
       console.log(`  Skipping alert ${alert.id} — already dispatched`);
       continue;
     }
 
-    // Find users following this game who have this pref enabled
-    const { data: followers } = await supabase
-      .from("user_game_follows")
-      .select("user_id")
-      .eq("game_id", alert.game_id)
-      .eq(prefCol, true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const game = alert.games as any;
+    const prefCol = getPrefColumn(alert.type);
 
-    // Also find users following the game's franchise with this pref enabled
-    const { data: gameData } = await supabase
-      .from("games")
-      .select("franchise")
-      .eq("id", alert.game_id)
-      .single();
+    // Fetch game followers and franchise followers in parallel
+    const franchiseId = game.franchise ? franchiseIdMap.get(game.franchise) : undefined;
+    const [{ data: followers }, franchiseResult] = await Promise.all([
+      supabase
+        .from("user_game_follows")
+        .select("user_id")
+        .eq("game_id", alert.game_id)
+        .eq(prefCol, true),
+      franchiseId
+        ? supabase
+            .from("user_franchise_follows")
+            .select("user_id")
+            .eq("franchise_id", franchiseId)
+            .eq(prefCol, true)
+        : Promise.resolve({ data: [] as { user_id: string }[] }),
+    ]);
 
-    let franchiseFollowerIds: string[] = [];
-    if (gameData?.franchise) {
-      const { data: franchise } = await supabase
-        .from("franchises")
-        .select("id")
-        .eq("name", gameData.franchise)
-        .single();
-
-      if (franchise) {
-        const { data: franchiseFollowers } = await supabase
-          .from("user_franchise_follows")
-          .select("user_id")
-          .eq("franchise_id", franchise.id)
-          .eq(prefCol, true);
-        franchiseFollowerIds = (franchiseFollowers ?? []).map((f: { user_id: string }) => f.user_id);
-      }
-    }
+    const franchiseFollowerIds = (franchiseResult.data ?? []).map((f: { user_id: string }) => f.user_id);
 
     // Merge and deduplicate user IDs
     const gameFollowerIds = (followers ?? []).map((f: { user_id: string }) => f.user_id);

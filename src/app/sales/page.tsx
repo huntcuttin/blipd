@@ -39,7 +39,7 @@ export default function SalesPage() {
   const [sort, setSort] = useState<SortMode>("Biggest Discount");
   const { followedGameIds, followedFranchiseIds } = useFollow();
 
-  const { data: games, loading: gamesLoading } = useSupabaseQuery(getGamesOnSale);
+  const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getGamesOnSale);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
 
   useEffect(() => {
@@ -116,6 +116,11 @@ export default function SalesPage() {
               <p className="text-[#555555] text-xs">Check your spelling or try a different search</p>
             </div>
           )}
+        </div>
+      ) : gamesError ? (
+        <div className="flex flex-col items-center justify-center py-20 px-4">
+          <p className="text-[#ff6874] text-sm font-medium mb-1">Failed to load sales</p>
+          <p className="text-[#555555] text-xs">Check your connection and try again</p>
         </div>
       ) : gamesLoading ? (
         <div className="space-y-6">
