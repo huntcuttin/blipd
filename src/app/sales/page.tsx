@@ -77,7 +77,7 @@ export default function SalesPage() {
       ? allGames.filter((g) => g.franchise && followedFranchiseNames.has(g.franchise))
       : allGames;
 
-  const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow);
+  const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow && (g.releaseStatus === "released" || g.releaseStatus === "out_today"));
   const sortedSales = sortGames(
     filteredSales.filter((g) => g.releaseStatus === "released" || g.releaseStatus === "out_today"),
     sort
