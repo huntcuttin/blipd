@@ -11,6 +11,7 @@ export default memo(function GameCard({ game, showHype }: { game: Game; showHype
   const daysUntilRelease = getDaysUntil(game.releaseDate);
   const releaseLabel = getReleaseLabel(game, daysUntilRelease);
   const saleEndLabel = game.isOnSale && game.saleEndDate ? getSaleEndLabel(game.saleEndDate) : null;
+  const { base, edition } = splitTitle(game.title);
 
   return (
     <Link href={`/game/${game.slug}`} className="block">
@@ -24,8 +25,13 @@ export default memo(function GameCard({ game, showHype }: { game: Game; showHype
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
             <h3 className="font-semibold text-white text-[15px] leading-snug line-clamp-2">
-              {game.title}
+              {base}
             </h3>
+            {edition && (
+              <p className="text-[#00aaff] text-[11px] mt-0.5 leading-tight line-clamp-1">
+                {edition}
+              </p>
+            )}
             <p className="text-[#555555] text-[11px] mt-0.5 truncate">
               {game.publisher}
               {game.metacriticScore !== null && (
@@ -171,6 +177,16 @@ export function GameCardCompactSkeleton() {
       </div>
     </div>
   );
+}
+
+// Split "Base Title – Edition Subtitle" into { base, edition }
+// Handles Nintendo's em-dash separator (–) and strips trademark symbols from base
+function splitTitle(title: string): { base: string; edition: string | null } {
+  const sep = title.indexOf(" – ");
+  if (sep === -1) return { base: title, edition: null };
+  const base = title.slice(0, sep).replace(/[™®]/g, "").trim();
+  const edition = title.slice(sep + 3).trim();
+  return { base, edition };
 }
 
 function getDaysUntil(dateStr: string): number {
