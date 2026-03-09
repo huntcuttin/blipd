@@ -83,12 +83,13 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     (gameId: string): { blocked?: "limit_reached" } | void => {
       const supabase = createClient();
       if (followedGameIds.has(gameId)) {
+        const savedPrefs = gamePrefsMap.get(gameId) ?? { ...DEFAULT_NOTIFY_PREFS };
         setFollowedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
         setGamePrefsMap((prev) => { const next = new Map(prev); next.delete(gameId); return next; });
         if (user) {
           dbUnfollowGame(supabase, user.id, gameId).catch(() => {
             setFollowedGameIds((prev) => new Set(prev).add(gameId));
-            setGamePrefsMap((prev) => new Map(prev).set(gameId, { ...DEFAULT_NOTIFY_PREFS }));
+            setGamePrefsMap((prev) => new Map(prev).set(gameId, savedPrefs));
           });
         }
         return;
@@ -105,19 +106,20 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [followedGameIds, user, isProUser]
+    [followedGameIds, gamePrefsMap, user, isProUser]
   );
 
   const toggleFollowFranchise = useCallback(
     (franchiseId: string) => {
       const supabase = createClient();
       if (followedFranchiseIds.has(franchiseId)) {
+        const savedPrefs = franchisePrefsMap.get(franchiseId) ?? { ...DEFAULT_NOTIFY_PREFS };
         setFollowedFranchiseIds((prev) => { const next = new Set(prev); next.delete(franchiseId); return next; });
         setFranchisePrefsMap((prev) => { const next = new Map(prev); next.delete(franchiseId); return next; });
         if (user) {
           dbUnfollowFranchise(supabase, user.id, franchiseId).catch(() => {
             setFollowedFranchiseIds((prev) => new Set(prev).add(franchiseId));
-            setFranchisePrefsMap((prev) => new Map(prev).set(franchiseId, { ...DEFAULT_NOTIFY_PREFS }));
+            setFranchisePrefsMap((prev) => new Map(prev).set(franchiseId, savedPrefs));
           });
         }
       } else {
@@ -131,7 +133,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [followedFranchiseIds, user]
+    [followedFranchiseIds, franchisePrefsMap, user]
   );
 
   const isFollowingGame = useCallback(
