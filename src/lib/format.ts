@@ -8,7 +8,7 @@ export function formatShortDate(date: string | null | undefined): string {
   if (!date) return "";
   const d = new Date(date);
   if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 /** Dates used as placeholders for unknown release dates. */

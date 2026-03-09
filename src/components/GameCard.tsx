@@ -200,7 +200,7 @@ function getReleaseLabel(game: Game, daysUntil: number): string | null {
     if (daysUntil === 1) return "Out tomorrow";
     if (daysUntil <= 7) return `Out in ${daysUntil} days`;
     const d = new Date(game.releaseDate);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   }
   return null;
 }
