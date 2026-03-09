@@ -158,18 +158,44 @@ export async function getGameBySlug(supabase: Client, slug: string): Promise<Gam
   return mapGame(data);
 }
 
-export async function searchGames(supabase: Client, query: string): Promise<Game[]> {
+// Title fragments that indicate DLC / add-ons — not standalone games
+const ADDON_PATTERNS = [
+  "upgrade pack",
+  "expansion pass",
+  "season pass",
+  " - dlc",
+  "booster course",
+  "additional content",
+];
+
+function isAddon(title: string): boolean {
+  const lower = title.toLowerCase();
+  return ADDON_PATTERNS.some((p) => lower.includes(p));
+}
+
+export async function searchGames(
+  supabase: Client,
+  query: string,
+  consolePreference?: "switch" | "switch2" | null
+): Promise<Game[]> {
   // Try Algolia first for relevance-ranked results, fall back to ILIKE
   try {
     const { fetchGameCatalog } = await import("@/lib/nintendo/client");
-    const PLATFORM_FILTER = '(platform:"Nintendo Switch" OR platform:"Nintendo Switch 2")';
+    // Switch 2 users see Switch 2 titles; everyone else sees both platforms
+    const platformFilter =
+      consolePreference === "switch2"
+        ? 'platform:"Nintendo Switch 2"'
+        : '(platform:"Nintendo Switch" OR platform:"Nintendo Switch 2")';
     const result = await fetchGameCatalog({
       query,
-      hitsPerPage: 30,
-      filters: `topLevelCategoryCode:GAMES AND ${PLATFORM_FILTER}`,
+      hitsPerPage: 40,
+      filters: `topLevelCategoryCode:GAMES AND ${platformFilter}`,
     });
 
-    const nsuids = result.hits.map((h) => h.nsuid).filter(Boolean) as string[];
+    const nsuids = result.hits
+      .filter((h) => !isAddon(h.title ?? ""))
+      .map((h) => h.nsuid)
+      .filter(Boolean) as string[];
     if (nsuids.length === 0) return [];
 
     // Look up only games we track in our DB, preserving Algolia's ranking order

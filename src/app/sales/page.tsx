@@ -9,6 +9,7 @@ import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGamesOnSale, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/AuthContext";
 import type { Game } from "@/lib/types";
 
 const FILTERS = ["All", "My Games", "My Franchises"] as const;
@@ -39,6 +40,7 @@ export default function SalesPage() {
   const [filter, setFilter] = useState<Filter>("All");
   const [sort, setSort] = useState<SortMode>("Biggest Discount");
   const { followedGameIds, followedFranchiseIds } = useFollow();
+  const { consolePreference } = useAuth();
 
   const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getGamesOnSale);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
@@ -51,14 +53,14 @@ export default function SalesPage() {
     const timer = setTimeout(async () => {
       try {
         const supabase = createClient();
-        const results = await searchGames(supabase, search);
+        const results = await searchGames(supabase, search, consolePreference);
         setSearchResults(results);
       } catch {
         setSearchResults([]);
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, consolePreference]);
 
   const allGames = games ?? [];
   const allFranchises = franchises ?? [];

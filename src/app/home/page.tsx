@@ -24,7 +24,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>("Discover");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
-  const { user, signOut } = useAuth();
+  const { user, signOut, consolePreference } = useAuth();
   const { followedGameIds, followedFranchiseIds } = useFollow();
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
@@ -68,14 +68,14 @@ export default function HomePage() {
     const timer = setTimeout(async () => {
       try {
         const supabase = createClient();
-        const results = await searchGames(supabase, search);
+        const results = await searchGames(supabase, search, consolePreference);
         setSearchResults(results);
       } catch {
         setSearchResults([]);
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, consolePreference]);
 
   const allFranchises = franchises ?? [];
   const followedGames = followedGamesData ?? [];
