@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { sendAlertToUsers } from "./send";
+import { sendBatchedDigest } from "./send-batch";
 import type { AlertPayload } from "./types";
+import type { BatchAlertGame } from "./batch-template";
 
 type PrefColumn = "notify_sales" | "notify_all_time_low" | "notify_releases" | "notify_announcements";
 
@@ -19,6 +21,10 @@ interface AlertGame {
   nsuid: string | null;
   franchise: string | null;
 }
+
+// Alert types that qualify for batching (price-related alerts only)
+const BATCHABLE_TYPES = new Set(["price_drop", "all_time_low", "sale_started", "sale_ending"]);
+const BATCH_THRESHOLD = 5;
 
 // Map alert types to the notification preference column that controls them
 function getPrefColumn(alertType: string): PrefColumn {
@@ -41,11 +47,15 @@ function getPrefColumn(alertType: string): PrefColumn {
   }
 }
 
+interface PendingAlert {
+  payload: AlertPayload;
+  batchGame: BatchAlertGame;
+}
+
 /**
  * Dispatches notifications for all alerts created since the given timestamp.
- * Designed to run after the alert generation pipeline completes.
- * Queries recent alerts, finds users following the affected game, and sends notifications.
- * Respects per-follow notification preferences.
+ * Implements batching: if a user would receive 5+ price-related alerts in one
+ * dispatch window, they get a single digest email instead of individual ones.
  */
 export async function dispatchRecentAlerts(since: string): Promise<number> {
   const supabase = createAdminClient();
@@ -134,6 +144,12 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     }
   }
 
+  // ── Phase 1: Collect per-user alert lists ──
+  // Map userId -> list of { payload, batchGame } for batchable alerts
+  // Map userId -> list of payloads for non-batchable alerts
+  const userBatchableAlerts = new Map<string, PendingAlert[]>();
+  const userNonBatchableAlerts = new Map<string, AlertPayload[]>();
+
   for (const alert of alerts) {
     const game = alert.games as unknown as AlertGame;
     const prefCol = getPrefColumn(alert.type);
@@ -154,12 +170,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     const allUserIds = Array.from(new Set([...gameFollowerIds, ...franchiseFollowerIds]))
       .filter((uid) => !alreadySentPairs.has(`${alert.id}:${uid}`));
 
-    if (allUserIds.length === 0) {
-      console.log(`  No followers for game ${game.title} (pref: ${prefCol}) — skipping`);
-      continue;
-    }
-
-    console.log(`  Dispatching "${alert.type}" for "${game.title}" to ${allUserIds.length} users`);
+    if (allUserIds.length === 0) continue;
 
     const payload: AlertPayload = {
       alertId: alert.id,
@@ -178,8 +189,68 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     if (alert.discount != null) payload.discount = Number(alert.discount);
     if (alert.sale_end_date) payload.saleEndDate = alert.sale_end_date;
 
-    await sendAlertToUsers(allUserIds, payload);
-    dispatched += allUserIds.length;
+    const isBatchable = BATCHABLE_TYPES.has(alert.type);
+
+    for (const userId of allUserIds) {
+      if (isBatchable) {
+        const list = userBatchableAlerts.get(userId) ?? [];
+        list.push({
+          payload,
+          batchGame: {
+            title: game.title,
+            slug: game.slug,
+            newPrice: payload.newPrice ?? 0,
+            oldPrice: payload.oldPrice ?? 0,
+            discount: payload.discount ?? 0,
+            alertType: alert.type,
+            saleEndDate: alert.sale_end_date,
+            nsuid: game.nsuid,
+          },
+        });
+        userBatchableAlerts.set(userId, list);
+      } else {
+        const list = userNonBatchableAlerts.get(userId) ?? [];
+        list.push(payload);
+        userNonBatchableAlerts.set(userId, list);
+      }
+    }
+  }
+
+  // ── Phase 2: Send non-batchable alerts individually (grouped by alert for efficiency) ──
+  const nonBatchableByAlert = new Map<string, { payload: AlertPayload; userIds: string[] }>();
+  for (const [userId, payloads] of Array.from(userNonBatchableAlerts.entries())) {
+    for (const payload of payloads) {
+      const existing = nonBatchableByAlert.get(payload.alertId);
+      if (existing) {
+        existing.userIds.push(userId);
+      } else {
+        nonBatchableByAlert.set(payload.alertId, { payload, userIds: [userId] });
+      }
+    }
+  }
+
+  dispatched = 0; // Reset — count actual sends
+  for (const { payload, userIds } of Array.from(nonBatchableByAlert.values())) {
+    console.log(`  Dispatching "${payload.alertType}" for "${payload.gameTitle}" to ${userIds.length} users`);
+    await sendAlertToUsers(userIds, payload);
+    dispatched += userIds.length;
+  }
+
+  // ── Phase 3: Handle batchable alerts — batch or individual ──
+  for (const [userId, pendingAlerts] of Array.from(userBatchableAlerts.entries())) {
+    if (pendingAlerts.length >= BATCH_THRESHOLD) {
+      // Send one batched digest email
+      console.log(`  Batching ${pendingAlerts.length} price alerts for user ${userId.slice(0, 8)}...`);
+      const games = pendingAlerts.map((pa) => pa.batchGame);
+      await sendBatchedDigest(userId, games, pendingAlerts.map((pa) => pa.payload.alertId));
+      dispatched += 1; // One email, not N
+    } else {
+      // Send individually
+      for (const pa of pendingAlerts) {
+        await sendAlertToUsers([userId], pa.payload);
+        dispatched += 1;
+      }
+    }
   }
 
   console.log(`  Dispatch complete: ${dispatched} notifications sent`);
