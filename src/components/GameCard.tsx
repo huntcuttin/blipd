@@ -51,7 +51,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
                 <span className="text-[#00ff88] font-bold text-sm shrink-0">
                   ${game.currentPrice.toFixed(2)}
                 </span>
-                <span className="text-[#555555] text-[11px] line-through truncate">
+                <span className="text-[#555555] text-[11px] line-through">
                   ${game.originalPrice.toFixed(2)}
                 </span>
                 <span className="px-1.5 py-0.5 rounded-md bg-[#00cc6e]/20 text-[#00ff88] text-[11px] font-bold shrink-0">
