@@ -3,6 +3,14 @@ export function formatPrice(price: number | null | undefined, fallback = "—"):
   return price != null && !isNaN(price) ? `$${price.toFixed(2)}` : fallback;
 }
 
+/** Format a date as "Mar 7, 2026". Returns empty string for invalid input. */
+export function formatShortDate(date: string | null | undefined): string {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 /** Dates used as placeholders for unknown release dates. */
 export const PLACEHOLDER_DATES = ["2099-12-31", "2020-01-01"] as const;
 

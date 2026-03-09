@@ -527,14 +527,9 @@ export async function runPriceUpdate(options?: {
     // Update price history: replace same-month entry or append new month
     const lastEntry = history[history.length - 1];
     if (priceChanged || !lastEntry || lastEntry.date !== currentMonth) {
-      let newHistory: { date: string; price: number }[];
-      if (lastEntry && lastEntry.date === currentMonth) {
-        // Same month — update in place instead of appending duplicate
-        newHistory = [...history.slice(0, -1), { date: currentMonth, price: newPrice }];
-      } else {
-        newHistory = [...history, { date: currentMonth, price: newPrice }];
-      }
-      // Cap at 120 months (10 years) of history
+      const shouldReplace = lastEntry?.date === currentMonth;
+      const base = shouldReplace ? history.slice(0, -1) : history;
+      let newHistory = [...base, { date: currentMonth, price: newPrice }];
       if (newHistory.length > 120) newHistory = newHistory.slice(-120);
       update.price_history = newHistory;
     }

@@ -1,5 +1,5 @@
 import type { AlertPayload } from "./types";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatShortDate } from "@/lib/format";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.blippd.app";
 
@@ -106,7 +106,7 @@ export function allTimeLow(payload: AlertPayload): { subject: string; html: stri
 
 export function saleStarted(payload: AlertPayload): { subject: string; html: string } {
   const endStr = payload.saleEndDate
-    ? `Ends ${new Date(payload.saleEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+    ? `Ends ${formatShortDate(payload.saleEndDate)}`
     : "";
   const discountStr = payload.discount ? `${payload.discount}%` : "";
 

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, formatShortDate } from "@/lib/format";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AdminClient = SupabaseClient<any>;
@@ -128,7 +128,7 @@ export async function generateSaleStartedAlert(
   followers?: string[]
 ): Promise<boolean> {
   const endStr = saleEndDate
-    ? ` · Ends ${new Date(saleEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+    ? ` · Ends ${formatShortDate(saleEndDate)}`
     : "";
   return insertAndDispatch(supabase, game, "sale_started", {
     headline: `${game.title} sale — ${discount}% off`,

@@ -39,7 +39,7 @@ export async function sendAlert(
 /**
  * Sends an alert to multiple users. Used by the alert generation pipeline
  * after creating an alert and resolving its affected users.
- * Processes in batches of 5 to respect Resend rate limits.
+ * Processes in batches of 3 with 1.1s delays to respect Resend rate limits.
  */
 export async function sendAlertToUsers(
   userIds: string[],

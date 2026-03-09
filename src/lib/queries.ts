@@ -230,11 +230,13 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
 
   const readMap = new Map<string, boolean>();
   const dismissedSet = new Set<string>();
-  if (userId) {
+  const alertIds = (data ?? []).map((row: { id: string }) => row.id);
+  if (userId && alertIds.length > 0) {
     const { data: statuses } = await supabase
       .from("user_alert_status")
       .select("alert_id, read, dismissed")
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .in("alert_id", alertIds);
 
     if (statuses) {
       for (const s of statuses) {
