@@ -5,10 +5,12 @@ import Link from "next/link";
 import FollowButton from "@/components/FollowButton";
 import AlertCard from "@/components/AlertCard";
 import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
+import QueryError from "@/components/QueryError";
+import GameCoverImage from "@/components/GameCoverImage";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/queries";
-import { formatPrice, isPlaceholderDate } from "@/lib/format";
+import { formatPrice, formatShortDate, isPlaceholderDate } from "@/lib/format";
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailPage() {
@@ -16,7 +18,7 @@ export default function GameDetailPage() {
   const slug = params.slug as string;
   const { isFollowingFranchise, isFollowingGame, getGamePrefs, updateGamePrefs } = useFollow();
 
-  const { data: game, loading: gameLoading } = useSupabaseQuery(
+  const { data: game, loading: gameLoading, error: gameError } = useSupabaseQuery(
     (sb) => getGameBySlug(sb, slug),
     [slug]
   );
@@ -37,6 +39,10 @@ export default function GameDetailPage() {
         <div className="w-8 h-8 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin mx-auto" />
       </div>
     );
+  }
+
+  if (gameError) {
+    return <QueryError subject="game" />;
   }
 
   if (!game) {
@@ -62,19 +68,14 @@ export default function GameDetailPage() {
   const gameAlerts = alerts ?? [];
 
   return (
-    <div className="pb-4">
+    <main className="pb-4">
       {/* Header with cover art */}
       <div className="relative h-56 bg-[#1a1a1a] overflow-hidden">
-        {game.coverArt ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={game.coverArt}
-            alt={game.title}
-            className="w-full h-full object-cover object-center opacity-60"
-          />
-        ) : (
-          <div className="w-full h-full bg-[#1a1a1a]" />
-        )}
+        <GameCoverImage
+          src={game.coverArt}
+          alt={game.title}
+          className="w-full h-full object-cover object-center opacity-60 bg-[#1a1a1a]"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
 
         {/* Back button */}
@@ -122,7 +123,7 @@ export default function GameDetailPage() {
             {franchise && (
               <Link
                 href={`/franchise/${encodeURIComponent(franchise.name)}`}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
+                className={`px-3 py-2 rounded-full text-xs font-medium transition-all ${
                   followingFranchise
                     ? "bg-[#00ff88]/15 text-[#00ff88] shadow-[0_0_8px_#00ff8844]"
                     : "bg-[#222222] text-[#888888] hover:text-white"
@@ -140,7 +141,7 @@ export default function GameDetailPage() {
         <div className="py-4 border-b border-[#222222]">
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold text-white">
-              {formatPrice(game.currentPrice)}
+              {game.currentPrice === 0 ? "Free" : formatPrice(game.currentPrice)}
             </span>
             {game.isOnSale && (
               <>
@@ -153,6 +154,11 @@ export default function GameDetailPage() {
                   </span>
                 )}
               </>
+            )}
+            {game.isOnSale && game.saleEndDate && (
+              <span className="text-[#ff6874] text-sm font-medium ml-1">
+                Ends {formatShortDate(game.saleEndDate)}
+              </span>
             )}
           </div>
           {game.isAllTimeLow && (
@@ -191,6 +197,7 @@ export default function GameDetailPage() {
                   month: "long",
                   day: "numeric",
                   year: "numeric",
+                  timeZone: "UTC",
                 })}`
               : game.releaseStatus === "out_today"
               ? "Released today"
@@ -198,12 +205,13 @@ export default function GameDetailPage() {
                   month: "long",
                   day: "numeric",
                   year: "numeric",
+                  timeZone: "UTC",
                 })}`}
           </p>
         </div>
 
         {/* Sticky follow button */}
-        <div className="sticky top-0 z-10 py-4 bg-[#0a0a0a]">
+        <div className="sticky z-10 py-4 bg-[#0a0a0a]" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
           <FollowButton gameId={game.id} size="large" />
         </div>
 
@@ -305,7 +313,7 @@ export default function GameDetailPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import type { NotifyPrefs } from "@/lib/types";
@@ -186,23 +186,27 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     [user]
   );
 
+  const value = useMemo(() => ({
+    followedGameIds,
+    followedFranchiseIds,
+    toggleFollowGame,
+    toggleFollowFranchise,
+    isFollowingGame,
+    isFollowingFranchise,
+    getGamePrefs,
+    getFranchisePrefs,
+    updateGamePrefs,
+    updateFranchisePrefs,
+    followCount,
+    loading,
+  }), [
+    followedGameIds, followedFranchiseIds, toggleFollowGame, toggleFollowFranchise,
+    isFollowingGame, isFollowingFranchise, getGamePrefs, getFranchisePrefs,
+    updateGamePrefs, updateFranchisePrefs, followCount, loading,
+  ]);
+
   return (
-    <FollowContext.Provider
-      value={{
-        followedGameIds,
-        followedFranchiseIds,
-        toggleFollowGame,
-        toggleFollowFranchise,
-        isFollowingGame,
-        isFollowingFranchise,
-        getGamePrefs,
-        getFranchisePrefs,
-        updateGamePrefs,
-        updateFranchisePrefs,
-        followCount,
-        loading,
-      }}
-    >
+    <FollowContext.Provider value={value}>
       {children}
     </FollowContext.Provider>
   );
