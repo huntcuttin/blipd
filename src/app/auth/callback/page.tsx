@@ -10,7 +10,6 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    // The PKCE verifier is in localStorage — only the browser client can exchange it
     const hash = window.location.hash;
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -26,18 +25,23 @@ export default function AuthCallbackPage() {
       });
     } else if (hash) {
       // Handle implicit flow (token in hash) — Supabase client auto-detects this
-      // Just wait for onAuthStateChange to fire, then redirect
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
         if (event === "SIGNED_IN") {
           subscription.unsubscribe();
           router.replace("/onboarding");
         }
       });
-      // Timeout fallback
-      setTimeout(() => {
+
+      // Timeout fallback — redirect to login (not onboarding) if auth didn't complete
+      const timeout = setTimeout(() => {
         subscription.unsubscribe();
-        router.replace("/onboarding");
+        router.replace("/login");
       }, 5000);
+
+      return () => {
+        clearTimeout(timeout);
+        subscription.unsubscribe();
+      };
     } else {
       router.replace("/login");
     }

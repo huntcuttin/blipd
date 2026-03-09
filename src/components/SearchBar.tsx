@@ -34,8 +34,10 @@ export default function SearchBar({
 
   return (
     <div className="relative w-60 max-w-[60vw]">
-      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666666]" />
+      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666666]" aria-hidden="true" />
+      <label htmlFor="search-games" className="sr-only">Search games</label>
       <input
+        id="search-games"
         ref={inputRef}
         type="text"
         value={value}
@@ -48,6 +50,7 @@ export default function SearchBar({
       />
       {value && (
         <button
+          aria-label="Clear search"
           onClick={() => {
             onChange("");
             inputRef.current?.focus();
@@ -61,9 +64,9 @@ export default function SearchBar({
   );
 }
 
-function SearchIcon({ className }: { className?: string }) {
+function SearchIcon({ className, ...props }: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
     </svg>
   );
@@ -71,7 +74,7 @@ function SearchIcon({ className }: { className?: string }) {
 
 function XIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
     </svg>
   );
