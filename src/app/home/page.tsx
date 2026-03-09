@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
+import DirectBanner from "@/components/DirectBanner";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
@@ -123,6 +124,9 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* Nintendo Direct banner */}
+      <DirectBanner />
 
       {/* Search results override */}
       {searchResults ? (

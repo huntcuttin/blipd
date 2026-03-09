@@ -225,6 +225,28 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["user_alert_status"]["Insert"]>;
         Relationships: [];
       };
+      nintendo_directs: {
+        Row: {
+          id: string;
+          video_id: string;
+          title: string;
+          published_at: string;
+          detected_at: string;
+          active: boolean;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          video_id: string;
+          title: string;
+          published_at: string;
+          detected_at?: string;
+          active?: boolean;
+          expires_at: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["nintendo_directs"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
