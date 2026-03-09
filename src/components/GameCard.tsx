@@ -45,7 +45,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
           </div>
 
           {/* Price row */}
-          <div className="flex items-center gap-2 mt-2 overflow-hidden">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             {game.isOnSale ? (
               <>
                 <span className="text-[#00ff88] font-bold text-base shrink-0">
@@ -70,7 +70,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
           </div>
 
           {/* Secondary badges row */}
-          <div className="flex items-center gap-2 mt-1 overflow-hidden">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             {game.isAllTimeLow && (
               <span className="px-2 py-0.5 rounded-md bg-[#FFD700]/15 text-[#FFD700] text-[10px] font-bold tracking-wide">
                 ALL TIME LOW
