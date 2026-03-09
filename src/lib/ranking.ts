@@ -42,6 +42,13 @@ export function computeTrendingScore(
   // Metacritic
   if (game.metacriticScore !== null && game.metacriticScore >= 85) score += 10;
 
+  // IGDB hype (for upcoming games)
+  if (game.igdbHype != null && game.igdbHype > 0) {
+    if (game.igdbHype >= 100) score += 15;
+    else if (game.igdbHype >= 50) score += 10;
+    else if (game.igdbHype >= 10) score += 5;
+  }
+
   // Follow count (normalized 0-10)
   if (options?.maxFollowCount && options.maxFollowCount > 0 && options.gameFollowCount) {
     score += Math.round((options.gameFollowCount / options.maxFollowCount) * 10);
