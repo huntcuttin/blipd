@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import GameCard from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
+import QueryError from "@/components/QueryError";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getFranchiseByName, getGamesByFranchise } from "@/lib/queries";
@@ -15,7 +17,7 @@ export default function FranchiseDetailPage() {
   const name = decodeURIComponent(params.name as string);
   const { isFollowingFranchise, getFranchisePrefs, updateFranchisePrefs } = useFollow();
 
-  const { data: franchise, loading } = useSupabaseQuery(
+  const { data: franchise, loading, error: franchiseError } = useSupabaseQuery(
     (sb) => getFranchiseByName(sb, name),
     [name]
   );
@@ -25,12 +27,18 @@ export default function FranchiseDetailPage() {
     [name]
   );
 
+  const [logoFailed, setLogoFailed] = useState(false);
+
   if (loading) {
     return (
       <div className="px-4 py-20 text-center">
         <div className="w-8 h-8 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin mx-auto" />
       </div>
     );
+  }
+
+  if (franchiseError) {
+    return <QueryError subject="franchise" />;
   }
 
   if (!franchise) {
@@ -47,6 +55,7 @@ export default function FranchiseDetailPage() {
     );
   }
 
+  const showLogo = franchise.logo && !logoFailed;
   const allGames = games ?? [];
   const onSale = allGames.filter((g) => g.isOnSale);
   const notOnSale = allGames.filter((g) => !g.isOnSale);
@@ -55,15 +64,14 @@ export default function FranchiseDetailPage() {
     <div className="pb-4">
       {/* Header with franchise logo */}
       <div className="relative h-48 bg-[#1a1a1a] overflow-hidden">
-        {franchise.logo ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={franchise.logo}
-              alt={franchise.name}
-              className="w-full h-full object-cover object-center opacity-40 scale-110 blur-sm"
-            />
-          </>
+        {showLogo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={franchise.logo!}
+            alt={franchise.name}
+            className="w-full h-full object-cover object-center opacity-40 scale-110 blur-sm"
+            onError={() => setLogoFailed(true)}
+          />
         ) : (
           <div className="w-full h-full bg-[#1a1a1a]" />
         )}
@@ -91,12 +99,13 @@ export default function FranchiseDetailPage() {
 
         {/* Franchise info overlay */}
         <div className="absolute bottom-4 left-4 right-4 flex items-end gap-3">
-          {franchise.logo ? (
+          {showLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={franchise.logo}
+              src={franchise.logo!}
               alt={franchise.name}
               className="w-16 h-16 rounded-2xl object-cover bg-[#1a1a1a] border border-[#333333] shrink-0"
+              onError={() => setLogoFailed(true)}
             />
           ) : (
             <div className="w-16 h-16 rounded-2xl bg-[#1a1a1a] border border-[#333333] flex items-center justify-center shrink-0">

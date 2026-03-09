@@ -65,9 +65,13 @@ export default function HomePage() {
       return;
     }
     const timer = setTimeout(async () => {
-      const supabase = createClient();
-      const results = await searchGames(supabase, search);
-      setSearchResults(results);
+      try {
+        const supabase = createClient();
+        const results = await searchGames(supabase, search);
+        setSearchResults(results);
+      } catch {
+        setSearchResults([]);
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
