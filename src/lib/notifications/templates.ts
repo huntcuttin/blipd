@@ -1,4 +1,5 @@
 import type { AlertPayload } from "./types";
+import { formatPrice } from "@/lib/format";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.blippd.app";
 
@@ -68,60 +69,60 @@ export function priceDrop(payload: AlertPayload): { subject: string; html: strin
     : "";
 
   return {
-    subject: `🔔 ${payload.gameTitle} just dropped to $${payload.newPrice?.toFixed(2)}`,
+    subject: `🔔 ${payload.gameTitle} just dropped to ${formatPrice(payload.newPrice, "")}`,
     html: layout(`
   <div class="card">
     <div class="badge" style="background:rgba(0,255,136,0.15);color:#00ff88;">Price Drop${pctOff ? ` · ${pctOff} off` : ""}</div>
     <h1 class="game-title">${payload.gameTitle}</h1>
     <div class="price-row">
-      <span class="price-new" style="color:#00ff88;">$${payload.newPrice?.toFixed(2)}</span>
-      <span class="price-old">$${payload.oldPrice?.toFixed(2)}</span>
+      <span class="price-new" style="color:#00ff88;">${formatPrice(payload.newPrice, "")}</span>
+      <span class="price-old">${formatPrice(payload.oldPrice, "")}</span>
       ${saved ? `<span style="color:#00ff88;font-size:13px;font-weight:600;">Save ${saved}</span>` : ""}
     </div>
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
     <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
-  `${payload.gameTitle} is now $${payload.newPrice?.toFixed(2)} — save ${saved}`),
+  `${payload.gameTitle} is now ${formatPrice(payload.newPrice, "")} — save ${saved}`),
   };
 }
 
 export function allTimeLow(payload: AlertPayload): { subject: string; html: string } {
   return {
-    subject: `🔔 ${payload.gameTitle} — ALL TIME LOW $${payload.newPrice?.toFixed(2)}`,
+    subject: `🔔 ${payload.gameTitle} — ALL TIME LOW ${formatPrice(payload.newPrice, "")}`,
     html: layout(`
   <div class="card">
     <div class="badge" style="background:rgba(0,255,136,0.15);color:#00ff88;">All Time Low</div>
     <h1 class="game-title">${payload.gameTitle}</h1>
     <p class="subtext">Lowest price ever recorded</p>
     <div class="price-row">
-      <span class="price-new" style="color:#00ff88;">$${payload.newPrice?.toFixed(2)}</span>
+      <span class="price-new" style="color:#00ff88;">${formatPrice(payload.newPrice, "")}</span>
     </div>
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
     <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
-  `${payload.gameTitle} is at its lowest price ever: $${payload.newPrice?.toFixed(2)}`),
+  `${payload.gameTitle} is at its lowest price ever: ${formatPrice(payload.newPrice, "")}`),
   };
 }
 
 export function saleStarted(payload: AlertPayload): { subject: string; html: string } {
-  const endStr = payload.saleEndDate
-    ? `Ends ${new Date(payload.saleEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-    : "";
+  // saleEndDate is already a formatted string from dispatch (e.g. "Mar 7, 2026"), use as-is
+  const endStr = payload.saleEndDate ? `Ends ${payload.saleEndDate}` : "";
+  const discountStr = payload.discount ? `${payload.discount}%` : "";
 
   return {
-    subject: `🔔 ${payload.gameTitle} is on sale — ${payload.discount}% off`,
+    subject: `🔔 ${payload.gameTitle} is on sale${discountStr ? ` — ${discountStr} off` : ""}`,
     html: layout(`
   <div class="card">
-    <div class="badge" style="background:rgba(255,170,0,0.15);color:#ffaa00;">Sale · ${payload.discount}% off</div>
+    <div class="badge" style="background:rgba(255,170,0,0.15);color:#ffaa00;">Sale${discountStr ? ` · ${discountStr} off` : ""}</div>
     <h1 class="game-title">${payload.gameTitle}</h1>
     <div class="price-row">
-      <span class="price-new" style="color:#ffaa00;">$${payload.newPrice?.toFixed(2)}</span>
+      <span class="price-new" style="color:#ffaa00;">${formatPrice(payload.newPrice, "")}</span>
       ${endStr ? `<span style="color:#666666;font-size:13px;">${endStr}</span>` : ""}
     </div>
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
     <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
-  `${payload.gameTitle} is ${payload.discount}% off — now $${payload.newPrice?.toFixed(2)}`),
+  `${payload.gameTitle} is ${discountStr} off — now ${formatPrice(payload.newPrice, "")}`),
   };
 }
 
@@ -134,12 +135,27 @@ export function releaseToday(payload: AlertPayload): { subject: string; html: st
     <h1 class="game-title">${payload.gameTitle}</h1>
     <p class="subtext">Now available on Nintendo eShop</p>
     <div class="price-row">
-      <span class="price-new" style="color:#ffffff;">$${payload.newPrice?.toFixed(2)}</span>
+      <span class="price-new" style="color:#ffffff;">${formatPrice(payload.newPrice, "")}</span>
     </div>
     <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
     <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
   </div>`,
   `${payload.gameTitle} is available now on Nintendo eShop`),
+  };
+}
+
+export function switch2Edition(payload: AlertPayload): { subject: string; html: string } {
+  return {
+    subject: `🔔 ${payload.gameTitle} — Switch 2 Edition announced`,
+    html: layout(`
+  <div class="card">
+    <div class="badge" style="background:rgba(0,170,255,0.15);color:#00aaff;">Switch 2 Edition</div>
+    <h1 class="game-title">${payload.gameTitle}</h1>
+    <p class="subtext">A Nintendo Switch 2 version is now available</p>
+    <a href="${gameLink(payload)}" class="btn btn-primary">View on Blippd</a>
+    <a href="${eshopLink(payload)}" class="btn btn-secondary" style="margin-left:8px;">Find on eShop</a>
+  </div>`,
+  `${payload.gameTitle} now has a Nintendo Switch 2 edition`),
   };
 }
 
@@ -150,6 +166,8 @@ export function getTemplate(alertType: string): ((payload: AlertPayload) => { su
     case "sale_started": return saleStarted;
     case "release_today": return releaseToday;
     case "out_now": return releaseToday;
+    case "switch2_edition_announced": return switch2Edition;
+    case "announced": return switch2Edition;
     default: return null;
   }
 }

@@ -284,22 +284,25 @@ export async function getAlertsForGame(supabase: Client, gameId: string): Promis
 }
 
 export async function markAlertRead(supabase: Client, userId: string, alertId: string) {
-  await supabase
+  const { error } = await supabase
     .from("user_alert_status")
     .upsert({ user_id: userId, alert_id: alertId, read: true });
+  if (error) throw error;
 }
 
 export async function dismissAlert(supabase: Client, userId: string, alertId: string) {
-  await supabase
+  const { error } = await supabase
     .from("user_alert_status")
     .upsert({ user_id: userId, alert_id: alertId, dismissed: true });
+  if (error) throw error;
 }
 
 export async function remindAlert(supabase: Client, userId: string, alertId: string) {
   const remindAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
-  await supabase
+  const { error } = await supabase
     .from("user_alert_status")
     .upsert({ user_id: userId, alert_id: alertId, read: true, remind_at: remindAt });
+  if (error) throw error;
 }
 
 // ── User profile queries ──────────────────────────────────────
@@ -359,19 +362,23 @@ export async function getUserFranchiseFollows(supabase: Client, userId: string):
 
 
 export async function followGame(supabase: Client, userId: string, gameId: string) {
-  await supabase.from("user_game_follows").insert({ user_id: userId, game_id: gameId });
+  const { error } = await supabase.from("user_game_follows").insert({ user_id: userId, game_id: gameId });
+  if (error) throw error;
 }
 
 export async function unfollowGame(supabase: Client, userId: string, gameId: string) {
-  await supabase.from("user_game_follows").delete().eq("user_id", userId).eq("game_id", gameId);
+  const { error } = await supabase.from("user_game_follows").delete().eq("user_id", userId).eq("game_id", gameId);
+  if (error) throw error;
 }
 
 export async function followFranchise(supabase: Client, userId: string, franchiseId: string) {
-  await supabase.from("user_franchise_follows").insert({ user_id: userId, franchise_id: franchiseId });
+  const { error } = await supabase.from("user_franchise_follows").insert({ user_id: userId, franchise_id: franchiseId });
+  if (error) throw error;
 }
 
 export async function unfollowFranchise(supabase: Client, userId: string, franchiseId: string) {
-  await supabase.from("user_franchise_follows").delete().eq("user_id", userId).eq("franchise_id", franchiseId);
+  const { error } = await supabase.from("user_franchise_follows").delete().eq("user_id", userId).eq("franchise_id", franchiseId);
+  if (error) throw error;
 }
 
 export async function updateGameFollowPrefs(supabase: Client, userId: string, gameId: string, prefs: Partial<NotifyPrefs>) {
@@ -380,7 +387,8 @@ export async function updateGameFollowPrefs(supabase: Client, userId: string, ga
   if (prefs.sales !== undefined) update.notify_sales = prefs.sales;
   if (prefs.allTimeLow !== undefined) update.notify_all_time_low = prefs.allTimeLow;
   if (prefs.releases !== undefined) update.notify_releases = prefs.releases;
-  await supabase.from("user_game_follows").update(update).eq("user_id", userId).eq("game_id", gameId);
+  const { error } = await supabase.from("user_game_follows").update(update).eq("user_id", userId).eq("game_id", gameId);
+  if (error) throw error;
 }
 
 export async function updateFranchiseFollowPrefs(supabase: Client, userId: string, franchiseId: string, prefs: Partial<NotifyPrefs>) {
@@ -389,6 +397,7 @@ export async function updateFranchiseFollowPrefs(supabase: Client, userId: strin
   if (prefs.sales !== undefined) update.notify_sales = prefs.sales;
   if (prefs.allTimeLow !== undefined) update.notify_all_time_low = prefs.allTimeLow;
   if (prefs.releases !== undefined) update.notify_releases = prefs.releases;
-  await supabase.from("user_franchise_follows").update(update).eq("user_id", userId).eq("franchise_id", franchiseId);
+  const { error } = await supabase.from("user_franchise_follows").update(update).eq("user_id", userId).eq("franchise_id", franchiseId);
+  if (error) throw error;
 }
 

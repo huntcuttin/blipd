@@ -118,17 +118,24 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       nsuid: game.nsuid ?? null,
     };
 
-    // Extract price data from the alert text for templates
-    const priceMatch = alert.headline.match(/\$(\d+\.\d{2})/);
-    if (priceMatch) payload.newPrice = parseFloat(priceMatch[1]);
+    // Extract price data from alert text for email templates
+    // Search both headline and subtext since different alert types put prices in different places
+    const combined = `${alert.headline} ${alert.subtext}`;
+
+    // newPrice: first $ amount in headline, or first in subtext
+    const headlinePrice = alert.headline.match(/\$(\d+\.\d{2})/);
+    const subtextPrice = alert.subtext.match(/\$(\d+\.\d{2})/);
+    if (headlinePrice) payload.newPrice = parseFloat(headlinePrice[1]);
+    else if (subtextPrice) payload.newPrice = parseFloat(subtextPrice[1]);
 
     const oldPriceMatch = alert.subtext.match(/Was \$(\d+\.\d{2})/);
     if (oldPriceMatch) payload.oldPrice = parseFloat(oldPriceMatch[1]);
 
-    const discountMatch = alert.headline.match(/(\d+)% off/);
+    const discountMatch = combined.match(/(\d+)% off/);
     if (discountMatch) payload.discount = parseInt(discountMatch[1]);
 
-    const endMatch = alert.subtext.match(/Ends (.+)/);
+    // Extract sale end date — look for ISO-style date or formatted date with year
+    const endMatch = alert.subtext.match(/Ends (.+?)(?:\s·|$)/);
     if (endMatch) payload.saleEndDate = endMatch[1];
 
     await sendAlertToUsers(allUserIds, payload);

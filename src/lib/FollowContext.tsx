@@ -75,6 +75,9 @@ export function FollowProvider({ children }: { children: ReactNode }) {
 
   const followCount = followedGameIds.size;
   const FREE_FOLLOW_LIMIT = 5;
+  // TODO: Check user's Pro subscription status from user_profiles or Stripe
+  // For now, Pro bypass is not implemented — will be added with Stripe integration (v1.5)
+  const isProUser = false;
 
   const toggleFollowGame = useCallback(
     (gameId: string): { blocked?: "limit_reached" } | void => {
@@ -82,17 +85,25 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       if (followedGameIds.has(gameId)) {
         setFollowedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
         setGamePrefsMap((prev) => { const next = new Map(prev); next.delete(gameId); return next; });
-        if (user) dbUnfollowGame(supabase, user.id, gameId);
+        if (user) {
+          dbUnfollowGame(supabase, user.id, gameId).catch((err) =>
+            console.error("Failed to unfollow game:", err)
+          );
+        }
         return;
       }
-      if (followedGameIds.size >= FREE_FOLLOW_LIMIT) {
+      if (!isProUser && followedGameIds.size >= FREE_FOLLOW_LIMIT) {
         return { blocked: "limit_reached" };
       }
       setFollowedGameIds((prev) => new Set(prev).add(gameId));
       setGamePrefsMap((prev) => new Map(prev).set(gameId, { ...DEFAULT_NOTIFY_PREFS }));
-      if (user) dbFollowGame(supabase, user.id, gameId);
+      if (user) {
+        dbFollowGame(supabase, user.id, gameId).catch((err) =>
+          console.error("Failed to follow game:", err)
+        );
+      }
     },
-    [followedGameIds, user]
+    [followedGameIds, user, isProUser]
   );
 
   const toggleFollowFranchise = useCallback(
@@ -101,11 +112,19 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       if (followedFranchiseIds.has(franchiseId)) {
         setFollowedFranchiseIds((prev) => { const next = new Set(prev); next.delete(franchiseId); return next; });
         setFranchisePrefsMap((prev) => { const next = new Map(prev); next.delete(franchiseId); return next; });
-        if (user) dbUnfollowFranchise(supabase, user.id, franchiseId);
+        if (user) {
+          dbUnfollowFranchise(supabase, user.id, franchiseId).catch((err) =>
+            console.error("Failed to unfollow franchise:", err)
+          );
+        }
       } else {
         setFollowedFranchiseIds((prev) => new Set(prev).add(franchiseId));
         setFranchisePrefsMap((prev) => new Map(prev).set(franchiseId, { ...DEFAULT_NOTIFY_PREFS }));
-        if (user) dbFollowFranchise(supabase, user.id, franchiseId);
+        if (user) {
+          dbFollowFranchise(supabase, user.id, franchiseId).catch((err) =>
+            console.error("Failed to follow franchise:", err)
+          );
+        }
       }
     },
     [followedFranchiseIds, user]
@@ -141,7 +160,9 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       });
       if (user) {
         const supabase = createClient();
-        dbUpdateGamePrefs(supabase, user.id, gameId, prefs);
+        dbUpdateGamePrefs(supabase, user.id, gameId, prefs).catch((err) =>
+          console.error("Failed to update game prefs:", err)
+        );
       }
     },
     [user]
@@ -157,7 +178,9 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       });
       if (user) {
         const supabase = createClient();
-        dbUpdateFranchisePrefs(supabase, user.id, franchiseId, prefs);
+        dbUpdateFranchisePrefs(supabase, user.id, franchiseId, prefs).catch((err) =>
+          console.error("Failed to update franchise prefs:", err)
+        );
       }
     },
     [user]
