@@ -212,6 +212,8 @@ function getSaleEndLabel(dateStr: string): string | null {
 }
 
 function getReleaseLabel(game: Game, daysUntil: number): string | null {
+  // If a game is on sale or has a price, it's released — never show a release label
+  if (game.isOnSale || game.currentPrice > 0 || game.originalPrice > 0) return null;
   if (game.releaseStatus === "out_today") return "Out Now";
   if (game.releaseStatus === "upcoming") {
     if (!game.releaseDate || isPlaceholderDate(game.releaseDate)) return "TBA";
