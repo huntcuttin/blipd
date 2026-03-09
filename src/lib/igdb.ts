@@ -155,8 +155,8 @@ export async function getIGDBHype(
   const token = await getIGDBToken();
   const clientId = process.env.TWITCH_CLIENT_ID!;
 
-  let igdbId = existingIgdbId;
-  let matchedName = gameName;
+  const igdbId = existingIgdbId;
+  const matchedName = gameName;
 
   // If we don't have an IGDB ID, search for the game
   if (!igdbId) {

@@ -2,8 +2,7 @@ import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { sendAlertToUsers } from "./send";
 import type { AlertPayload } from "./types";
 
-const PREF_COLUMNS = ["notify_sales", "notify_all_time_low", "notify_releases", "notify_announcements"] as const;
-type PrefColumn = (typeof PREF_COLUMNS)[number];
+type PrefColumn = "notify_sales" | "notify_all_time_low" | "notify_releases" | "notify_announcements";
 
 interface FollowRow {
   user_id: string;

@@ -26,7 +26,10 @@ export default function UpcomingPage() {
 
   const loading = subTab === "Out Now" ? recentLoading : upcomingLoading;
   const queryError = subTab === "Out Now" ? recentError : upcomingError;
-  const rawGames = subTab === "Out Now" ? (recentReleases ?? []) : (upcomingGames ?? []);
+  const rawGames = useMemo(
+    () => (subTab === "Out Now" ? (recentReleases ?? []) : (upcomingGames ?? [])),
+    [subTab, recentReleases, upcomingGames]
+  );
 
   const filtered = useMemo(() => {
     let games = platformFilter === "switch2"

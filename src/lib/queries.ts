@@ -247,9 +247,9 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (data ?? [])
     .filter((row: { id: string }) => !dismissedSet.has(row.id))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .map((row: any) => ({
       id: row.id,
       gameId: row.game_id,
