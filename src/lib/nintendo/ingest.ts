@@ -493,16 +493,17 @@ export async function runPriceUpdate(options?: {
   // Batch in chunks of 200 to avoid PostgREST URL length limits with .in()
   const allPolledIds = games.map((g) => g.id);
   const QUEUE_BATCH = 200;
+  const now = new Date().toISOString();
+  const queueUpdates = [];
   for (let i = 0; i < allPolledIds.length; i += QUEUE_BATCH) {
     const batch = allPolledIds.slice(i, i + QUEUE_BATCH);
-    const { error: queueError } = await supabase
-      .from("games")
-      .update({ last_price_check: new Date().toISOString() })
-      .in("id", batch);
-    if (queueError) {
-      console.error(`Failed to update last_price_check for batch ${i / QUEUE_BATCH}:`, queueError.message);
-    }
+    queueUpdates.push(
+      supabase.from("games").update({ last_price_check: now }).in("id", batch).then(({ error }) => {
+        if (error) console.error(`Failed to update last_price_check for batch ${i / QUEUE_BATCH}:`, error.message);
+      })
+    );
   }
+  await Promise.all(queueUpdates);
 
   // Process each game that got a price response
   const gameIds: string[] = [];

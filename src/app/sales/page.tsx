@@ -77,11 +77,9 @@ export default function SalesPage() {
       ? allGames.filter((g) => g.franchise && followedFranchiseNames.has(g.franchise))
       : allGames;
 
-  const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow && (g.releaseStatus === "released" || g.releaseStatus === "out_today"));
-  const sortedSales = sortGames(
-    filteredSales.filter((g) => g.releaseStatus === "released" || g.releaseStatus === "out_today"),
-    sort
-  );
+  const isReleased = (g: Game) => g.releaseStatus === "released" || g.releaseStatus === "out_today";
+  const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow && isReleased(g));
+  const sortedSales = sortGames(filteredSales.filter(isReleased), sort);
 
   const myGamesCount = allGames.filter((g) => followedGameIds.has(g.id)).length;
   const myFranchisesCount = allGames.filter(
