@@ -33,6 +33,7 @@ function mapGame(row: any): Game {
     upgradePackNsuid: row.upgrade_pack_nsuid ?? null,
     upgradePackPrice: row.upgrade_pack_price != null ? Number(row.upgrade_pack_price) : null,
     isSuppressed: row.is_suppressed ?? false,
+    igdbHype: row.igdb_hype ?? null,
   };
 }
 

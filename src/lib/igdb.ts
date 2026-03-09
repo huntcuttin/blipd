@@ -45,6 +45,12 @@ interface IGDBReleaseDateResult {
   matchedName: string;
 }
 
+interface IGDBHypeResult {
+  igdbId: number;
+  hypes: number;
+  matchedName: string;
+}
+
 export async function getIGDBReleaseDate(
   gameName: string
 ): Promise<IGDBReleaseDateResult | null> {
@@ -139,6 +145,97 @@ async function searchIGDB(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Fetch hype count for a game by IGDB ID or name search
+export async function getIGDBHype(
+  gameName: string,
+  existingIgdbId?: number | null
+): Promise<IGDBHypeResult | null> {
+  const token = await getIGDBToken();
+  const clientId = process.env.TWITCH_CLIENT_ID!;
+
+  let igdbId = existingIgdbId;
+  let matchedName = gameName;
+
+  // If we don't have an IGDB ID, search for the game
+  if (!igdbId) {
+    const searchRes = await fetch("https://api.igdb.com/v4/games", {
+      method: "POST",
+      headers: {
+        "Client-ID": clientId,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "text/plain",
+      },
+      body: `search "${gameName.replace(/"/g, '\\"')}"; fields name,id,hypes; where platforms = (${SWITCH_PLATFORM_ID}); limit 5;`,
+    });
+
+    if (!searchRes.ok) {
+      if (searchRes.status === 429) await sleep(1000);
+      return null;
+    }
+
+    const games = await searchRes.json();
+    if (!games || games.length === 0) return null;
+
+    const normalizedSearch = gameName.toLowerCase().trim();
+    const bestMatch =
+      games.find((g: { name: string }) => g.name.toLowerCase().trim() === normalizedSearch) ??
+      (games.length === 1 ? games[0] : null);
+
+    if (!bestMatch) return null;
+
+    return {
+      igdbId: bestMatch.id,
+      hypes: bestMatch.hypes ?? 0,
+      matchedName: bestMatch.name,
+    };
+  }
+
+  // We have an IGDB ID — fetch directly
+  const res = await fetch("https://api.igdb.com/v4/games", {
+    method: "POST",
+    headers: {
+      "Client-ID": clientId,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "text/plain",
+    },
+    body: `fields name,hypes; where id = ${igdbId}; limit 1;`,
+  });
+
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  if (!data || data.length === 0) return null;
+
+  return {
+    igdbId,
+    hypes: data[0].hypes ?? 0,
+    matchedName: data[0].name ?? matchedName,
+  };
+}
+
+// Batch fetch hype scores for multiple games
+export async function batchGetHypeScores(
+  games: { id: string; title: string; igdbId?: number | null }[]
+): Promise<Map<string, { igdbId: number; hypes: number }>> {
+  const results = new Map<string, { igdbId: number; hypes: number }>();
+
+  for (const game of games) {
+    try {
+      const result = await getIGDBHype(game.title, game.igdbId);
+      if (result && result.hypes > 0) {
+        results.set(game.id, { igdbId: result.igdbId, hypes: result.hypes });
+        console.log(`  IGDB hype: "${game.title}" → ${result.hypes} hypes`);
+      }
+    } catch (err) {
+      console.error(`  IGDB hype error for "${game.title}":`, err);
+    }
+
+    await sleep(500);
+  }
+
+  return results;
 }
 
 // Rate-limited batch processor: 4 req/sec = 250ms between calls

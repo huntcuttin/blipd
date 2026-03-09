@@ -28,6 +28,8 @@ export interface Database {
           upgrade_pack_nsuid: string | null;
           upgrade_pack_price: number | null;
           is_suppressed: boolean;
+          igdb_id: number | null;
+          igdb_hype: number | null;
           release_date_source: string;
           created_at: string;
           updated_at: string;
@@ -56,6 +58,8 @@ export interface Database {
           upgrade_pack_nsuid?: string | null;
           upgrade_pack_price?: number | null;
           is_suppressed?: boolean;
+          igdb_id?: number | null;
+          igdb_hype?: number | null;
           release_date_source?: string;
           created_at?: string;
           updated_at?: string;

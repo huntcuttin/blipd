@@ -7,7 +7,7 @@ import { formatPrice, isPlaceholderDate } from "@/lib/format";
 import FollowButton from "./FollowButton";
 import GameCoverImage from "./GameCoverImage";
 
-export default memo(function GameCard({ game }: { game: Game }) {
+export default memo(function GameCard({ game, showHype }: { game: Game; showHype?: boolean }) {
   const daysUntilRelease = getDaysUntil(game.releaseDate);
   const releaseLabel = getReleaseLabel(game, daysUntilRelease);
   const saleEndLabel = game.isOnSale && game.saleEndDate ? getSaleEndLabel(game.saleEndDate) : null;
@@ -84,6 +84,11 @@ export default memo(function GameCard({ game }: { game: Game }) {
             {saleEndLabel && (
               <span className="text-[#ff6874] text-[10px] font-medium">
                 {saleEndLabel}
+              </span>
+            )}
+            {showHype && game.igdbHype != null && game.igdbHype > 0 && (
+              <span className="px-1.5 py-0.5 rounded-md bg-[#ff6b35]/15 text-[#ff6b35] text-[10px] font-bold">
+                {game.igdbHype} hype
               </span>
             )}
             {releaseLabel && (

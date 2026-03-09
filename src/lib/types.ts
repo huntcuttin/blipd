@@ -21,6 +21,7 @@ export interface Game {
   upgradePackNsuid: string | null;
   upgradePackPrice: number | null;
   isSuppressed: boolean;
+  igdbHype: number | null;
 }
 
 export interface NotifyPrefs {
