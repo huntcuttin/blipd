@@ -120,12 +120,10 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     };
 
     // Use structured price fields from the alerts table
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const a = alert as any;
-    if (a.new_price != null) payload.newPrice = Number(a.new_price);
-    if (a.old_price != null) payload.oldPrice = Number(a.old_price);
-    if (a.discount != null) payload.discount = Number(a.discount);
-    if (a.sale_end_date) payload.saleEndDate = a.sale_end_date;
+    if (alert.new_price != null) payload.newPrice = Number(alert.new_price);
+    if (alert.old_price != null) payload.oldPrice = Number(alert.old_price);
+    if (alert.discount != null) payload.discount = Number(alert.discount);
+    if (alert.sale_end_date) payload.saleEndDate = alert.sale_end_date;
 
     await sendAlertToUsers(allUserIds, payload);
     dispatched += allUserIds.length;

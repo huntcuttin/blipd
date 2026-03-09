@@ -557,7 +557,7 @@ export async function runPriceUpdate(options?: {
           const followers = await getFollowers(supabase, game.id);
 
           if (isPriceDrop) {
-            if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, followers)) alertsCreated++;
+            if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers)) alertsCreated++;
           }
           if (allTimeLow) {
             if (await generateAllTimeLowAlert(supabase, ref, newPrice, followers)) alertsCreated++;

@@ -93,6 +93,7 @@ export async function generatePriceDropAlert(
   game: GameRef,
   oldPrice: number,
   newPrice: number,
+  discount: number,
   followers?: string[]
 ): Promise<boolean> {
   const savings = formatPrice(oldPrice - newPrice, "");
@@ -101,7 +102,7 @@ export async function generatePriceDropAlert(
     subtext: `Was ${formatPrice(oldPrice, "")} · Save ${savings}`,
     new_price: newPrice,
     old_price: oldPrice,
-    discount: Math.round((1 - newPrice / oldPrice) * 100),
+    discount,
   }, followers);
 }
 
