@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getRecentReleases, getUpcomingGames } from "@/lib/queries";
+import { getRecentReleases, getUpcomingGames, getAnnouncedGames } from "@/lib/queries";
 import QueryError from "@/components/QueryError";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -15,6 +15,7 @@ export default function UpcomingPage() {
   const { consolePreference } = useAuth();
   const { data: recentReleases, loading: recentLoading, error: recentError } = useSupabaseQuery(getRecentReleases);
   const { data: upcomingGames, loading: upcomingLoading, error: upcomingError } = useSupabaseQuery(getUpcomingGames);
+  const { data: announcedGames } = useSupabaseQuery(getAnnouncedGames);
   const [subTab, setSubTab] = useState<SubTab>("Out Now");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("date");
@@ -43,8 +44,18 @@ export default function UpcomingPage() {
     return games;
   }, [rawGames, platformFilter, subTab, sortMode]);
 
+  const announcedFiltered = useMemo(() => {
+    const all = announcedGames ?? [];
+    return platformFilter === "switch2"
+      ? all.filter((g) => g.platform === "switch2" || g.switch2Nsuid || /switch\s*2/i.test(g.title))
+      : all;
+  }, [announcedGames, platformFilter]);
+
   const isFiltered = platformFilter === "switch2";
-  const hasAnyHype = subTab === "Coming Soon" && rawGames.some((g) => g.igdbHype && g.igdbHype > 0);
+  const hasAnyHype = subTab === "Coming Soon" && (
+    rawGames.some((g) => g.igdbHype && g.igdbHype > 0) ||
+    (announcedGames ?? []).some((g) => g.igdbHype && g.igdbHype > 0)
+  );
 
   return (
     <div className="px-4 pb-28">
@@ -111,14 +122,32 @@ export default function UpcomingPage() {
             <GameCardSkeleton key={i} />
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : filtered.length === 0 && (subTab !== "Coming Soon" || !announcedFiltered.length) ? (
         <EmptyState subTab={subTab} isFiltered={isFiltered} />
       ) : (
-        <div className="space-y-2 mb-4">
-          {filtered.map((game) => (
-            <GameCard key={game.id} game={game} showHype={subTab === "Coming Soon"} />
-          ))}
-        </div>
+        <>
+          {filtered.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {filtered.map((game) => (
+                <GameCard key={game.id} game={game} showHype={subTab === "Coming Soon"} />
+              ))}
+            </div>
+          )}
+          {subTab === "Coming Soon" && announcedFiltered.length > 0 && (
+            <div className="mb-4">
+              {filtered.length > 0 && (
+                <h2 className="text-xs font-semibold text-[#555555] uppercase tracking-wider mb-3 mt-6">
+                  Announced — No Release Date
+                </h2>
+              )}
+              <div className="space-y-2">
+                {announcedFiltered.map((game) => (
+                  <GameCard key={game.id} game={game} showHype />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Platform toggle — bottom section */}

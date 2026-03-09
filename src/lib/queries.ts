@@ -34,6 +34,7 @@ function mapGame(row: any): Game {
     upgradePackPrice: row.upgrade_pack_price != null ? Number(row.upgrade_pack_price) : null,
     isSuppressed: row.is_suppressed ?? false,
     igdbHype: row.igdb_hype ?? null,
+    platform: row.platform ?? null,
   };
 }
 
@@ -145,8 +146,20 @@ export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
     .gte("release_date", today)
     .neq("release_date", "2099-12-31")
     .neq("release_date", "2020-01-01")
-    .gt("original_price", 0)
     .order("release_date", { ascending: true })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
+}
+
+export async function getAnnouncedGames(supabase: Client): Promise<Game[]> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("release_status", "upcoming")
+    .eq("is_suppressed", false)
+    .eq("release_date", "2099-12-31")
+    .order("igdb_hype", { ascending: false })
     .limit(100);
   if (error) throw error;
   return (data ?? []).map(mapGame);

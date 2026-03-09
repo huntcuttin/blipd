@@ -22,6 +22,7 @@ export interface Game {
   upgradePackPrice: number | null;
   isSuppressed: boolean;
   igdbHype: number | null;
+  platform: "switch" | "switch2" | null;
 }
 
 export interface NotifyPrefs {
