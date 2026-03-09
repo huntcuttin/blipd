@@ -260,3 +260,31 @@ When helping with Blippd, default to:
 3. Flag risks explicitly
 4. MVP-first, no over-engineering
 5. Mobile-first UI decisions
+
+## Competitor Intelligence: Deku Deals & NT Deals User Reviews
+
+### What users love (build this well or they'll go back)
+- Saving real money — users cite exact dollar amounts saved. The value prop is financial, not discovery. Lead with it.
+- Price history: highest, lowest, average, and "last time it was at this price." Users use this to decide whether a current sale is actually good.
+- Free push notifications. Any paywall on notifications = immediate 1-star reviews.
+- Fast, smooth search. This is table stakes — if search lags, users mention it every time.
+- Wishlist + alert combo. Users want to set it and forget it, then get notified. The less friction, the better.
+
+### What users hate (do not repeat these mistakes)
+- Delayed or unreliable push notifications. The #1 complaint on both apps. Users will tolerate a lot but not missed alerts — that's the whole point of the app.
+- Aggressive or intrusive ads. NT Deals reviewers specifically said ads "tank the experience" despite loving everything else.
+- Auth/login bugs. NT Deals has users who can't register at all. Broken auth = zero retention.
+- Being logged out constantly. Deku Deals users complain about having to re-login. Session persistence matters.
+- Missing games. If a user searches for a game and it's not there, they lose trust immediately.
+- Paywalling core features. Desired price threshold behind NT Deals premium = resentment. Keep the free tier generous.
+- No way to filter unreleased games from watchlist. Small but frequently mentioned.
+- Price charts that are hard to tap on mobile. Interactive charts need large touch targets.
+
+### Blippd design principles derived from this
+- Notifications must fire fast. If an alert is delayed more than a few minutes, it feels broken.
+- Never break auth. Magic link must work flawlessly every time — this is Blippd's only login method.
+- Free tier should include: follows, notifications, price history, search. Paywall only advanced features (multi-region, instant vs. batched alerts, etc.).
+- Show price context on every game: current price, historical low, % off. Users make purchase decisions based on this.
+- Mobile-first touch targets on all interactive elements, especially price charts and game cards.
+- Session persistence: users should never have to re-authenticate unless they explicitly log out.
+- Game catalog coverage matters. If a user's game isn't there, they churn. Prioritize catalog completeness.
