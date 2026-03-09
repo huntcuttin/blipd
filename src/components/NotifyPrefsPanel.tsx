@@ -21,18 +21,22 @@ export default function NotifyPrefsPanel({
       {PREF_OPTIONS.map((opt) => (
         <button
           key={opt.key}
+          role="switch"
+          aria-checked={prefs[opt.key]}
+          aria-label={`${opt.label} notifications`}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onChange(opt.key, !prefs[opt.key]);
           }}
-          className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg hover:bg-[#1a1a1a] transition-colors"
+          className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg hover:bg-[#1a1a1a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00ff88] transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <span className="text-sm">{opt.icon}</span>
+            <span className="text-sm" aria-hidden="true">{opt.icon}</span>
             <span className="text-sm text-white">{opt.label}</span>
           </div>
           <div
+            aria-hidden="true"
             className={`w-9 h-5 rounded-full transition-all relative ${
               prefs[opt.key]
                 ? "bg-[#00ff88]"

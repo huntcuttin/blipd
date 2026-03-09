@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
+import { formatPrice } from "@/lib/format";
 import FollowButton from "./FollowButton";
 
 export default memo(function GameCard({ game }: { game: Game }) {
@@ -49,21 +50,23 @@ export default memo(function GameCard({ game }: { game: Game }) {
             {game.isOnSale ? (
               <>
                 <span className="text-[#00ff88] font-bold text-sm shrink-0">
-                  ${game.currentPrice.toFixed(2)}
+                  {formatPrice(game.currentPrice)}
                 </span>
                 <span className="text-[#555555] text-[11px] line-through">
-                  ${game.originalPrice.toFixed(2)}
+                  {formatPrice(game.originalPrice)}
                 </span>
-                <span className="px-1.5 py-0.5 rounded-md bg-[#00cc6e]/20 text-[#00ff88] text-[11px] font-bold shrink-0">
-                  -{game.discount}%
-                </span>
+                {game.discount != null && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-[#00cc6e]/20 text-[#00ff88] text-[11px] font-bold shrink-0">
+                    -{game.discount}%
+                  </span>
+                )}
               </>
             ) : (
               <span className="text-white font-bold text-sm">
                 {game.currentPrice > 0
-                  ? `$${game.currentPrice.toFixed(2)}`
+                  ? formatPrice(game.currentPrice)
                   : game.originalPrice > 0
-                  ? `$${game.originalPrice.toFixed(2)}`
+                  ? formatPrice(game.originalPrice)
                   : ""}
               </span>
             )}
@@ -120,7 +123,7 @@ export function GameCardSkeleton() {
 }
 
 // Compact horizontal scroll variant
-export function GameCardCompact({ game }: { game: Game }) {
+export const GameCardCompact = memo(function GameCardCompact({ game }: { game: Game }) {
   return (
     <Link href={`/game/${game.slug}`} className="block shrink-0">
       <div className="w-[150px] bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors overflow-hidden">
@@ -140,15 +143,17 @@ export function GameCardCompact({ game }: { game: Game }) {
             {game.isOnSale ? (
               <>
                 <span className="text-[#00ff88] font-bold text-xs">
-                  ${game.currentPrice.toFixed(2)}
+                  {formatPrice(game.currentPrice)}
                 </span>
-                <span className="px-1 py-0.5 rounded bg-[#00cc6e]/20 text-[#00ff88] text-[9px] font-bold">
-                  -{game.discount}%
-                </span>
+                {game.discount != null && (
+                  <span className="px-1 py-0.5 rounded bg-[#00cc6e]/20 text-[#00ff88] text-[9px] font-bold">
+                    -{game.discount}%
+                  </span>
+                )}
               </>
             ) : (
               <span className="text-white font-bold text-xs">
-                ${game.currentPrice.toFixed(2)}
+                {game.currentPrice > 0 ? formatPrice(game.currentPrice) : ""}
               </span>
             )}
           </div>
@@ -156,7 +161,7 @@ export function GameCardCompact({ game }: { game: Game }) {
       </div>
     </Link>
   );
-}
+});
 
 // Compact skeleton
 export function GameCardCompactSkeleton() {

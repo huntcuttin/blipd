@@ -26,7 +26,7 @@ function mapGame(row: any): Game {
     releaseStatus: row.release_status,
     metacriticScore: row.metacritic_score ?? null,
     saleEndDate: row.sale_end_date ?? null,
-    priceHistory: row.price_history as { date: string; price: number }[],
+    priceHistory: (row.price_history as { date: string; price: number }[] | null) ?? [],
     nsuid: row.nsuid ?? null,
     nintendoUrl: row.nintendo_url ?? null,
     switch2Nsuid: row.switch2_nsuid ?? null,
@@ -143,6 +143,7 @@ export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
     .eq("is_suppressed", false)
     .gte("release_date", today)
     .neq("release_date", "2099-12-31")
+    .neq("release_date", "2020-01-01")
     .gt("original_price", 0)
     .order("release_date", { ascending: true })
     .limit(100);

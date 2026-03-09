@@ -8,6 +8,7 @@ import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/queries";
+import { formatPrice, isPlaceholderDate } from "@/lib/format";
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailPage() {
@@ -54,26 +55,34 @@ export default function GameDetailPage() {
 
   const followingFranchise = franchise ? isFollowingFranchise(franchise.id) : false;
   const releaseDate = new Date(game.releaseDate);
-  const maxPrice = Math.max(...game.priceHistory.map((p) => p.price));
-  const minPrice = Math.min(...game.priceHistory.map((p) => p.price));
+  const placeholderDate = isPlaceholderDate(game.releaseDate);
+  const priceHistory = game.priceHistory;
+  const maxPrice = priceHistory.length > 0 ? Math.max(...priceHistory.map((p) => p.price)) : 0;
+  const minPrice = priceHistory.length > 0 ? Math.min(...priceHistory.map((p) => p.price)) : 0;
   const gameAlerts = alerts ?? [];
 
   return (
     <div className="pb-4">
       {/* Header with cover art */}
       <div className="relative h-56 bg-[#1a1a1a] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={game.coverArt}
-          alt={game.title}
-          className="w-full h-full object-cover object-center opacity-60"
-        />
+        {game.coverArt ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={game.coverArt}
+            alt={game.title}
+            className="w-full h-full object-cover object-center opacity-60"
+          />
+        ) : (
+          <div className="w-full h-full bg-[#1a1a1a]" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
 
         {/* Back button */}
         <Link
           href="/home"
-          className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center rounded-full bg-[#0a0a0a]/60 backdrop-blur-sm text-white"
+          aria-label="Back to Home"
+          className="absolute left-2 w-11 h-11 flex items-center justify-center rounded-full bg-[#0a0a0a]/60 backdrop-blur-sm text-white"
+          style={{ top: 'calc(8px + env(safe-area-inset-top, 0px))' }}
         >
           <svg
             className="w-5 h-5"
@@ -81,6 +90,7 @@ export default function GameDetailPage() {
             viewBox="0 0 24 24"
             strokeWidth={2}
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -92,27 +102,30 @@ export default function GameDetailPage() {
 
         {/* Title overlay */}
         <div className="absolute bottom-4 left-4 right-4">
-          <h1 className="text-2xl font-bold text-white leading-tight">
+          <h1 className="text-2xl font-bold text-white leading-tight line-clamp-2">
             {game.title}
           </h1>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-[#666666] text-sm">{game.publisher}</span>
+            {game.publisher && <span className="text-[#888888] text-sm">{game.publisher}</span>}
             {game.metacriticScore !== null && (
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
-                game.metacriticScore >= 85 ? "bg-[#00ce7a]/20 text-[#00ce7a]"
-                : game.metacriticScore >= 70 ? "bg-[#ffbd3f]/20 text-[#ffbd3f]"
-                : "bg-[#ff6874]/20 text-[#ff6874]"
-              }`}>
+              <span
+                aria-label={`Metacritic score: ${game.metacriticScore}`}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
+                  game.metacriticScore >= 85 ? "bg-[#00ce7a]/20 text-[#00ce7a]"
+                  : game.metacriticScore >= 70 ? "bg-[#ffbd3f]/20 text-[#ffbd3f]"
+                  : "bg-[#ff6874]/20 text-[#ff6874]"
+                }`}
+              >
                 {game.metacriticScore}
               </span>
             )}
             {franchise && (
               <Link
                 href={`/franchise/${encodeURIComponent(franchise.name)}`}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${
+                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
                   followingFranchise
                     ? "bg-[#00ff88]/15 text-[#00ff88] shadow-[0_0_8px_#00ff8844]"
-                    : "bg-[#222222] text-[#666666] hover:text-white"
+                    : "bg-[#222222] text-[#888888] hover:text-white"
                 }`}
               >
                 {franchise.name}
@@ -127,22 +140,24 @@ export default function GameDetailPage() {
         <div className="py-4 border-b border-[#222222]">
           <div className="flex items-center gap-3">
             <span className="text-3xl font-bold text-white">
-              ${game.currentPrice.toFixed(2)}
+              {formatPrice(game.currentPrice)}
             </span>
             {game.isOnSale && (
               <>
-                <span className="text-lg text-[#666666] line-through">
-                  ${game.originalPrice.toFixed(2)}
+                <span className="text-lg text-[#888888] line-through">
+                  {formatPrice(game.originalPrice)}
                 </span>
-                <span className="px-2 py-1 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-sm font-bold">
-                  -{game.discount}%
-                </span>
+                {game.discount != null && (
+                  <span className="px-2 py-1 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-sm font-bold">
+                    -{game.discount}%
+                  </span>
+                )}
               </>
             )}
           </div>
           {game.isAllTimeLow && (
             <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFD700]/10 border border-[#FFD700]/20">
-              <svg className="w-4 h-4 text-[#FFD700]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <svg className="w-4 h-4 text-[#FFD700]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181" />
               </svg>
               <span className="text-[#FFD700] text-xs font-bold tracking-wide">ALL TIME LOW PRICE</span>
@@ -168,8 +183,10 @@ export default function GameDetailPage() {
               )}
             </div>
           )}
-          <p className="text-[#666666] text-xs mt-3">
-            {game.releaseStatus === "released"
+          <p className="text-[#888888] text-xs mt-3">
+            {placeholderDate
+              ? "Release date TBD"
+              : game.releaseStatus === "released"
               ? `Released ${releaseDate.toLocaleDateString("en-US", {
                   month: "long",
                   day: "numeric",
@@ -212,7 +229,7 @@ export default function GameDetailPage() {
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#111111] border border-[#222222] text-[#999999] text-sm font-medium hover:border-[#333333] transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
             </svg>
             View on Nintendo eShop
@@ -222,19 +239,19 @@ export default function GameDetailPage() {
         {/* Price history */}
         <div className="py-4 border-t border-[#222222]">
           <h2 className="text-sm font-bold text-white mb-3">Price History</h2>
-          {game.priceHistory.length >= 3 ? (
-            <div className="relative">
+          {priceHistory.length >= 3 ? (
+            <div className="relative" role="img" aria-label={`Price history chart: current price ${formatPrice(game.currentPrice)}, lowest ${formatPrice(minPrice)}, highest ${formatPrice(maxPrice)}`}>
               {/* Y-axis labels */}
-              <div className="absolute left-0 top-0 bottom-5 flex flex-col justify-between text-[9px] text-[#555555] w-8">
+              <div className="absolute left-0 top-0 bottom-5 flex flex-col justify-between text-[9px] text-[#777777] w-8">
                 <span>${maxPrice.toFixed(0)}</span>
                 {maxPrice !== minPrice && <span>${minPrice.toFixed(0)}</span>}
               </div>
               {/* Chart */}
               <div className="ml-9">
                 <div className="flex items-end gap-2 h-24">
-                  {game.priceHistory.map((point, i) => {
+                  {priceHistory.map((point, i) => {
                     const height = maxPrice > 0 ? (point.price / maxPrice) * 100 : 0;
-                    const isLatest = i === game.priceHistory.length - 1;
+                    const isLatest = i === priceHistory.length - 1;
                     return (
                       <div
                         key={point.date}
@@ -242,7 +259,7 @@ export default function GameDetailPage() {
                       >
                         <span
                           className={`text-[9px] font-medium ${
-                            isLatest ? "text-[#00ff88]" : "text-[#555555]"
+                            isLatest ? "text-[#00ff88]" : "text-[#777777]"
                           }`}
                         >
                           ${point.price.toFixed(0)}
@@ -259,16 +276,16 @@ export default function GameDetailPage() {
                 </div>
                 {/* X-axis labels */}
                 <div className="flex gap-2 mt-1">
-                  {game.priceHistory.map((point) => (
+                  {priceHistory.map((point) => (
                     <div key={point.date} className="flex-1 text-center">
-                      <span className="text-[8px] text-[#555555]">{point.date}</span>
+                      <span className="text-[8px] text-[#777777]">{point.date}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
           ) : (
-            <p className="text-[#555555] text-xs">Price history building... Check back soon.</p>
+            <p className="text-[#777777] text-xs">Price history building... Check back soon.</p>
           )}
         </div>
 
@@ -284,7 +301,7 @@ export default function GameDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-[#555555] text-xs">No alerts yet for this game</p>
+            <p className="text-[#777777] text-xs">No alerts yet for this game</p>
           )}
         </div>
       </div>
