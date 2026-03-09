@@ -45,16 +45,16 @@ export default memo(function GameCard({ game }: { game: Game }) {
           </div>
 
           {/* Price row */}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 overflow-hidden">
             {game.isOnSale ? (
               <>
-                <span className="text-[#00ff88] font-bold text-base">
+                <span className="text-[#00ff88] font-bold text-base shrink-0">
                   ${game.currentPrice.toFixed(2)}
                 </span>
-                <span className="text-[#555555] text-xs line-through">
+                <span className="text-[#555555] text-xs line-through shrink-0">
                   ${game.originalPrice.toFixed(2)}
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-[#00ff88]/15 text-[#00ff88] text-xs font-bold">
+                <span className="px-2 py-0.5 rounded-md bg-[#00cc6e]/20 text-[#00ff88] text-xs font-bold shrink-0">
                   -{game.discount}%
                 </span>
               </>
@@ -70,7 +70,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
           </div>
 
           {/* Secondary badges row */}
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 overflow-hidden">
             {game.isAllTimeLow && (
               <span className="px-2 py-0.5 rounded-md bg-[#FFD700]/15 text-[#FFD700] text-[10px] font-bold tracking-wide">
                 ALL TIME LOW
@@ -142,7 +142,7 @@ export function GameCardCompact({ game }: { game: Game }) {
                 <span className="text-[#00ff88] font-bold text-xs">
                   ${game.currentPrice.toFixed(2)}
                 </span>
-                <span className="px-1 py-0.5 rounded bg-[#00ff88]/15 text-[#00ff88] text-[9px] font-bold">
+                <span className="px-1 py-0.5 rounded bg-[#00cc6e]/20 text-[#00ff88] text-[9px] font-bold">
                   -{game.discount}%
                 </span>
               </>

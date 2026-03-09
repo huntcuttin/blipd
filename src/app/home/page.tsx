@@ -101,7 +101,8 @@ export default function HomePage() {
           {user ? (
             <button
               onClick={signOut}
-              className="shrink-0 w-8 h-8 rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center text-[#666666] hover:text-white hover:border-[#333333] transition-all"
+              aria-label="Sign out"
+              className="shrink-0 w-10 h-10 rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center text-[#666666] hover:text-white hover:border-[#333333] transition-all"
               title="Sign out"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -111,7 +112,7 @@ export default function HomePage() {
           ) : (
             <Link
               href="/login"
-              className="shrink-0 px-3 py-1.5 rounded-full bg-[#00ff88] text-[#0a0a0a] text-xs font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
+              className="shrink-0 px-4 py-2.5 rounded-full bg-[#00ff88] text-[#0a0a0a] text-xs font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
             >
               Sign in
             </Link>

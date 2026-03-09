@@ -14,14 +14,28 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   width: "device-width",
   initialScale: 1,
+  themeColor: "#0a0a0a",
 };
 
 export const metadata: Metadata = {
   title: "blippd — Never miss a Nintendo drop.",
-  description: "Track Nintendo eShop prices, get alerts when they drop.",
+  description: "Track Nintendo eShop prices, get alerts when they drop. Follow games, get instant price drop alerts, and never miss a sale.",
   icons: {
     icon: "/favicon.svg",
   },
+  openGraph: {
+    title: "blippd — Never miss a Nintendo drop.",
+    description: "Track Nintendo eShop prices, get alerts when they drop. Follow games, get instant price drop alerts, and never miss a sale.",
+    url: "https://www.blippd.app",
+    siteName: "blippd",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "blippd — Never miss a Nintendo drop.",
+    description: "Track Nintendo eShop prices and get instant alerts when games go on sale.",
+  },
+  metadataBase: new URL("https://www.blippd.app"),
 };
 
 export default function RootLayout({
