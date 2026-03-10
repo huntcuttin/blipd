@@ -498,3 +498,24 @@ export async function updateFranchiseFollowPrefs(supabase: Client, userId: strin
   if (error) throw error;
 }
 
+// ── Games I Own queries ───────────────────────────────────────
+
+export async function getUserGameOwns(supabase: Client, userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("user_game_owns")
+    .select("game_id")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return (data ?? []).map((r: { game_id: string }) => r.game_id);
+}
+
+export async function markGameOwned(supabase: Client, userId: string, gameId: string) {
+  const { error } = await supabase.from("user_game_owns").insert({ user_id: userId, game_id: gameId });
+  if (error) throw error;
+}
+
+export async function unmarkGameOwned(supabase: Client, userId: string, gameId: string) {
+  const { error } = await supabase.from("user_game_owns").delete().eq("user_id", userId).eq("game_id", gameId);
+  if (error) throw error;
+}
+

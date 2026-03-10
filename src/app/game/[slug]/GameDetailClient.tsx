@@ -13,7 +13,7 @@ import { formatPrice, formatShortDate, formatLongDate, isPlaceholderDate } from 
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailClient({ slug }: { slug: string }) {
-  const { isFollowingFranchise, isFollowingGame, getGamePrefs, updateGamePrefs } = useFollow();
+  const { isFollowingFranchise, isFollowingGame, isOwningGame, toggleOwnGame, getGamePrefs, updateGamePrefs } = useFollow();
 
   const { data: game, loading: gameLoading, error: gameError } = useSupabaseQuery(
     (sb) => getGameBySlug(sb, slug),
@@ -204,9 +204,24 @@ export default function GameDetailClient({ slug }: { slug: string }) {
           )}
         </div>
 
-        {/* Sticky follow button */}
+        {/* Sticky follow + own buttons */}
         <div className="sticky z-10 py-4 bg-[#0a0a0a]" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-          <FollowButton gameId={game.id} size="large" />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <FollowButton gameId={game.id} size="large" />
+            </div>
+            <button
+              onClick={() => toggleOwnGame(game.id)}
+              aria-pressed={isOwningGame(game.id)}
+              className={`shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                isOwningGame(game.id)
+                  ? "bg-[#ffffff]/10 border-[#ffffff]/20 text-white"
+                  : "bg-[#111111] border-[#222222] text-[#666666] hover:border-[#444444] hover:text-white"
+              }`}
+            >
+              {isOwningGame(game.id) ? "✓ Owned" : "Own this"}
+            </button>
+          </div>
         </div>
 
         {/* Notification preferences */}

@@ -8,7 +8,7 @@ import { requestPushPermission } from "@/components/ServiceWorkerRegistration";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
-  const { followedGameIds, followedFranchiseIds } = useFollow();
+  const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
   const [pushState, setPushState] = useState<"default" | "granted" | "denied" | "unsupported">("default");
   const [pushLoading, setPushLoading] = useState(false);
 
@@ -19,6 +19,7 @@ export default function SettingsPage() {
 
   const gameCount = followedGameIds.size;
   const franchiseCount = followedFranchiseIds.size;
+  const ownedCount = ownedGameIds.size;
 
   return (
     <div className="px-4 py-6 pb-28">
@@ -44,18 +45,18 @@ export default function SettingsPage() {
             <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
               FOLLOWING
             </h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="bg-[#0a0a0a] rounded-lg p-3 text-center">
                 <p className="text-2xl font-bold text-white">{gameCount}</p>
-                <p className="text-[#666666] text-xs mt-0.5">
-                  game{gameCount !== 1 ? "s" : ""}
-                </p>
+                <p className="text-[#666666] text-xs mt-0.5">watching</p>
               </div>
               <div className="bg-[#0a0a0a] rounded-lg p-3 text-center">
                 <p className="text-2xl font-bold text-white">{franchiseCount}</p>
-                <p className="text-[#666666] text-xs mt-0.5">
-                  franchise{franchiseCount !== 1 ? "s" : ""}
-                </p>
+                <p className="text-[#666666] text-xs mt-0.5">franchise{franchiseCount !== 1 ? "s" : ""}</p>
+              </div>
+              <div className="bg-[#0a0a0a] rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-white">{ownedCount}</p>
+                <p className="text-[#666666] text-xs mt-0.5">owned</p>
               </div>
             </div>
           </div>

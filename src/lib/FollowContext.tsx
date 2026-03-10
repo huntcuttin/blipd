@@ -14,15 +14,21 @@ import {
   unfollowFranchise as dbUnfollowFranchise,
   updateGameFollowPrefs as dbUpdateGamePrefs,
   updateFranchiseFollowPrefs as dbUpdateFranchisePrefs,
+  getUserGameOwns,
+  markGameOwned as dbMarkOwned,
+  unmarkGameOwned as dbUnmarkOwned,
 } from "@/lib/queries";
 
 interface FollowContextType {
   followedGameIds: Set<string>;
   followedFranchiseIds: Set<string>;
+  ownedGameIds: Set<string>;
   toggleFollowGame: (gameId: string) => void;
   toggleFollowFranchise: (franchiseId: string) => void;
+  toggleOwnGame: (gameId: string) => void;
   isFollowingGame: (gameId: string) => boolean;
   isFollowingFranchise: (franchiseId: string) => boolean;
+  isOwningGame: (gameId: string) => boolean;
   getGamePrefs: (gameId: string) => NotifyPrefs;
   getFranchisePrefs: (franchiseId: string) => NotifyPrefs;
   updateGamePrefs: (gameId: string, prefs: Partial<NotifyPrefs>) => void;
@@ -36,6 +42,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [followedGameIds, setFollowedGameIds] = useState<Set<string>>(new Set());
   const [followedFranchiseIds, setFollowedFranchiseIds] = useState<Set<string>>(new Set());
+  const [ownedGameIds, setOwnedGameIds] = useState<Set<string>>(new Set());
   const [gamePrefsMap, setGamePrefsMap] = useState<Map<string, NotifyPrefs>>(new Map());
   const [franchisePrefsMap, setFranchisePrefsMap] = useState<Map<string, NotifyPrefs>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -44,6 +51,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setFollowedGameIds(new Set());
       setFollowedFranchiseIds(new Set());
+      setOwnedGameIds(new Set());
       setGamePrefsMap(new Map());
       setFranchisePrefsMap(new Map());
       return;
@@ -54,8 +62,9 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     Promise.all([
       getUserGameFollows(supabase, user.id),
       getUserFranchiseFollows(supabase, user.id),
+      getUserGameOwns(supabase, user.id),
     ])
-      .then(([gameFollows, franchiseFollows]) => {
+      .then(([gameFollows, franchiseFollows, ownedIds]) => {
         setFollowedGameIds(new Set(gameFollows.map((f) => f.gameId)));
         const gPrefs = new Map<string, NotifyPrefs>();
         for (const f of gameFollows) gPrefs.set(f.gameId, f.prefs);
@@ -65,6 +74,8 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         const fPrefs = new Map<string, NotifyPrefs>();
         for (const f of franchiseFollows) fPrefs.set(f.franchiseId, f.prefs);
         setFranchisePrefsMap(fPrefs);
+
+        setOwnedGameIds(new Set(ownedIds));
       })
       .catch((err) => {
         console.error("Failed to load follows:", err);
@@ -126,6 +137,33 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     [followedFranchiseIds, franchisePrefsMap, user]
   );
 
+  const toggleOwnGame = useCallback(
+    (gameId: string): void => {
+      const supabase = createClient();
+      if (ownedGameIds.has(gameId)) {
+        setOwnedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
+        if (user) {
+          dbUnmarkOwned(supabase, user.id, gameId).catch(() => {
+            setOwnedGameIds((prev) => new Set(prev).add(gameId));
+          });
+        }
+      } else {
+        setOwnedGameIds((prev) => new Set(prev).add(gameId));
+        if (user) {
+          dbMarkOwned(supabase, user.id, gameId).catch(() => {
+            setOwnedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
+          });
+        }
+      }
+    },
+    [ownedGameIds, user]
+  );
+
+  const isOwningGame = useCallback(
+    (gameId: string) => ownedGameIds.has(gameId),
+    [ownedGameIds]
+  );
+
   const isFollowingGame = useCallback(
     (gameId: string) => followedGameIds.has(gameId),
     [followedGameIds]
@@ -185,18 +223,23 @@ export function FollowProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({
     followedGameIds,
     followedFranchiseIds,
+    ownedGameIds,
     toggleFollowGame,
     toggleFollowFranchise,
+    toggleOwnGame,
     isFollowingGame,
     isFollowingFranchise,
+    isOwningGame,
     getGamePrefs,
     getFranchisePrefs,
     updateGamePrefs,
     updateFranchisePrefs,
     loading,
   }), [
-    followedGameIds, followedFranchiseIds, toggleFollowGame, toggleFollowFranchise,
-    isFollowingGame, isFollowingFranchise, getGamePrefs, getFranchisePrefs,
+    followedGameIds, followedFranchiseIds, ownedGameIds,
+    toggleFollowGame, toggleFollowFranchise, toggleOwnGame,
+    isFollowingGame, isFollowingFranchise, isOwningGame,
+    getGamePrefs, getFranchisePrefs,
     updateGamePrefs, updateFranchisePrefs, loading,
   ]);
 

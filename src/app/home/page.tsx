@@ -25,7 +25,7 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { user, signOut, consolePreference } = useAuth();
-  const { followedGameIds, followedFranchiseIds } = useFollow();
+  const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
   const { data: followedGamesData } = useSupabaseQuery(
@@ -217,7 +217,7 @@ export default function HomePage() {
               />
             )}
             {activeTab === "My Games" && (
-              <MyGamesTab games={followedGames} />
+              <MyGamesTab games={followedGames} ownedGameIds={ownedGameIds} />
             )}
             {activeTab === "My Franchises" && (
               <MyFranchisesTab
@@ -284,8 +284,11 @@ function DiscoverTab({
 
 // ── My Games Tab ──────────────────────────────────────────────
 
-function MyGamesTab({ games }: { games: Game[] }) {
-  if (games.length === 0) {
+function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<string> }) {
+  const watching = games.filter((g) => !ownedGameIds.has(g.id));
+  const owned = games.filter((g) => ownedGameIds.has(g.id));
+
+  if (watching.length === 0 && owned.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4">
         <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
@@ -293,42 +296,40 @@ function MyGamesTab({ games }: { games: Game[] }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-white mb-2">
-          No games flagged yet
-        </h2>
+        <h2 className="text-lg font-semibold text-white mb-2">No games yet</h2>
         <p className="text-[#666666] text-sm text-center max-w-[260px]">
-          Follow games from the Upcoming tab or search to track prices and get alerts
+          Follow games to track prices and get alerts, or mark ones you own
         </p>
       </div>
     );
   }
 
-  const onSale = games.filter((g) => g.isOnSale);
-  const notOnSale = games.filter((g) => !g.isOnSale);
+  const onSale = watching.filter((g) => g.isOnSale);
+  const notOnSale = watching.filter((g) => !g.isOnSale);
 
   return (
     <div className="space-y-4 pb-4">
       {onSale.length > 0 && (
         <div>
-          <h3 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2">
-            ON SALE NOW
-          </h3>
+          <h3 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2">ON SALE NOW</h3>
           <div className="space-y-2">
-            {onSale.map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))}
+            {onSale.map((game) => <GameCard key={game.id} game={game} />)}
           </div>
         </div>
       )}
       {notOnSale.length > 0 && (
         <div>
-          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">
-            WATCHING
-          </h3>
+          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">WATCHING</h3>
           <div className="space-y-2">
-            {notOnSale.map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))}
+            {notOnSale.map((game) => <GameCard key={game.id} game={game} />)}
+          </div>
+        </div>
+      )}
+      {owned.length > 0 && (
+        <div>
+          <h3 className="text-[10px] font-bold text-[#555555] tracking-wider mb-2">OWNED</h3>
+          <div className="space-y-2">
+            {owned.map((game) => <GameCard key={game.id} game={game} />)}
           </div>
         </div>
       )}
