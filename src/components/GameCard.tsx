@@ -18,7 +18,11 @@ export default memo(function GameCard({ game, showHype }: { game: Game; showHype
       <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors">
         {/* Cover art */}
         <div className="w-[110px] shrink-0">
-          <GameCoverImage src={game.coverArt} alt={game.title} className="w-full aspect-[16/10] rounded-lg object-cover bg-[#1a1a1a]" />
+          <GameCoverImage
+            src={game.coverArt}
+            alt={game.title}
+            className={`w-full aspect-[16/10] rounded-lg bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
+          />
         </div>
 
         {/* Info */}
@@ -135,7 +139,11 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
   return (
     <Link href={`/game/${game.slug}`} className="block shrink-0">
       <div className="w-[150px] bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors overflow-hidden">
-        <GameCoverImage src={game.coverArt} alt={game.title} className="w-full aspect-[16/10] object-cover bg-[#1a1a1a]" />
+        <GameCoverImage
+          src={game.coverArt}
+          alt={game.title}
+          className={`w-full aspect-[16/10] bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
+        />
         <div className="p-2.5">
           <h3 className="font-semibold text-white text-xs leading-tight truncate">
             {game.title}

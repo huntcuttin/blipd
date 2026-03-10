@@ -125,10 +125,11 @@ for (const game of igdbGames) {
   const publisher = companies.find(c => c.publisher)?.company?.name ?? "Nintendo";
   const developer = companies.find(c => c.developer)?.company?.name ?? null;
 
-  // Cover art
+  // Cover art — use t_cover_big (portrait) or fallback placeholder
+  const IGDB_NOCOVER = "https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.png";
   const coverUrl = game.cover?.url
     ? game.cover.url.replace("t_thumb", "t_cover_big").replace("//", "https://")
-    : null;
+    : IGDB_NOCOVER;
 
   // Release date
   const releaseDate = game.first_release_date
