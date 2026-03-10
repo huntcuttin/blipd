@@ -166,8 +166,8 @@ export async function getAnnouncedGames(supabase: Client): Promise<Game[]> {
 }
 
 export async function getGameBySlug(supabase: Client, slug: string): Promise<Game | null> {
-  const { data, error } = await supabase.from("games").select("*").eq("slug", slug).single();
-  if (error) return null;
+  const { data, error } = await supabase.from("games").select("*").eq("slug", slug).maybeSingle();
+  if (error || !data) return null;
   return mapGame(data);
 }
 
@@ -279,8 +279,9 @@ export async function getAllFranchises(supabase: Client): Promise<Franchise[]> {
 }
 
 export async function getFranchiseByName(supabase: Client, name: string): Promise<Franchise | null> {
-  const { data, error } = await supabase.from("franchises").select("*").eq("name", name).single();
-  if (error) return null;
+  // Try exact match first, then case-insensitive
+  const { data, error } = await supabase.from("franchises").select("*").ilike("name", name).maybeSingle();
+  if (error || !data) return null;
   return mapFranchise(data);
 }
 
@@ -407,7 +408,7 @@ export async function getUserProfile(supabase: Client, userId: string): Promise<
     .from("user_profiles")
     .select("console_preference")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
   return { consolePreference: data?.console_preference ?? null };
 }
 

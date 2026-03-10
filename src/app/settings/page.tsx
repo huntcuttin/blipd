@@ -132,8 +132,14 @@ export default function SettingsPage() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col items-center py-16 px-4">
-          <p className="text-[#666666] text-sm mb-4">Sign in to manage your settings</p>
+        <div className="flex flex-col items-center py-8 px-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
+            <svg className="w-7 h-7 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+          </div>
+          <p className="text-white text-sm font-semibold mb-1">Sign in to manage settings</p>
+          <p className="text-[#666666] text-xs mb-5 text-center max-w-[240px]">Track prices and get alerts for your favorite games</p>
           <Link
             href="/login"
             className="px-6 py-3 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm hover:shadow-[0_0_16px_#00ff8855] transition-all"

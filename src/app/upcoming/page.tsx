@@ -92,7 +92,7 @@ export default function UpcomingPage() {
               key={pf}
               aria-pressed={platformFilter === pf}
               onClick={() => setPlatformFilter(pf)}
-              className={`px-2 py-1.5 rounded-md text-[10px] font-medium whitespace-nowrap transition-all ${
+              className={`px-3 py-2.5 rounded-md text-[10px] font-medium whitespace-nowrap transition-all ${
                 platformFilter === pf
                   ? "bg-[#1a1a1a] text-white"
                   : "text-[#666666] hover:text-white"
@@ -109,7 +109,7 @@ export default function UpcomingPage() {
             <button
               onClick={() => setSortMode("date")}
               aria-pressed={sortMode === "date"}
-              className={`px-2 py-1.5 rounded-md text-[10px] font-medium transition-all ${
+              className={`px-3 py-2.5 rounded-md text-[10px] font-medium transition-all ${
                 sortMode === "date"
                   ? "bg-[#1a1a1a] text-white"
                   : "text-[#666666] hover:text-white"
@@ -120,7 +120,7 @@ export default function UpcomingPage() {
             <button
               onClick={() => setSortMode("hype")}
               aria-pressed={sortMode === "hype"}
-              className={`px-2 py-1.5 rounded-md text-[10px] font-medium transition-all ${
+              className={`px-3 py-2.5 rounded-md text-[10px] font-medium transition-all ${
                 sortMode === "hype"
                   ? "bg-[#1a1a1a] text-white"
                   : "text-[#666666] hover:text-white"

@@ -89,7 +89,7 @@ export default function SalesPage() {
   ).length;
 
   return (
-    <div className="px-4">
+    <div className="px-4 pb-28">
       {/* Header */}
       <div className="flex items-center justify-between py-4">
         <h1 className="text-2xl font-bold text-white">Sales</h1>
@@ -217,7 +217,7 @@ export default function SalesPage() {
                     key={s}
                     onClick={() => setSort(s)}
                     aria-pressed={sort === s}
-                    className={`px-3 py-2.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                    className={`px-4 py-3 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                       sort === s
                         ? "bg-[#00ff88]/15 text-[#00ff88]"
                         : "bg-[#1a1a1a] text-[#666666] hover:text-white"

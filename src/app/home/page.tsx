@@ -117,7 +117,7 @@ export default function HomePage() {
           ) : (
             <Link
               href="/login"
-              className="shrink-0 px-4 py-2.5 rounded-full bg-[#00ff88] text-[#0a0a0a] text-xs font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
+              className="shrink-0 px-4 py-3 rounded-full bg-[#00ff88] text-[#0a0a0a] text-xs font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
             >
               Sign in
             </Link>
@@ -166,7 +166,7 @@ export default function HomePage() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all ${
+                  className={`flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all ${
                     isActive
                       ? "bg-[#1a1a1a] text-white"
                       : "text-[#666666] hover:text-white"
