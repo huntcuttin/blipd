@@ -142,7 +142,7 @@ export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
     .from("games")
     .select("*")
     .in("release_status", ["upcoming", "out_today"])
-    .eq("is_suppressed", false)
+    .neq("is_suppressed", true)
     .gte("release_date", today)
     .neq("release_date", "2099-12-31")
     .neq("release_date", "2020-01-01")
@@ -157,7 +157,7 @@ export async function getAnnouncedGames(supabase: Client): Promise<Game[]> {
     .from("games")
     .select("*")
     .eq("release_status", "upcoming")
-    .eq("is_suppressed", false)
+    .neq("is_suppressed", true)
     .eq("release_date", "2099-12-31")
     .order("igdb_hype", { ascending: false })
     .limit(100);
@@ -209,23 +209,37 @@ export async function searchGames(
       .filter((h) => !isAddon(h.title ?? ""))
       .map((h) => h.nsuid)
       .filter(Boolean) as string[];
-    if (nsuids.length === 0) return [];
 
-    // Look up only games we track in our DB, preserving Algolia's ranking order
-    const { data, error } = await supabase
-      .from("games")
-      .select("*")
-      .in("nsuid", nsuids)
-      .limit(20);
+    // Run Algolia DB lookup + announced-game DB search in parallel
+    const escaped = query.replace(/[%_]/g, "\\$&");
+    const [eshopResult, announcedResult] = await Promise.all([
+      nsuids.length > 0
+        ? supabase.from("games").select("*").in("nsuid", nsuids).limit(20)
+        : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from("games")
+        .select("*")
+        .is("nsuid", null)
+        .eq("release_status", "upcoming")
+        .ilike("title", `%${escaped}%`)
+        .limit(10),
+    ]);
 
-    if (error) throw error;
+    if (eshopResult.error) throw eshopResult.error;
 
-    const byNsuid = new Map((data ?? []).map((g) => [g.nsuid, g]));
-    return nsuids
+    // eShop results in Algolia rank order, then announced games appended
+    const byNsuid = new Map((eshopResult.data ?? []).map((g) => [g.nsuid, g]));
+    const eshopGames = nsuids
       .map((nsuid) => byNsuid.get(nsuid))
       .filter((g): g is NonNullable<typeof g> => !!g)
       .slice(0, 20)
       .map(mapGame);
+
+    const announcedGames = (announcedResult.data ?? []).map(mapGame);
+    const seenIds = new Set(eshopGames.map((g) => g.id));
+    const newAnnounced = announcedGames.filter((g) => !seenIds.has(g.id));
+
+    return [...eshopGames, ...newAnnounced].slice(0, 20);
   } catch {
     // Algolia unavailable — fall back to DB ILIKE
     const escaped = query.replace(/[%_]/g, "\\$&");
