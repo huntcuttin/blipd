@@ -3,6 +3,11 @@
 ## Workflow Rules
 - **Always push after committing.** After every `git commit`, immediately run `git push origin main` without asking. Every commit should be deployed.
 
+## Credentials & API Keys
+- **cron-job.org API key:** `nXnh2WcO/qDxLTG/g2LW5dilu7fgfBLTqtpgP5OkLcg=` — use `Authorization: Bearer <key>` against `https://api.cron-job.org`
+- **Supabase project ref:** `cigsitwnhfnndtidrjjo` — management API via `https://api.supabase.com/v1/projects/{ref}/database/query` with Bearer token from macOS keychain (`security find-generic-password -a "supabase" -w | base64 -d`)
+- **Admin email:** `huntcuttin@gmail.com`
+
 ## What This Is
 Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follow games and get alerted the moment something changes. The goal is a clean, reliable side project that wins the US Switch niche by being definitively better at the one thing that matters: the alert fires, it's accurate, and it doesn't spam you.
 
