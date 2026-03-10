@@ -6,8 +6,9 @@ import TrailersClient from "./TrailersClient";
 
 export const dynamic = "force-dynamic";
 
+const ADMIN_EMAIL = "huntcuttin@gmail.com";
+
 export default async function AdminTrailersPage() {
-  // Auth check
   const cookieStore = cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,6 +18,15 @@ export default async function AdminTrailersPage() {
         getAll() {
           return cookieStore.getAll();
         },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Server component — cookie setting handled by middleware
+          }
+        },
       },
     }
   );
@@ -25,8 +35,7 @@ export default async function AdminTrailersPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (!user || user.email !== adminEmail) {
+  if (!user || user.email !== ADMIN_EMAIL) {
     redirect("/home");
   }
 
