@@ -4,6 +4,7 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import { AuthProvider } from "@/lib/AuthContext";
 import { FollowProvider } from "@/lib/FollowContext";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,6 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  manifest: "/manifest.json",
   title: "blippd — Never miss a Nintendo drop.",
   description: "Track Nintendo eShop prices, get alerts when they drop. Follow games, get instant price drop alerts, and never miss a sale.",
   icons: {
@@ -52,6 +54,7 @@ export default function RootLayout({
               <main style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>{children}</main>
             </div>
             <BottomNav />
+            <ServiceWorkerRegistration />
           </FollowProvider>
         </AuthProvider>
       </body>

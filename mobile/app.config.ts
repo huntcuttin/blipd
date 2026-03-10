@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     package: "app.blippd.mobile",
   },
-  plugins: ["expo-router", "expo-image", "expo-web-browser"],
+  plugins: [["expo-router", { root: "./src/app" }]],
   experiments: {
     typedRoutes: true,
   },

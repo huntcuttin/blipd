@@ -11,5 +11,5 @@ export async function getUserNotificationChannels(
 ): Promise<NotificationChannel[]> {
   // Future: query user notification preferences from DB
   // e.g. const { data } = await supabase.from('user_notification_settings').select('channels').eq('user_id', userId)
-  return ["email"];
+  return ["email", "web_push"];
 }

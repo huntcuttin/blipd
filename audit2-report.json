@@ -1,0 +1,500 @@
+{
+  "consoleErrors": [
+    {
+      "page": "root-m",
+      "message": "Failed to load resource: the server responded with a status of 400 ()"
+    },
+    {
+      "page": "home-m",
+      "message": "Failed to load resource: the server responded with a status of 400 ()"
+    },
+    {
+      "page": "sales-m",
+      "message": "Failed to load resource: the server responded with a status of 400 ()"
+    },
+    {
+      "page": "root-d",
+      "message": "Failed to load resource: the server responded with a status of 400 ()"
+    },
+    {
+      "page": "home-d",
+      "message": "Failed to load resource: the server responded with a status of 400 ()"
+    },
+    {
+      "page": "sales-d",
+      "message": "Failed to load resource: the server responded with a status of 400 ()"
+    },
+    {
+      "page": "game-404-m",
+      "message": "Failed to load resource: the server responded with a status of 406 ()"
+    },
+    {
+      "page": "franchise-404-m",
+      "message": "Failed to load resource: the server responded with a status of 406 ()"
+    }
+  ],
+  "networkErrors": [
+    {
+      "page": "root-m",
+      "url": "https://www.blippd.app/game/mario-vs-donkey-kong?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "root-m",
+      "url": "https://www.blippd.app/game/super-mario-bros-wonder-nintendo-switch-2-edition-meetup-in-bellabel-park-upgrade-pack?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "root-m",
+      "url": "https://www.blippd.app/game/super-mario-odyssey?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "root-m",
+      "url": "https://www.blippd.app/game/super-mario-galaxy-super-mario-galaxy-2?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "home-m",
+      "url": "https://www.blippd.app/game/super-mario-bros-wonder-nintendo-switch-2-edition-meetup-in-bellabel-park-upgrade-pack?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "home-m",
+      "url": "https://www.blippd.app/game/donkey-kong-country-returns-hd?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "home-m",
+      "url": "https://www.blippd.app/game/mario-vs-donkey-kong?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "home-m",
+      "url": "https://www.blippd.app/game/pok-mon-scarlet-and-pok-mon-violet-double-pack?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "home-m",
+      "url": "https://www.blippd.app/game/super-mario-galaxy-super-mario-galaxy-2?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "home-m",
+      "url": "https://www.blippd.app/game/super-mario-odyssey?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "sales-m",
+      "url": "https://www.blippd.app/game/planet-of-lana-collection?_rsc=id6ae",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "sales-m",
+      "url": "https://www.blippd.app/game/super-mario-maker-2?_rsc=id6ae",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "sales-m",
+      "url": "https://www.blippd.app/game/super-mario-party-jamboree?_rsc=id6ae",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "sales-m",
+      "url": "https://www.blippd.app/game/mario-vs-donkey-kong?_rsc=id6ae",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "upcoming-m",
+      "url": "https://www.blippd.app/game/fear-effect-2-retro-helix?_rsc=4eiy7",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "upcoming-m",
+      "url": "https://www.blippd.app/game/planet-of-lana-collection?_rsc=4eiy7",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "upcoming-m",
+      "url": "https://www.blippd.app/game/planet-of-lana-ii?_rsc=4eiy7",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "upcoming-m",
+      "url": "https://www.blippd.app/game/paranormasight-the-mermaid-s-curse?_rsc=4eiy7",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "upcoming-m",
+      "url": "https://www.blippd.app/game/calamity-angels-special-delivery-digital-deluxe-edition?_rsc=4eiy7",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "upcoming-m",
+      "url": "https://www.blippd.app/game/calamity-angels-special-delivery?_rsc=4eiy7",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "alerts-m",
+      "url": "https://www.blippd.app/game/super-bomberman-collection?_rsc=12ngl",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "alerts-m",
+      "url": "https://www.blippd.app/game/the-legend-of-zelda-breath-of-the-wild?_rsc=12ngl",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "alerts-m",
+      "url": "https://www.blippd.app/game/the-legend-of-zelda-tears-of-the-kingdom?_rsc=12ngl",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "root-d",
+      "url": "https://www.blippd.app/game/donkey-kong-country-returns-hd?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "home-d",
+      "url": "https://www.blippd.app/game/super-mario-odyssey?_rsc=1f27h",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "alerts-d",
+      "url": "https://www.blippd.app/game/the-legend-of-zelda-tears-of-the-kingdom?_rsc=12ngl",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "alerts-d",
+      "url": "https://www.blippd.app/game/pok-mon-legends-z-a?_rsc=12ngl",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "franchise-Donkey%20Kong-m",
+      "url": "https://www.blippd.app/game/donkey-kong-bananza-dk-island-emerald-rush?_rsc=1v4n4",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "franchise-Donkey%20Kong-m",
+      "url": "https://www.blippd.app/game/donkey-kong-country-returns-hd?_rsc=1v4n4",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "page": "franchise-Donkey%20Kong-m",
+      "url": "https://www.blippd.app/game/donkey-kong-country-tropical-freeze?_rsc=1v4n4",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "brokenLinks": [],
+  "uiIssues": [
+    {
+      "page": "home",
+      "issue": "Broken images",
+      "details": [
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "New Pokémon Snap™"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Pokémon™ Brilliant Diamond"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Pokémon™ Shining Pearl"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Pokémon™ Legends: Arceus"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Kirby’s Dream Buffet™"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Metroid Prime™ Remastered"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Kirby’s Return to Dream Land™ Deluxe"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Animal Crossing™: New Horizons"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Pokémon™ Brilliant Diamond and Pokémon™ Shining Pearl Double Pack"
+        },
+        {
+          "src": "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/",
+          "alt": "Go Vacation™"
+        }
+      ]
+    },
+    {
+      "page": "home",
+      "issue": "Content may be hidden behind bottom nav",
+      "details": {
+        "navTop": 779,
+        "mainBottom": 5244.5,
+        "overlap": true
+      }
+    },
+    {
+      "page": "sales",
+      "issue": "Content may be hidden behind bottom nav",
+      "details": {
+        "navTop": 779,
+        "mainBottom": 1110.5,
+        "overlap": true
+      }
+    },
+    {
+      "page": "upcoming",
+      "issue": "Content may be hidden behind bottom nav",
+      "details": {
+        "navTop": 779,
+        "mainBottom": 1491.75,
+        "overlap": true
+      }
+    },
+    {
+      "page": "alerts",
+      "issue": "Content may be hidden behind bottom nav",
+      "details": {
+        "navTop": 779,
+        "mainBottom": 1561,
+        "overlap": true
+      }
+    },
+    {
+      "page": "privacy",
+      "issue": "Content may be hidden behind bottom nav",
+      "details": {
+        "navTop": 779,
+        "mainBottom": 820,
+        "overlap": true
+      }
+    },
+    {
+      "page": "terms",
+      "issue": "Content may be hidden behind bottom nav",
+      "details": {
+        "navTop": 779,
+        "mainBottom": 804,
+        "overlap": true
+      }
+    }
+  ],
+  "pageLoadTimes": [
+    {
+      "page": "root-m",
+      "url": "https://www.blippd.app/",
+      "loadTime": 2240,
+      "status": 307
+    },
+    {
+      "page": "home-m",
+      "url": "https://www.blippd.app/home",
+      "loadTime": 1059,
+      "status": 200
+    },
+    {
+      "page": "sales-m",
+      "url": "https://www.blippd.app/sales",
+      "loadTime": 1102,
+      "status": 200
+    },
+    {
+      "page": "upcoming-m",
+      "url": "https://www.blippd.app/upcoming",
+      "loadTime": 1274,
+      "status": 200
+    },
+    {
+      "page": "alerts-m",
+      "url": "https://www.blippd.app/alerts",
+      "loadTime": 1182,
+      "status": 200
+    },
+    {
+      "page": "login-m",
+      "url": "https://www.blippd.app/login",
+      "loadTime": 980,
+      "status": 200
+    },
+    {
+      "page": "onboarding-m",
+      "url": "https://www.blippd.app/onboarding",
+      "loadTime": 1193,
+      "status": 200
+    },
+    {
+      "page": "settings-m",
+      "url": "https://www.blippd.app/settings",
+      "loadTime": 1175,
+      "status": 200
+    },
+    {
+      "page": "privacy-m",
+      "url": "https://www.blippd.app/privacy",
+      "loadTime": 971,
+      "status": 200
+    },
+    {
+      "page": "terms-m",
+      "url": "https://www.blippd.app/terms",
+      "loadTime": 1233,
+      "status": 200
+    },
+    {
+      "page": "root-d",
+      "url": "https://www.blippd.app/",
+      "loadTime": 1854,
+      "status": 307
+    },
+    {
+      "page": "home-d",
+      "url": "https://www.blippd.app/home",
+      "loadTime": 1445,
+      "status": 200
+    },
+    {
+      "page": "sales-d",
+      "url": "https://www.blippd.app/sales",
+      "loadTime": 1124,
+      "status": 200
+    },
+    {
+      "page": "upcoming-d",
+      "url": "https://www.blippd.app/upcoming",
+      "loadTime": 1118,
+      "status": 200
+    },
+    {
+      "page": "alerts-d",
+      "url": "https://www.blippd.app/alerts",
+      "loadTime": 1086,
+      "status": 200
+    },
+    {
+      "page": "login-d",
+      "url": "https://www.blippd.app/login",
+      "loadTime": 823,
+      "status": 200
+    },
+    {
+      "page": "onboarding-d",
+      "url": "https://www.blippd.app/onboarding",
+      "loadTime": 697,
+      "status": 200
+    },
+    {
+      "page": "settings-d",
+      "url": "https://www.blippd.app/settings",
+      "loadTime": 766,
+      "status": 200
+    },
+    {
+      "page": "privacy-d",
+      "url": "https://www.blippd.app/privacy",
+      "loadTime": 988,
+      "status": 200
+    },
+    {
+      "page": "terms-d",
+      "url": "https://www.blippd.app/terms",
+      "loadTime": 700,
+      "status": 200
+    },
+    {
+      "page": "game-donkey-kong-country-returns-hd-m",
+      "url": "https://www.blippd.app/game/donkey-kong-country-returns-hd",
+      "loadTime": 1376,
+      "status": 200
+    },
+    {
+      "page": "game-donkey-kong-country-returns-hd-d",
+      "url": "https://www.blippd.app/game/donkey-kong-country-returns-hd",
+      "loadTime": 1315,
+      "status": 200
+    },
+    {
+      "page": "game-super-mario-maker-2-m",
+      "url": "https://www.blippd.app/game/super-mario-maker-2",
+      "loadTime": 1118,
+      "status": 200
+    },
+    {
+      "page": "game-super-mario-maker-2-d",
+      "url": "https://www.blippd.app/game/super-mario-maker-2",
+      "loadTime": 1194,
+      "status": 200
+    },
+    {
+      "page": "game-mario-vs-donkey-kong-m",
+      "url": "https://www.blippd.app/game/mario-vs-donkey-kong",
+      "loadTime": 1143,
+      "status": 200
+    },
+    {
+      "page": "game-mario-vs-donkey-kong-d",
+      "url": "https://www.blippd.app/game/mario-vs-donkey-kong",
+      "loadTime": 1185,
+      "status": 200
+    },
+    {
+      "page": "game-the-legend-of-zelda-echoes-of-wisdom-m",
+      "url": "https://www.blippd.app/game/the-legend-of-zelda-echoes-of-wisdom",
+      "loadTime": 1129,
+      "status": 200
+    },
+    {
+      "page": "game-the-legend-of-zelda-echoes-of-wisdom-d",
+      "url": "https://www.blippd.app/game/the-legend-of-zelda-echoes-of-wisdom",
+      "loadTime": 1188,
+      "status": 200
+    },
+    {
+      "page": "game-super-mario-bros-wonder-nintendo-switch-2-edition-meetup-in-bellabel-park-upgrade-pack-m",
+      "url": "https://www.blippd.app/game/super-mario-bros-wonder-nintendo-switch-2-edition-meetup-in-bellabel-park-upgrade-pack",
+      "loadTime": 1124,
+      "status": 200
+    },
+    {
+      "page": "game-super-mario-bros-wonder-nintendo-switch-2-edition-meetup-in-bellabel-park-upgrade-pack-d",
+      "url": "https://www.blippd.app/game/super-mario-bros-wonder-nintendo-switch-2-edition-meetup-in-bellabel-park-upgrade-pack",
+      "loadTime": 1108,
+      "status": 200
+    },
+    {
+      "page": "franchise-Donkey%20Kong-m",
+      "url": "https://www.blippd.app/franchise/Donkey%20Kong",
+      "loadTime": 1249,
+      "status": 200
+    },
+    {
+      "page": "game-404-m",
+      "url": "https://www.blippd.app/game/nonexistent-game-12345",
+      "loadTime": 793,
+      "status": 200
+    },
+    {
+      "page": "franchise-404-m",
+      "url": "https://www.blippd.app/franchise/NonexistentFranchise12345",
+      "loadTime": 789,
+      "status": 200
+    }
+  ],
+  "observations": [
+    "Search: input found, tested with \"Zelda\"",
+    "Search results: 10 results",
+    "Focus indicator: {\"outline\":\"rgb(224, 224, 224) auto 0px\",\"outlineOffset\":\"0px\",\"boxShadow\":\"none\"}",
+    "Game card click navigated to: https://www.blippd.app/game/donkey-kong-country-returns-hd",
+    "First button on game page: \"Follow\"",
+    "Bottom nav visible after scroll: true",
+    "Desktop layout: {\"found\":true,\"width\":430,\"left\":505,\"right\":935,\"windowWidth\":1440,\"centered\":true}"
+  ]
+}

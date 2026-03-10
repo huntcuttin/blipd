@@ -1,6 +1,45 @@
 import { getUserNotificationChannels } from "./channels";
 import { sendEmailAlert } from "./email";
+import { sendPushToUser } from "./push";
 import type { AlertPayload } from "./types";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.blippd.app";
+
+function alertToPushPayload(payload: AlertPayload) {
+  const url = `${APP_URL}/game/${payload.gameSlug}`;
+  switch (payload.alertType) {
+    case "price_drop":
+    case "sale_started":
+      return {
+        title: `${payload.gameTitle} is on sale`,
+        body: payload.headline,
+        url,
+        tag: `sale-${payload.gameId}`,
+      };
+    case "all_time_low":
+      return {
+        title: `🏆 All-time low: ${payload.gameTitle}`,
+        body: payload.headline,
+        url,
+        tag: `atl-${payload.gameId}`,
+      };
+    case "out_now":
+    case "release_today":
+      return {
+        title: `${payload.gameTitle} is out now`,
+        body: payload.headline,
+        url,
+        tag: `release-${payload.gameId}`,
+      };
+    default:
+      return {
+        title: "blippd alert",
+        body: payload.headline,
+        url,
+        tag: `alert-${payload.alertId}`,
+      };
+  }
+}
 
 /**
  * Sends an alert to a user across all their enabled notification channels.
@@ -18,9 +57,8 @@ export async function sendAlert(
       switch (channel) {
         case "email":
           return sendEmailAlert(userId, payload);
-        // Future channels:
-        // case "web_push":
-        //   return sendWebPushAlert(userId, payload);
+        case "web_push":
+          return sendPushToUser(userId, alertToPushPayload(payload));
         // case "expo_push":
         //   return sendExpoPushAlert(userId, payload);
         default:

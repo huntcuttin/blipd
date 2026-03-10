@@ -19,15 +19,15 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 | Email | Resend — sender: alerts@blippd.app |
 | Hosting | Vercel (free tier) |
 | Cron | cron-job.org (7 jobs configured) |
-| Payments | Stripe (v1.5) |
+| Payments | None (ad-supported, free forever) |
 | iOS (v2) | Expo / React Native |
 | Data | nintendo-switch-eshop npm + ITAD API + IGDB API + Algolia |
 
 ## Monetization
 
-- **Free:** Follow up to 5 games, email alerts
-- **Pro ($3/mo via Stripe):** Unlimited follows, instant alerts, future push notifications
-- No ads at launch. Carbon Ads considered at 5k+ users (light touch, never interstitials).
+- **Free forever:** Unlimited follows, email alerts, web push notifications — no paywall.
+- **Ads:** Carbon Ads at 5k+ users (light touch, banner only, never interstitials). No Stripe, no subscription tier.
+- Stripe removed from roadmap entirely.
 
 ## Database Schema (Core Tables)
 
@@ -138,7 +138,7 @@ GET https://api.isthereanydeal.com/games/history/v2
 
 ### V1.5
 
-- Stripe Pro tier ($3/mo)
+- ~~Stripe Pro tier~~ (removed — ad-supported free model)
 - Web push notifications
 - "Sale ending soon" alert type
 - Named sale event detection + two-tier notification system

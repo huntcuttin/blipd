@@ -1,12 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import Constants from "expo-constants";
 
-const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl as string;
-const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey as string;
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY");
+  console.warn("Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY");
 }
 
 // Singleton Supabase client for mobile

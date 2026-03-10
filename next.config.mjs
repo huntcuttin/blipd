@@ -4,6 +4,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "assets.nintendo.com" },
       { protocol: "https", hostname: "*.nintendo.com" },
+      { protocol: "https", hostname: "images.igdb.com" },
     ],
   },
 };

@@ -3,10 +3,19 @@
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { requestPushPermission } from "@/components/ServiceWorkerRegistration";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { followedGameIds, followedFranchiseIds } = useFollow();
+  const [pushState, setPushState] = useState<"default" | "granted" | "denied" | "unsupported">("default");
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    if (!("Notification" in window)) { setPushState("unsupported"); return; }
+    setPushState(Notification.permission as "default" | "granted" | "denied");
+  }, []);
 
   const gameCount = followedGameIds.size;
   const franchiseCount = followedFranchiseIds.size;
@@ -79,6 +88,35 @@ export default function SettingsPage() {
                   ON
                 </span>
               </div>
+              {/* Push notifications row */}
+              {pushState !== "unsupported" && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white text-sm font-medium">Push notifications</p>
+                    <p className="text-[#666666] text-xs mt-0.5">
+                      {pushState === "granted" ? "Instant alerts on this device" : pushState === "denied" ? "Blocked in browser settings" : "Get instant alerts on this device"}
+                    </p>
+                  </div>
+                  {pushState === "granted" ? (
+                    <span className="px-2 py-1 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-[10px] font-bold">ON</span>
+                  ) : pushState === "denied" ? (
+                    <span className="px-2 py-1 rounded-full bg-[#ff6874]/15 text-[#ff6874] text-[10px] font-bold">BLOCKED</span>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        setPushLoading(true);
+                        const ok = await requestPushPermission();
+                        setPushState(ok ? "granted" : "denied");
+                        setPushLoading(false);
+                      }}
+                      disabled={pushLoading}
+                      className="px-3 py-1.5 rounded-lg bg-[#00ff88] text-[#0a0a0a] text-[11px] font-bold disabled:opacity-50"
+                    >
+                      {pushLoading ? "..." : "Enable"}
+                    </button>
+                  )}
+                </div>
+              )}
               <p className="text-[#444444] text-[11px]">
                 Customize per-game alerts from each game&apos;s detail page.
               </p>
