@@ -153,7 +153,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
             )}
             {game.isOnSale && game.saleEndDate && (
               <span className="text-[#ff6874] text-sm font-medium ml-1">
-                Ends {formatShortDate(game.saleEndDate)}
+                Sale ends {formatShortDate(game.saleEndDate)}
               </span>
             )}
           </div>
@@ -194,6 +194,14 @@ export default function GameDetailClient({ slug }: { slug: string }) {
               ? "Released today"
               : `Releasing ${formatLongDate(game.releaseDate)}`}
           </p>
+          {game.releaseStatus === "upcoming" && !placeholderDate && (
+            <a
+              href={`/games/${game.slug}/release-time`}
+              className="inline-block mt-1.5 text-[#00ff88] text-xs font-medium hover:underline"
+            >
+              What time does it launch? →
+            </a>
+          )}
         </div>
 
         {/* Sticky follow button */}

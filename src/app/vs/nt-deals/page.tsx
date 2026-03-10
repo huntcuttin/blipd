@@ -26,8 +26,8 @@ const features: Feature[] = [
   { name: "Sale started alerts", blippd: true, ntDeals: true },
   { name: "Release day alerts", blippd: true, ntDeals: false },
   { name: "Email notifications", blippd: true, ntDeals: true },
-  { name: "Push notifications", blippd: "Coming soon", ntDeals: true },
-  { name: "Named sale detection", blippd: "Coming soon", ntDeals: false, note: "Blippd detects named events like Mar10 Day and groups alerts intelligently" },
+  { name: "Push notifications", blippd: true, ntDeals: true },
+  { name: "Named sale detection", blippd: true, ntDeals: false, note: "Blippd detects named events like Mar10 Day and groups alerts intelligently" },
   { name: "Switch 2 catalog", blippd: true, ntDeals: false, note: "NT Deals Switch 2 support has been broken since launch" },
   { name: "Price history", blippd: "Building", ntDeals: "9 years" },
   { name: "Desired price threshold", blippd: false, ntDeals: "Premium only" },
@@ -35,8 +35,7 @@ const features: Feature[] = [
   { name: "Ad-free experience", blippd: true, ntDeals: false, note: "NT Deals shows aggressive ads triggered by search" },
   { name: "iOS app", blippd: "Coming soon", ntDeals: true },
   { name: "Android app", blippd: "Coming soon", ntDeals: false, note: "NT Deals promised Android in 2021, never delivered" },
-  { name: "Free tier price", blippd: "Free", ntDeals: "Free (with ads)" },
-  { name: "Premium price", blippd: "$3/mo", ntDeals: "$4.99/mo" },
+  { name: "Price", blippd: "Free forever", ntDeals: "Free (with ads) or $4.99/mo", note: "Blippd is free with no ads, no premium tier" },
   { name: "Support response", blippd: "Active", ntDeals: "No response", note: "Multiple reports of unanswered support emails" },
 ];
 
@@ -115,7 +114,7 @@ export default function VsNtDealsPage() {
         <div className="bg-[#111111] rounded-xl border border-[#222222] p-5">
           <h2 className="text-base font-bold text-white mb-2">Where NT Deals wins</h2>
           <p className="text-[#888888] text-sm leading-relaxed">
-            NT Deals has nearly a decade of price history data and working push notifications on iOS.
+            NT Deals has nearly a decade of price history data and an iOS app.
             If historical price depth is your top priority, they have more data today.
             We&apos;re building our own history and will get there — but we won&apos;t pretend we&apos;re there yet.
           </p>
