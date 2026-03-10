@@ -205,8 +205,11 @@ export async function searchGames(
       filters: `topLevelCategoryCode:GAMES AND ${platformFilter}`,
     });
 
+    // Only keep hits where the title actually contains the query (avoids fuzzy false positives)
+    const queryLower = query.toLowerCase();
     const nsuids = result.hits
       .filter((h) => !isAddon(h.title ?? ""))
+      .filter((h) => (h.title ?? "").toLowerCase().includes(queryLower))
       .map((h) => h.nsuid)
       .filter(Boolean) as string[];
 
