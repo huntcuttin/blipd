@@ -64,8 +64,9 @@ export default function UpcomingPage() {
         <h1 className="text-lg font-bold text-white">Upcoming</h1>
       </div>
 
-      {/* Sub-tab pills */}
+      {/* Filters row */}
       <div className="flex items-center gap-2 mb-4">
+        {/* Sub-tab pills */}
         <div className="flex gap-2" role="tablist">
           {(["Out Now", "Coming Soon"] as SubTab[]).map((tab) => (
             <button
@@ -84,9 +85,27 @@ export default function UpcomingPage() {
           ))}
         </div>
 
+        {/* Platform toggle */}
+        <div className="ml-auto flex gap-1 bg-[#111111] rounded-lg p-0.5 border border-[#222222]">
+          {(["all", "switch2"] as PlatformFilter[]).map((pf) => (
+            <button
+              key={pf}
+              aria-pressed={platformFilter === pf}
+              onClick={() => setPlatformFilter(pf)}
+              className={`px-2 py-1.5 rounded-md text-[10px] font-medium whitespace-nowrap transition-all ${
+                platformFilter === pf
+                  ? "bg-[#1a1a1a] text-white"
+                  : "text-[#666666] hover:text-white"
+              }`}
+            >
+              {pf === "all" ? "All" : "Switch 2"}
+            </button>
+          ))}
+        </div>
+
         {/* Sort toggle — only on Coming Soon when hype data exists */}
-        {hasAnyHype && (
-          <div className="ml-auto flex gap-1 bg-[#111111] rounded-lg p-0.5 border border-[#222222]">
+        {hasAnyHype && subTab === "Coming Soon" && (
+          <div className="flex gap-1 bg-[#111111] rounded-lg p-0.5 border border-[#222222]">
             <button
               onClick={() => setSortMode("date")}
               aria-pressed={sortMode === "date"}
@@ -150,25 +169,6 @@ export default function UpcomingPage() {
         </>
       )}
 
-      {/* Platform toggle — bottom section */}
-      <div className="sticky bottom-20 z-10 py-3">
-        <div className="flex p-1 bg-[#111111] rounded-xl border border-[#222222]">
-          {(["all", "switch2"] as PlatformFilter[]).map((pf) => (
-            <button
-              key={pf}
-              aria-pressed={platformFilter === pf}
-              onClick={() => setPlatformFilter(pf)}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                platformFilter === pf
-                  ? "bg-[#1a1a1a] text-white"
-                  : "text-[#666666] hover:text-white"
-              }`}
-            >
-              {pf === "all" ? "All Platforms" : "Switch 2 Only"}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
