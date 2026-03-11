@@ -462,7 +462,7 @@ export async function runPriceUpdate(options?: {
     .select("id, title, nsuid, current_price, original_price, is_on_sale, price_history")
     .not("nsuid", "is", null)
     .order("last_price_check", { ascending: true, nullsFirst: true })
-    .limit(200);
+    .limit(100);
 
   if (error || !games) {
     console.error("Failed to fetch games for price check:", error?.message);
@@ -506,8 +506,11 @@ export async function runPriceUpdate(options?: {
   }
   await Promise.all(queueUpdates);
 
-  // Process each game that got a price response
-  const gameIds: string[] = [];
+  // Process each game that got a price response — compute updates in memory first
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pendingUpdates: { game: typeof games[0]; update: Record<string, any>; priceChanged: boolean; oldPrice: number; isOnSale: boolean; allTimeLow: boolean; endDate: string | null }[] = [];
+
   for (const game of games) {
     const priceInfo = priceMap.get(game.nsuid!);
     if (!priceInfo) continue;
@@ -519,10 +522,8 @@ export async function runPriceUpdate(options?: {
     const isOnSale = priceInfo.discount != null && priceInfo.discount < priceInfo.regular;
     const discount = computeDiscount(newPrice, originalPrice);
     const history = (game.price_history as { date: string; price: number }[]) || [];
-    const currentMonth = new Date().toISOString().slice(0, 7);
     const priceChanged = !isFirstPriceCheck && Math.abs(newPrice - oldPrice) >= 0.01;
 
-    // Build update object
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const update: Record<string, any> = {
       current_price: newPrice,
@@ -533,7 +534,6 @@ export async function runPriceUpdate(options?: {
       updated_at: new Date().toISOString(),
     };
 
-    // Update price history: replace same-month entry or append new month
     const lastEntry = history[history.length - 1];
     if (priceChanged || !lastEntry || lastEntry.date !== currentMonth) {
       const shouldReplace = lastEntry?.date === currentMonth;
@@ -543,39 +543,46 @@ export async function runPriceUpdate(options?: {
       update.price_history = newHistory;
     }
 
-    // Check all-time low
     const allTimeLow = isAllTimeLow(newPrice, history);
     update.is_all_time_low = allTimeLow;
 
-    const { error: updateError } = await supabase
-      .from("games")
-      .update(update)
-      .eq("id", game.id);
+    pendingUpdates.push({ game, update, priceChanged, oldPrice, isOnSale, allTimeLow, endDate: priceInfo.endDate });
+  }
 
-    if (updateError) {
-      console.error(`  Failed to update ${game.title}:`, updateError.message);
-      continue;
-    }
+  // Fire all DB updates in parallel
+  const updateResults = await Promise.all(
+    pendingUpdates.map(({ game, update }) =>
+      supabase.from("games").update(update).eq("id", game.id).then(({ error }) => {
+        if (error) console.error(`  Failed to update ${game.title}:`, error.message);
+        return !error;
+      })
+    )
+  );
 
+  // Generate alerts for games that updated successfully and had price changes
+  const gameIds: string[] = [];
+  for (let i = 0; i < pendingUpdates.length; i++) {
+    if (!updateResults[i]) continue;
+    const { game, priceChanged, oldPrice, isOnSale, allTimeLow, endDate } = pendingUpdates[i];
+    const { update } = pendingUpdates[i];
     gameIds.push(game.id);
 
     if (priceChanged) {
       priceChanges++;
 
       if (shouldAlert) {
+        const newPrice = update.current_price as number;
+        const discount = update.discount as number;
         const isPriceDrop = newPrice < oldPrice;
         const isNewSale = isOnSale && !game.is_on_sale;
         if (isPriceDrop || allTimeLow || isNewSale) {
           const ref = { id: game.id, title: game.title };
           const followers = await getFollowers(supabase, game.id);
 
-          // Prioritize alerts: price_drop subsumes sale_started to avoid triple-alerting
           if (isPriceDrop) {
-            if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers, isOnSale ? priceInfo.endDate : null)) alertsCreated++;
+            if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers, isOnSale ? endDate : null)) alertsCreated++;
           } else if (isNewSale) {
-            // Only fire sale_started when it's not also a price drop (e.g. game goes on sale at same tracked price)
-            if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, priceInfo.endDate, followers))
-              alertsCreated++;
+            if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, endDate, followers)) alertsCreated++;
           }
           if (allTimeLow) {
             if (await generateAllTimeLowAlert(supabase, ref, newPrice, followers)) alertsCreated++;
