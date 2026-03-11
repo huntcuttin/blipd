@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const ownedCount = ownedGameIds.size;
 
   return (
-    <div className="px-4 py-6 pb-28">
+    <div className="px-4 py-6 pb-28 min-h-[calc(100svh-80px)] flex flex-col">
       <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
 
       {user ? (
@@ -133,7 +133,7 @@ export default function SettingsPage() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col items-center py-8 px-4">
+        <div className="flex-1 flex flex-col items-center justify-center py-8 px-4">
           <div className="w-14 h-14 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
             <svg className="w-7 h-7 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
@@ -151,7 +151,7 @@ export default function SettingsPage() {
       )}
 
       {/* App info — always visible */}
-      <div className="mt-6 bg-[#111111] rounded-xl border border-[#222222] p-4">
+      <div className="mt-auto pt-4 bg-[#111111] rounded-xl border border-[#222222] p-4">
         <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
           ABOUT
         </h2>

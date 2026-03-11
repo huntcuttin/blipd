@@ -96,7 +96,7 @@ export default function AlertCard({
         {!alert.read && onRemind && !reminded && (
           <button
             onClick={handleRemind}
-            className="mt-0.5 py-1.5 text-[11px] text-[#666666] hover:text-[#00ff88] transition-colors"
+            className="mt-1 py-2.5 min-h-[44px] text-[11px] text-[#666666] hover:text-[#00ff88] transition-colors flex items-center"
           >
             Remind me in a few days
           </button>
