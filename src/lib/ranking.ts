@@ -1,12 +1,24 @@
 import type { Game } from "@/lib/types";
 
-// Franchises that signal a higher-quality game
-const PRESTIGE_FRANCHISES = new Set([
+// Nintendo 1st party franchises — top tier, always show prominently
+const NINTENDO_1ST_PARTY = new Set([
   "The Legend of Zelda", "Super Mario", "Mario Kart", "Mario Party", "Paper Mario",
-  "Pokémon", "Metroid", "Kirby", "Donkey Kong", "Splatoon", "Fire Emblem",
-  "Xenoblade Chronicles", "Animal Crossing", "Bayonetta", "Super Smash Bros.",
-  "Monster Hunter", "Final Fantasy", "Persona", "Hollow Knight", "Celeste",
-  "Hades", "Dead Cells", "Stardew Valley", "Cuphead", "Shovel Knight",
+  "Mario + Rabbids", "Pokémon", "Kirby", "Metroid", "Donkey Kong", "Pikmin",
+  "Fire Emblem", "Xenoblade Chronicles", "Splatoon", "Animal Crossing", "Star Fox",
+  "F-Zero", "WarioWare", "Yoshi", "Bayonetta", "ARMS", "Super Smash Bros.",
+  "Astral Chain", "Luigi's Mansion", "Nintendo Switch Sports", "Ring Fit Adventure",
+]);
+
+// Reputable 3rd party franchises — critically acclaimed or major sellers
+const REPUTABLE_3RD_PARTY = new Set([
+  "Sonic the Hedgehog", "Mega Man", "Castlevania", "Street Fighter", "Monster Hunter",
+  "Final Fantasy", "Dragon Quest", "Octopath Traveler", "Triangle Strategy",
+  "Persona", "Ace Attorney", "Danganronpa",
+  "Shovel Knight", "Hollow Knight", "Dead Cells", "Hades", "Cuphead", "Stardew Valley",
+  "Celeste", "Ori", "Terraria", "Minecraft", "Vampire Survivors",
+  "FromSoftware", "The Witcher", "Cyberpunk", "Disco Elysium", "Dave the Diver",
+  "Overwatch", "Diablo", "Borderlands", "Katamari", "Okami", "Professor Layton",
+  "BioShock", "Klonoa", "Fall Guys", "Among Us", "Fortnite",
 ]);
 
 export function computeTrendingScore(
@@ -43,16 +55,20 @@ export function computeTrendingScore(
     }
   }
 
-  // ── GAME QUALITY (0-25 pts) ─────────────────────────────────
-  // Metacritic: real quality signal (Deku Deals surfaces these prominently)
+  // ── GAME QUALITY (0-20 pts) ─────────────────────────────────
   if (game.metacriticScore !== null) {
     if (game.metacriticScore >= 90) score += 20;
     else if (game.metacriticScore >= 80) score += 12;
     else if (game.metacriticScore >= 70) score += 6;
   }
 
-  // Prestige franchise: signals catalog quality
-  if (game.franchise && PRESTIGE_FRANCHISES.has(game.franchise)) score += 8;
+  // ── PUBLISHER TIER (0-40 pts) ───────────────────────────────
+  // Nintendo 1st party always surface prominently — they're the core of the Switch library.
+  // Reputable 3rd party ranked above random eShop shovelware.
+  if (game.franchise) {
+    if (NINTENDO_1ST_PARTY.has(game.franchise)) score += 40;
+    else if (REPUTABLE_3RD_PARTY.has(game.franchise)) score += 20;
+  }
 
   // ── RECENCY (0-15 pts) ─────────────────────────────────────
   // New releases deserve discovery exposure
