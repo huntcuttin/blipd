@@ -212,10 +212,7 @@ export async function GET(request: Request) {
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not set" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: true, skipped: true, reason: "ANTHROPIC_API_KEY not configured" });
   }
 
   try {

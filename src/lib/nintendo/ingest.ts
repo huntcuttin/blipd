@@ -462,7 +462,7 @@ export async function runPriceUpdate(options?: {
     .select("id, title, nsuid, current_price, original_price, is_on_sale, price_history")
     .not("nsuid", "is", null)
     .order("last_price_check", { ascending: true, nullsFirst: true })
-    .limit(1000);
+    .limit(200);
 
   if (error || !games) {
     console.error("Failed to fetch games for price check:", error?.message);

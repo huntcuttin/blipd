@@ -4,7 +4,7 @@ import { batchGetReleaseDates } from "@/lib/igdb";
 import { computeReleaseStatus } from "@/lib/nintendo/transform";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const BATCH_SIZE = 50;
 
@@ -12,6 +12,10 @@ export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!process.env.TWITCH_CLIENT_ID || !process.env.TWITCH_CLIENT_SECRET) {
+    return NextResponse.json({ ok: true, skipped: true, reason: "IGDB credentials not configured" });
   }
 
   try {
