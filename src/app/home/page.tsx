@@ -263,8 +263,11 @@ function DiscoverTab({
     setVisibleCount(PAGE_SIZE);
   }, [sorted]);
 
-  // IntersectionObserver: load more when sentinel scrolls into view
+  // IntersectionObserver: load more when sentinel scrolls into view.
+  // Depend on visibleCount so the observer re-attaches after each batch —
+  // if the sentinel is still visible it fires immediately, filling the screen.
   useEffect(() => {
+    if (visibleCount >= sorted.length) return;
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
@@ -273,11 +276,11 @@ function DiscoverTab({
           setVisibleCount((c) => Math.min(c + PAGE_SIZE, sorted.length));
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: "400px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [sorted.length]);
+  }, [sorted.length, visibleCount]);
 
   if (loading) {
     return (
