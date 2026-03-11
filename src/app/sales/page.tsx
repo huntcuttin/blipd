@@ -10,17 +10,25 @@ import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGamesOnSale, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/AuthContext";
+import { computeTrendingScore } from "@/lib/ranking";
 import type { Game } from "@/lib/types";
 
 const FILTERS = ["All", "My Games", "My Franchises"] as const;
 type Filter = (typeof FILTERS)[number];
 
-const SORTS = ["Biggest Discount", "Lowest Price", "Ending Soon"] as const;
+const SORTS = ["Best Deals", "Biggest Discount", "Lowest Price", "Ending Soon"] as const;
 type SortMode = (typeof SORTS)[number];
 
-function sortGames(games: Game[], mode: SortMode): Game[] {
+function sortGames(games: Game[], mode: SortMode, followedFranchises?: Set<string>): Game[] {
   const sorted = [...games];
   switch (mode) {
+    case "Best Deals":
+      // Quality-weighted: Nintendo/reputable + Metacritic + deal depth
+      return sorted.sort(
+        (a, b) =>
+          computeTrendingScore(b, { followedFranchises }) -
+          computeTrendingScore(a, { followedFranchises })
+      );
     case "Biggest Discount":
       return sorted.sort((a, b) => b.discount - a.discount);
     case "Lowest Price":
@@ -38,7 +46,7 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const [filter, setFilter] = useState<Filter>("All");
-  const [sort, setSort] = useState<SortMode>("Biggest Discount");
+  const [sort, setSort] = useState<SortMode>("Best Deals");
   const { followedGameIds, followedFranchiseIds } = useFollow();
   const { consolePreference } = useAuth();
 
@@ -81,7 +89,7 @@ export default function SalesPage() {
 
   const isReleased = (g: Game) => g.releaseStatus === "released" || g.releaseStatus === "out_today";
   const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow && isReleased(g));
-  const sortedSales = sortGames(filteredSales.filter(isReleased), sort);
+  const sortedSales = sortGames(filteredSales.filter(isReleased), sort, followedFranchiseNames);
 
   const myGamesCount = allGames.filter((g) => followedGameIds.has(g.id)).length;
   const myFranchisesCount = allGames.filter(

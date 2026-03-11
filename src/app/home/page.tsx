@@ -5,13 +5,13 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
 import DirectBanner from "@/components/DirectBanner";
-import GameCard, { GameCardSkeleton } from "@/components/GameCard";
+import GameCard, { GameCardCompact, GameCardCompactSkeleton, GameCardSkeleton } from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getTrendingGames, getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
+import { getTrendingGames, getUpcomingGames, getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { computeTrendingScore } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
@@ -27,6 +27,7 @@ export default function HomePage() {
   const { user, signOut, consolePreference } = useAuth();
   const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
+  const { data: upcomingData } = useSupabaseQuery(getUpcomingGames);
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
   const { data: followedGamesData } = useSupabaseQuery(
     (sb) => getGamesByIds(sb, followedIds),
@@ -211,6 +212,7 @@ export default function HomePage() {
             {activeTab === "Discover" && (
               <DiscoverTab
                 trendingGames={trendingData ?? []}
+                upcomingGames={upcomingData ?? []}
                 loading={trendingLoading}
                 error={trendingError}
                 followedFranchises={followedFranchiseNames}
@@ -238,17 +240,21 @@ const PAGE_SIZE = 30;
 
 function DiscoverTab({
   trendingGames,
+  upcomingGames,
   loading,
   error,
   followedFranchises,
 }: {
   trendingGames: Game[];
+  upcomingGames: Game[];
   loading: boolean;
   error: Error | null;
   followedFranchises: Set<string>;
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const now = useMemo(() => Date.now(), []);
 
   const sorted = useMemo(() => {
     return [...trendingGames].sort(
@@ -258,7 +264,17 @@ function DiscoverTab({
     );
   }, [trendingGames, followedFranchises]);
 
-  // Reset visible count when sort changes (tab switch / follow change)
+  // New releases: released in the last 60 days, sorted by quality score
+  const newReleases = useMemo(() => {
+    return sorted
+      .filter((g) => {
+        const days = Math.round((now - new Date(g.releaseDate).getTime()) / 86400000);
+        return days >= 0 && days <= 60;
+      })
+      .slice(0, 12);
+  }, [sorted, now]);
+
+  // Reset visible count when data changes
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [sorted]);
@@ -284,10 +300,16 @@ function DiscoverTab({
 
   if (loading) {
     return (
-      <div className="space-y-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <GameCardSkeleton key={i} />
-        ))}
+      <div className="space-y-6">
+        <div>
+          <div className="h-3 bg-[#1a1a1a] rounded w-28 mb-3" />
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+            {Array.from({ length: 4 }).map((_, i) => <GameCardCompactSkeleton key={i} />)}
+          </div>
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => <GameCardSkeleton key={i} />)}
+        </div>
       </div>
     );
   }
@@ -306,17 +328,46 @@ function DiscoverTab({
   const hasMore = visibleCount < sorted.length;
 
   return (
-    <div className="space-y-2">
-      {visible.map((game) => (
-        <GameCard key={game.id} game={game} />
-      ))}
-      {/* Sentinel — triggers next page load */}
-      <div ref={sentinelRef} className="h-4" />
-      {hasMore && (
-        <div className="flex justify-center py-4">
-          <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
-        </div>
+    <div className="space-y-6">
+      {/* Coming Soon */}
+      {upcomingGames.length > 0 && (
+        <section>
+          <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">COMING SOON</h2>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+            {upcomingGames.map((game) => (
+              <GameCardCompact key={game.id} game={game} />
+            ))}
+          </div>
+        </section>
       )}
+
+      {/* New Releases */}
+      {newReleases.length > 0 && (
+        <section>
+          <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">NEW RELEASES</h2>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+            {newReleases.map((game) => (
+              <GameCardCompact key={game.id} game={game} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Full catalog — infinite scroll */}
+      <section>
+        <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">DISCOVER</h2>
+        <div className="space-y-2">
+          {visible.map((game) => (
+            <GameCard key={game.id} game={game} />
+          ))}
+          <div ref={sentinelRef} className="h-4" />
+          {hasMore && (
+            <div className="flex justify-center py-4">
+              <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
