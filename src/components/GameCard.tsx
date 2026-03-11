@@ -162,11 +162,16 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
                 )}
               </>
             ) : game.releaseStatus === "upcoming" ? (
-              <span className="text-[#666666] text-[10px]">
-                {game.releaseDate && game.releaseDate !== "2099-12-31" && game.releaseDate !== "2020-01-01"
-                  ? new Date(game.releaseDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                  : "Coming soon"}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {game.currentPrice > 0 && (
+                  <span className="text-white font-bold text-xs">{formatPrice(game.currentPrice)}</span>
+                )}
+                <span className="text-[#666666] text-[10px]">
+                  {game.releaseDate && game.releaseDate !== "2099-12-31" && game.releaseDate !== "2020-01-01"
+                    ? new Date(game.releaseDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : "Coming soon"}
+                </span>
+              </div>
             ) : (
               <span className="text-white font-bold text-xs">
                 {game.currentPrice === 0 && game.originalPrice === 0 ? "Free" : game.currentPrice > 0 ? formatPrice(game.currentPrice) : ""}
