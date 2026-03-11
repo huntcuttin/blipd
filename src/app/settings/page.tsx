@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const ownedCount = ownedGameIds.size;
 
   return (
-    <div className="px-4 py-6 pb-28 min-h-[calc(100svh-80px)] flex flex-col">
+    <div className="px-4 py-6 min-h-[calc(100svh-80px)] flex flex-col">
       <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
 
       {user ? (
@@ -151,7 +151,7 @@ export default function SettingsPage() {
       )}
 
       {/* App info — always visible */}
-      <div className="mt-auto pt-4 bg-[#111111] rounded-xl border border-[#222222] p-4">
+      <div className="mt-auto bg-[#111111] rounded-xl border border-[#222222] p-4">
         <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
           ABOUT
         </h2>
