@@ -234,6 +234,8 @@ export default function HomePage() {
 
 // ── Discover Tab ──────────────────────────────────────────────
 
+const PAGE_SIZE = 30;
+
 function DiscoverTab({
   trendingGames,
   loading,
@@ -245,13 +247,37 @@ function DiscoverTab({
   error: Error | null;
   followedFranchises: Set<string>;
 }) {
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
   const sorted = useMemo(() => {
-    return [...trendingGames]
-      .sort((a, b) =>
-        computeTrendingScore(b, { followedFranchises }) - computeTrendingScore(a, { followedFranchises })
-      )
-      .slice(0, 40);
+    return [...trendingGames].sort(
+      (a, b) =>
+        computeTrendingScore(b, { followedFranchises }) -
+        computeTrendingScore(a, { followedFranchises })
+    );
   }, [trendingGames, followedFranchises]);
+
+  // Reset visible count when sort changes (tab switch / follow change)
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [sorted]);
+
+  // IntersectionObserver: load more when sentinel scrolls into view
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((c) => Math.min(c + PAGE_SIZE, sorted.length));
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [sorted.length]);
 
   if (loading) {
     return (
@@ -267,17 +293,27 @@ function DiscoverTab({
     return (
       <div className="text-center py-16">
         <p className="text-[#666666] text-sm">
-          {error ? "Failed to load games" : "No trending games"}
+          {error ? "Failed to load games" : "No games found"}
         </p>
       </div>
     );
   }
 
+  const visible = sorted.slice(0, visibleCount);
+  const hasMore = visibleCount < sorted.length;
+
   return (
     <div className="space-y-2">
-      {sorted.map((game) => (
+      {visible.map((game) => (
         <GameCard key={game.id} game={game} />
       ))}
+      {/* Sentinel — triggers next page load */}
+      <div ref={sentinelRef} className="h-4" />
+      {hasMore && (
+        <div className="flex justify-center py-4">
+          <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
     </div>
   );
 }

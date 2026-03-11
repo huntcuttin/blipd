@@ -96,16 +96,36 @@ export async function getAllGames(supabase: Client): Promise<Game[]> {
 }
 
 export async function getTrendingGames(supabase: Client): Promise<Game[]> {
-  const { data, error } = await supabase
-    .from("games")
-    .select("*")
-    .eq("release_status", "released")
-    .eq("is_suppressed", false)
-    .gt("current_price", 0)
-    .order("updated_at", { ascending: false })
-    .limit(100);
-  if (error) throw error;
-  return (data ?? []).map(mapGame);
+  // Fetch a wide pool — client-side ranking handles ordering
+  // Two passes: on-sale games first (full set), then rest of catalog
+  const [saleRes, fullRes] = await Promise.all([
+    supabase
+      .from("games")
+      .select("*")
+      .eq("release_status", "released")
+      .eq("is_suppressed", false)
+      .eq("is_on_sale", true)
+      .gt("current_price", 0)
+      .order("discount", { ascending: false })
+      .limit(300),
+    supabase
+      .from("games")
+      .select("*")
+      .eq("release_status", "released")
+      .eq("is_suppressed", false)
+      .eq("is_on_sale", false)
+      .gt("current_price", 0)
+      .order("metacritic_score", { ascending: false, nullsFirst: false })
+      .limit(300),
+  ]);
+  if (saleRes.error) throw saleRes.error;
+  if (fullRes.error) throw fullRes.error;
+  const seen = new Set<string>();
+  const combined: typeof saleRes.data = [];
+  for (const g of [...(saleRes.data ?? []), ...(fullRes.data ?? [])]) {
+    if (!seen.has(g.id)) { seen.add(g.id); combined.push(g); }
+  }
+  return combined.map(mapGame);
 }
 
 export async function getGamesOnSale(supabase: Client): Promise<Game[]> {

@@ -1,17 +1,18 @@
 import type { Game } from "@/lib/types";
 
-const MAJOR_FRANCHISES = new Set([
-  "The Legend of Zelda", "Mario", "Super Mario", "Mario Kart",
-  "Pokemon", "Metroid", "Kirby", "Donkey Kong", "Splatoon",
-  "Fire Emblem", "Xenoblade Chronicles", "Animal Crossing",
+// Franchises that signal a higher-quality game
+const PRESTIGE_FRANCHISES = new Set([
+  "The Legend of Zelda", "Super Mario", "Mario Kart", "Mario Party", "Paper Mario",
+  "Pokémon", "Metroid", "Kirby", "Donkey Kong", "Splatoon", "Fire Emblem",
+  "Xenoblade Chronicles", "Animal Crossing", "Bayonetta", "Super Smash Bros.",
+  "Monster Hunter", "Final Fantasy", "Persona", "Hollow Knight", "Celeste",
+  "Hades", "Dead Cells", "Stardew Valley", "Cuphead", "Shovel Knight",
 ]);
 
 export function computeTrendingScore(
   game: Game,
   options?: {
     followedFranchises?: Set<string>;
-    maxFollowCount?: number;
-    gameFollowCount?: number;
   }
 ): number {
   let score = 0;
@@ -20,49 +21,55 @@ export function computeTrendingScore(
   const daysSinceRelease = Math.round(
     (now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24)
   );
-  const daysUntilRelease = -daysSinceRelease;
 
-  // Recency: upcoming
-  if (daysUntilRelease > 0 && daysUntilRelease <= 14) score += 50;
-  else if (daysUntilRelease > 14 && daysUntilRelease <= 30) score += 30;
+  // ── DEAL QUALITY (0-70 pts) ─────────────────────────────────
+  // This is a price tracker — deals are the primary signal
+  if (game.isOnSale) {
+    score += 35;
 
-  // Recently released
-  if (daysSinceRelease >= 0 && daysSinceRelease <= 30) score += 10;
+    // Discount depth: up to +25 for 50%+ off
+    const disc = game.discount ?? 0;
+    score += Math.min(Math.floor(disc * 0.5), 25);
 
-  // Sale signals
-  if (game.isOnSale) score += 25;
-  if (game.isAllTimeLow) score += 20;
+    // All-time low is the killer signal
+    if (game.isAllTimeLow) score += 20;
 
-  // Publisher
-  if (game.publisher === "Nintendo") score += 20;
-
-  // Major franchise
-  if (game.franchise && MAJOR_FRANCHISES.has(game.franchise)) score += 15;
-
-  // Metacritic
-  if (game.metacriticScore !== null && game.metacriticScore >= 85) score += 10;
-
-  // IGDB hype (for upcoming games)
-  if (game.igdbHype != null && game.igdbHype > 0) {
-    if (game.igdbHype >= 100) score += 15;
-    else if (game.igdbHype >= 50) score += 10;
-    else if (game.igdbHype >= 10) score += 5;
+    // Sale ending soon — urgency (within 3 days)
+    if (game.saleEndDate) {
+      const endDate = new Date(game.saleEndDate);
+      const daysLeft = Math.round((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysLeft <= 1) score += 15;
+      else if (daysLeft <= 3) score += 8;
+    }
   }
 
-  // Follow count (normalized 0-10)
-  if (options?.maxFollowCount && options.maxFollowCount > 0 && options.gameFollowCount) {
-    score += Math.round((options.gameFollowCount / options.maxFollowCount) * 10);
+  // ── GAME QUALITY (0-25 pts) ─────────────────────────────────
+  // Metacritic: real quality signal (Deku Deals surfaces these prominently)
+  if (game.metacriticScore !== null) {
+    if (game.metacriticScore >= 90) score += 20;
+    else if (game.metacriticScore >= 80) score += 12;
+    else if (game.metacriticScore >= 70) score += 6;
   }
 
-  // Personalization: user follows this franchise
+  // Prestige franchise: signals catalog quality
+  if (game.franchise && PRESTIGE_FRANCHISES.has(game.franchise)) score += 8;
+
+  // ── RECENCY (0-15 pts) ─────────────────────────────────────
+  // New releases deserve discovery exposure
+  if (daysSinceRelease >= 0 && daysSinceRelease <= 14) score += 15;
+  else if (daysSinceRelease <= 30) score += 10;
+  else if (daysSinceRelease <= 90) score += 5;
+
+  // ── PERSONALIZATION (0-25 pts) ─────────────────────────────
+  // Franchise the user follows — boost heavily
   if (options?.followedFranchises && game.franchise && options.followedFranchises.has(game.franchise)) {
-    score += 20;
+    score += 25;
   }
 
   return score;
 }
 
-// Keep old function name as alias for backward compat in non-trending contexts
+// Keep old alias for backward compat
 export function computeGameScore(game: Game): number {
   return computeTrendingScore(game);
 }
