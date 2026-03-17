@@ -5,6 +5,7 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
 import DirectBanner from "@/components/DirectBanner";
+import NamedSaleBanner from "@/components/NamedSaleBanner";
 import GameCard, { GameCardCompact, GameCardCompactSkeleton, GameCardSkeleton } from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
@@ -128,6 +129,9 @@ export default function HomePage() {
 
       {/* Nintendo Direct banner */}
       <DirectBanner />
+
+      {/* Named sale event banners */}
+      {!searchResults && <NamedSaleBanner />}
 
       {/* Search results override */}
       {searchResults ? (

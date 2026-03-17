@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } from "@/components/GameCard";
+import NamedSaleBanner from "@/components/NamedSaleBanner";
 
 import QueryError from "@/components/QueryError";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGamesOnSale, getAllFranchises, searchGames, getActiveNamedSaleEvents } from "@/lib/queries";
-import type { NamedSaleEvent } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/AuthContext";
 import { computeTrendingScore } from "@/lib/ranking";
@@ -44,11 +45,12 @@ function sortGames(games: Game[], mode: SortMode, followedFranchises?: Set<strin
 }
 
 export default function SalesPage() {
+  const searchParams = useSearchParams();
+  const activeEventId = searchParams.get("event");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const [filter, setFilter] = useState<Filter>("All");
   const [sort, setSort] = useState<SortMode>("Best Deals");
-  const [activeSaleEvent, setActiveSaleEvent] = useState<NamedSaleEvent | null>(null);
   const { followedGameIds, followedFranchiseIds } = useFollow();
   const { consolePreference } = useAuth();
 
@@ -83,8 +85,8 @@ export default function SalesPage() {
   );
 
   // Games are already filtered to on-sale by the query
-  const eventFilteredGames = activeSaleEvent
-    ? allGames.filter((g) => g.saleEventId === activeSaleEvent.id)
+  const eventFilteredGames = activeEventId
+    ? allGames.filter((g) => g.saleEventId === activeEventId)
     : allGames;
 
   const filteredSales =
@@ -115,35 +117,18 @@ export default function SalesPage() {
       </div>
 
       {/* Named sale event banners */}
-      {saleEvents && saleEvents.length > 0 && !search && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-3">
-          {saleEvents.map((event) => {
-            const isActive = activeSaleEvent?.id === event.id;
-            return (
-              <button
-                key={event.id}
-                onClick={() => setActiveSaleEvent(isActive ? null : event)}
-                className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${
-                  isActive
-                    ? "bg-[#ffaa00]/15 border-[#ffaa00]/50 text-[#ffaa00]"
-                    : "bg-[#111111] border-[#222222] text-white hover:border-[#333333]"
-                }`}
-              >
-                <span className={`text-lg ${isActive ? "" : "grayscale"}`}>🏷️</span>
-                <div>
-                  <div className="text-xs font-bold leading-tight">{event.name}</div>
-                  <div className={`text-[10px] ${isActive ? "text-[#ffaa00]/70" : "text-[#555555]"}`}>
-                    {event.gamesCount} games on sale
-                  </div>
-                </div>
-                {isActive && (
-                  <span className="ml-1 text-[#ffaa00]/60 text-xs">✕</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {!search && <NamedSaleBanner />}
+
+      {/* Active event filter indicator */}
+      {activeEventId && !search && (() => {
+        const event = (saleEvents ?? []).find((e) => e.id === activeEventId);
+        return event ? (
+          <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#ffaa00]/10 border border-[#ffaa00]/30">
+            <span className="text-xs text-[#ffaa00] font-medium flex-1">Showing: {event.name}</span>
+            <a href="/sales" className="text-[10px] text-[#ffaa00]/60 hover:text-[#ffaa00]">Clear ✕</a>
+          </div>
+        ) : null;
+      })()}
 
       {/* Search results */}
       {searchResults ? (
