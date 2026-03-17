@@ -5,21 +5,48 @@ import { useFollow } from "@/lib/FollowContext";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { requestPushPermission } from "@/components/ServiceWorkerRegistration";
+import { createClient } from "@/lib/supabase/client";
+import { setConsolePreference } from "@/lib/queries";
+import type { ConsolePreference } from "@/lib/types";
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth();
+  const { user, consolePreference, signOut } = useAuth();
   const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
   const [pushState, setPushState] = useState<"default" | "granted" | "denied" | "unsupported">("default");
   const [pushLoading, setPushLoading] = useState(false);
+  const [consolePref, setConsolePref] = useState<ConsolePreference | null>(consolePreference);
+  const [consoleSaving, setConsoleSaving] = useState(false);
+
+  useEffect(() => {
+    setConsolePref(consolePreference);
+  }, [consolePreference]);
 
   useEffect(() => {
     if (!("Notification" in window)) { setPushState("unsupported"); return; }
     setPushState(Notification.permission as "default" | "granted" | "denied");
   }, []);
 
+  async function handleConsoleChange(pref: ConsolePreference) {
+    if (!user || consoleSaving || pref === consolePref) return;
+    setConsoleSaving(true);
+    const prev = consolePref;
+    setConsolePref(pref);
+    try {
+      const supabase = createClient();
+      await setConsolePreference(supabase, user.id, pref);
+    } catch {
+      setConsolePref(prev);
+    } finally {
+      setConsoleSaving(false);
+    }
+  }
+
   const gameCount = followedGameIds.size;
   const franchiseCount = followedFranchiseIds.size;
   const ownedCount = ownedGameIds.size;
+
+  const authProvider = user?.app_metadata?.provider;
+  const authLabel = authProvider === "google" ? "Google" : authProvider === "apple" ? "Apple" : "Email";
 
   return (
     <div className="px-4 py-6 min-h-[calc(100svh-80px)] flex flex-col">
@@ -32,11 +59,63 @@ export default function SettingsPage() {
             <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
               ACCOUNT
             </h2>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white text-sm font-medium">Email</p>
-                <p className="text-[#666666] text-xs mt-0.5">{user.email}</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white text-sm font-medium">Email</p>
+                  <p className="text-[#666666] text-xs mt-0.5">{user.email}</p>
+                </div>
+                <span className="px-2 py-1 rounded-full bg-[#222222] text-[#888888] text-[10px] font-medium">
+                  {authLabel}
+                </span>
               </div>
+            </div>
+          </div>
+
+          {/* Console preference */}
+          <div className="bg-[#111111] rounded-xl border border-[#222222] p-4">
+            <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
+              MY CONSOLE
+            </h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleConsoleChange("switch")}
+                disabled={consoleSaving}
+                className={`flex-1 flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all active:scale-[0.98] ${
+                  consolePref === "switch"
+                    ? "border-[#ff4444]/40 bg-[#ff4444]/5"
+                    : "border-[#222222] hover:border-[#333333]"
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${consolePref === "switch" ? "bg-[#ff4444]/15" : "bg-[#1a1a1a]"}`}>
+                  <svg className={`w-5 h-5 ${consolePref === "switch" ? "text-[#ff4444]" : "text-[#555555]"}`} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.5 2C5.01 2 3 4.01 3 6.5v11C3 19.99 5.01 22 7.5 22H11V2H7.5zM7 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                    <path d="M16.5 2H13v20h3.5c2.49 0 4.5-2.01 4.5-4.5v-11C21 4.01 18.99 2 16.5 2zM17 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className={`text-sm font-semibold ${consolePref === "switch" ? "text-white" : "text-[#888888]"}`}>Switch</p>
+                </div>
+              </button>
+              <button
+                onClick={() => handleConsoleChange("switch2")}
+                disabled={consoleSaving}
+                className={`flex-1 flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all active:scale-[0.98] ${
+                  consolePref === "switch2"
+                    ? "border-[#00aaff]/40 bg-[#00aaff]/5"
+                    : "border-[#222222] hover:border-[#333333]"
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${consolePref === "switch2" ? "bg-[#00aaff]/15" : "bg-[#1a1a1a]"}`}>
+                  <svg className={`w-5 h-5 ${consolePref === "switch2" ? "text-[#00aaff]" : "text-[#555555]"}`} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.5 2C5.01 2 3 4.01 3 6.5v11C3 19.99 5.01 22 7.5 22H11V2H7.5zM7 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                    <path d="M16.5 2H13v20h3.5c2.49 0 4.5-2.01 4.5-4.5v-11C21 4.01 18.99 2 16.5 2zM17 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className={`text-sm font-semibold ${consolePref === "switch2" ? "text-white" : "text-[#888888]"}`}>Switch 2</p>
+                </div>
+              </button>
             </div>
           </div>
 

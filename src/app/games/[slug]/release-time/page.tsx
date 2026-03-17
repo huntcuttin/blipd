@@ -150,7 +150,7 @@ export default async function ReleaseTimePage({ params }: Props) {
                 timeZone: "UTC",
               })}
             </p>
-            <ReleaseTimeClient releaseDate={game.release_date} gameTitle={game.title} />
+            <ReleaseTimeClient releaseDate={game.release_date} gameId={game.id} gameTitle={game.title} />
           </>
         ) : (
           <>
