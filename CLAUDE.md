@@ -154,11 +154,11 @@ GET https://api.isthereanydeal.com/games/history/v2
 
 ### Immediate (Unblocking — Do First)
 
-- [ ] Connect blippd.app domain to Vercel — DNS records added in Namecheap, propagating
+- [x] Connect blippd.app domain to Vercel — DNS records added in Namecheap, propagating
 - [ ] Add blippd.app to Resend, update sender to alerts@blippd.app
-- [ ] Rename Blipd->Blippd everywhere in codebase (exclude node_modules, .next, lock files)
-- [ ] Update cron-job.org endpoints if Vercel URL changed
-- [ ] Run migration: `ALTER TABLE named_sale_events ADD COLUMN IF NOT EXISTS dedup_key text UNIQUE;`
+- [x] Rename Blipd->Blippd everywhere in codebase (exclude node_modules, .next, lock files)
+- [x] Update cron-job.org endpoints if Vercel URL changed
+- [x] Run migration: `ALTER TABLE named_sale_events ADD COLUMN IF NOT EXISTS dedup_key text UNIQUE;`
 - [ ] Add cron job for /api/cron/sync-ratings (every 6 hours) to backfill critic scores
 - [ ] Merge branch `claude/review-recent-commits-LI1DF` into main and push to deploy
 
