@@ -184,9 +184,18 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       nsuid: game.nsuid ?? null,
     };
 
-    if (alert.new_price != null) payload.newPrice = Number(alert.new_price);
-    if (alert.old_price != null) payload.oldPrice = Number(alert.old_price);
-    if (alert.discount != null) payload.discount = Number(alert.discount);
+    if (alert.new_price != null) {
+      const n = Number(alert.new_price);
+      if (!isNaN(n) && n >= 0) payload.newPrice = n;
+    }
+    if (alert.old_price != null) {
+      const n = Number(alert.old_price);
+      if (!isNaN(n) && n >= 0) payload.oldPrice = n;
+    }
+    if (alert.discount != null) {
+      const n = Number(alert.discount);
+      if (!isNaN(n) && n >= 0 && n <= 100) payload.discount = n;
+    }
     if (alert.sale_end_date) payload.saleEndDate = alert.sale_end_date;
 
     const isBatchable = BATCHABLE_TYPES.has(alert.type);
@@ -232,8 +241,11 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   dispatched = 0; // Reset — count actual sends
   for (const { payload, userIds } of Array.from(nonBatchableByAlert.values())) {
     console.log(`  Dispatching "${payload.alertType}" for "${payload.gameTitle}" to ${userIds.length} users`);
-    await sendAlertToUsers(userIds, payload);
-    dispatched += userIds.length;
+    const sent = await sendAlertToUsers(userIds, payload);
+    dispatched += sent;
+    if (sent < userIds.length) {
+      console.warn(`  ${userIds.length - sent}/${userIds.length} failed for alert ${payload.alertId}`);
+    }
   }
 
   // ── Phase 3: Handle batchable alerts — batch or individual ──

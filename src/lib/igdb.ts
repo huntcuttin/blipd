@@ -91,8 +91,8 @@ async function searchIGDB(
   if (!searchRes.ok) {
     if (searchRes.status === 429) {
       console.warn("IGDB rate limit hit, backing off");
-      await sleep(1000);
-      return null;
+      await sleep(2000);
+      throw new Error("IGDB 429 rate limit");
     }
     console.error(`IGDB search failed: ${searchRes.status}`);
     return null;
@@ -171,7 +171,10 @@ export async function getIGDBHype(
     });
 
     if (!searchRes.ok) {
-      if (searchRes.status === 429) await sleep(1000);
+      if (searchRes.status === 429) {
+        await sleep(2000);
+        throw new Error("IGDB 429 rate limit");
+      }
       return null;
     }
 
@@ -216,20 +219,36 @@ export async function getIGDBHype(
 }
 
 // Batch fetch hype scores for multiple games
+// Stops early if IGDB is rate-limiting us (3+ consecutive 429s)
 export async function batchGetHypeScores(
   games: { id: string; title: string; igdbId?: number | null }[]
 ): Promise<Map<string, { igdbId: number; hypes: number }>> {
   const results = new Map<string, { igdbId: number; hypes: number }>();
+  let consecutive429s = 0;
+  const CIRCUIT_BREAKER_THRESHOLD = 3;
 
   for (const game of games) {
+    if (consecutive429s >= CIRCUIT_BREAKER_THRESHOLD) {
+      console.warn(`  IGDB circuit breaker tripped after ${consecutive429s} consecutive 429s — stopping early`);
+      break;
+    }
+
     try {
       const result = await getIGDBHype(game.title, game.igdbId);
       if (result && result.hypes > 0) {
         results.set(game.id, { igdbId: result.igdbId, hypes: result.hypes });
         console.log(`  IGDB hype: "${game.title}" → ${result.hypes} hypes`);
       }
+      consecutive429s = 0; // Reset on success
     } catch (err) {
-      console.error(`  IGDB hype error for "${game.title}":`, err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("429")) {
+        consecutive429s++;
+        console.warn(`  IGDB rate limit (${consecutive429s}/${CIRCUIT_BREAKER_THRESHOLD})`);
+      } else {
+        console.error(`  IGDB hype error for "${game.title}":`, err);
+        consecutive429s = 0;
+      }
     }
 
     await sleep(500);
@@ -238,14 +257,20 @@ export async function batchGetHypeScores(
   return results;
 }
 
-// Rate-limited batch processor: 4 req/sec = 250ms between calls
-// Each game does 2 API calls (search + release_dates), so 500ms per game
+// Rate-limited batch processor with circuit breaker for 429s
 export async function batchGetReleaseDates(
   games: { id: string; title: string }[]
 ): Promise<Map<string, { releaseDate: string; matchedName: string }>> {
   const results = new Map<string, { releaseDate: string; matchedName: string }>();
+  let consecutive429s = 0;
+  const CIRCUIT_BREAKER_THRESHOLD = 3;
 
   for (const game of games) {
+    if (consecutive429s >= CIRCUIT_BREAKER_THRESHOLD) {
+      console.warn(`  IGDB circuit breaker tripped after ${consecutive429s} consecutive 429s — stopping early`);
+      break;
+    }
+
     try {
       const result = await getIGDBReleaseDate(game.title);
       if (result) {
@@ -257,11 +282,18 @@ export async function batchGetReleaseDates(
       } else {
         console.log(`  IGDB no match: "${game.title}"`);
       }
+      consecutive429s = 0;
     } catch (err) {
-      console.error(`  IGDB error for "${game.title}":`, err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("429")) {
+        consecutive429s++;
+        console.warn(`  IGDB rate limit (${consecutive429s}/${CIRCUIT_BREAKER_THRESHOLD})`);
+      } else {
+        console.error(`  IGDB error for "${game.title}":`, err);
+        consecutive429s = 0;
+      }
     }
 
-    // Rate limit: ~2 API calls per game, 4 req/sec max → 500ms between games
     await sleep(500);
   }
 

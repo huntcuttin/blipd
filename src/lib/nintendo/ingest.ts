@@ -711,10 +711,18 @@ async function detectAndFireNamedSaleEvent(
     ? Array.from(endDateCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
     : null;
 
-  // Create the named sale event
+  // Generate a dedup key based on date + sale name to prevent race condition
+  // Two concurrent calls will both try to insert with the same key; one will fail
+  const dedupDate = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH (hourly bucket)
+  const dedupKey = `${dedupDate}:${saleName}`;
+
+  // Create the named sale event (use upsert with dedup_key to prevent race condition)
   const { data: event, error: eventError } = await supabase
     .from("named_sale_events")
-    .insert({ name: saleName, detected_at: new Date().toISOString(), active: true, games_count: totalGames })
+    .upsert(
+      { name: saleName, detected_at: new Date().toISOString(), active: true, games_count: totalGames, dedup_key: dedupKey },
+      { onConflict: "dedup_key", ignoreDuplicates: true }
+    )
     .select("id")
     .single();
 

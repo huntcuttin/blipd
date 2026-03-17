@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
+import { fetchWithRetry, withTimeout } from "@/lib/retry";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -50,10 +51,11 @@ interface ClaudeMatch {
 }
 
 async function fetchRSSEntries(): Promise<RSSEntry[]> {
-  const res = await fetch(RSS_URL, {
-    headers: { "User-Agent": "Blippd/1.0 (Nintendo eShop price tracker)" },
-    next: { revalidate: 0 },
-  });
+  const res = await fetchWithRetry(
+    RSS_URL,
+    { headers: { "User-Agent": "Blippd/1.0 (Nintendo eShop price tracker)" } },
+    { retries: 2, timeoutMs: 10000, label: "YouTube RSS (trailers)" }
+  );
   if (!res.ok) throw new Error(`YouTube RSS fetch failed: ${res.status}`);
 
   const xml = await res.text();
@@ -110,13 +112,14 @@ async function matchWithClaude(
 ): Promise<ClaudeMatch> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 400,
-    messages: [
-      {
-        role: "user",
-        content: `You are analyzing a Nintendo YouTube video to identify which game it features.
+  const response = await withTimeout(
+    client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 400,
+      messages: [
+        {
+          role: "user",
+          content: `You are analyzing a Nintendo YouTube video to identify which game it features.
 
 Video title: "${title}"
 Video description: "${description || "(none)"}"
@@ -129,9 +132,12 @@ Tasks:
 
 Respond with ONLY valid JSON, no markdown or extra text:
 {"is_trailer":boolean,"matched_game_title":"exact title or null","matched_franchise":"franchise or null","confidence":0.0,"reasoning":"one sentence"}`,
-      },
-    ],
-  });
+        },
+      ],
+    }),
+    20000,
+    "Claude trailer match"
+  );
 
   const text =
     response.content[0].type === "text" ? response.content[0].text.trim() : "";

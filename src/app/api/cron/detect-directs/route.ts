@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
+import { fetchWithRetry } from "@/lib/retry";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -26,9 +27,11 @@ interface RSSEntry {
 }
 
 async function fetchRSSEntries(): Promise<RSSEntry[]> {
-  const res = await fetch(RSS_URL, {
-    headers: { "User-Agent": "Blippd/1.0 (Nintendo eShop price tracker)" },
-  });
+  const res = await fetchWithRetry(
+    RSS_URL,
+    { headers: { "User-Agent": "Blippd/1.0 (Nintendo eShop price tracker)" } },
+    { retries: 2, timeoutMs: 10000, label: "YouTube RSS (directs)" }
+  );
 
   if (!res.ok) {
     throw new Error(`YouTube RSS fetch failed: ${res.status}`);

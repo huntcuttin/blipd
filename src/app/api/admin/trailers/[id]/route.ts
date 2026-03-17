@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 function isAdmin(email: string | undefined): boolean {
   const adminEmail = process.env.ADMIN_EMAIL;
