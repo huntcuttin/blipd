@@ -257,6 +257,118 @@ export async function batchGetHypeScores(
   return results;
 }
 
+// Fetch aggregated rating (critic score) for a game — used as Metacritic proxy
+export interface IGDBRatingResult {
+  igdbId: number;
+  rating: number; // 0-100 scale
+  matchedName: string;
+}
+
+export async function getIGDBRating(
+  gameName: string,
+  existingIgdbId?: number | null
+): Promise<IGDBRatingResult | null> {
+  const token = await getIGDBToken();
+  const clientId = process.env.TWITCH_CLIENT_ID!;
+
+  if (existingIgdbId) {
+    // Direct lookup by ID
+    const res = await fetch("https://api.igdb.com/v4/games", {
+      method: "POST",
+      headers: {
+        "Client-ID": clientId,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "text/plain",
+      },
+      body: `fields name,aggregated_rating,aggregated_rating_count; where id = ${existingIgdbId}; limit 1;`,
+    });
+
+    if (!res.ok) {
+      if (res.status === 429) { await sleep(2000); throw new Error("IGDB 429 rate limit"); }
+      return null;
+    }
+
+    const data = await res.json();
+    if (!data?.[0]?.aggregated_rating) return null;
+
+    return {
+      igdbId: existingIgdbId,
+      rating: Math.round(data[0].aggregated_rating),
+      matchedName: data[0].name ?? gameName,
+    };
+  }
+
+  // Search by name
+  const searchRes = await fetch("https://api.igdb.com/v4/games", {
+    method: "POST",
+    headers: {
+      "Client-ID": clientId,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "text/plain",
+    },
+    body: `search "${gameName.replace(/"/g, '\\"')}"; fields name,id,aggregated_rating,aggregated_rating_count; where platforms = (${SWITCH_PLATFORM_ID}) & aggregated_rating != null; limit 5;`,
+  });
+
+  if (!searchRes.ok) {
+    if (searchRes.status === 429) { await sleep(2000); throw new Error("IGDB 429 rate limit"); }
+    return null;
+  }
+
+  const games = await searchRes.json();
+  if (!games || games.length === 0) return null;
+
+  const normalizedSearch = gameName.toLowerCase().trim();
+  const bestMatch =
+    games.find((g: { name: string }) => g.name.toLowerCase().trim() === normalizedSearch) ??
+    (games.length === 1 ? games[0] : null);
+
+  if (!bestMatch?.aggregated_rating) return null;
+
+  return {
+    igdbId: bestMatch.id,
+    rating: Math.round(bestMatch.aggregated_rating),
+    matchedName: bestMatch.name,
+  };
+}
+
+// Batch fetch ratings with circuit breaker
+export async function batchGetRatings(
+  games: { id: string; title: string; igdbId?: number | null }[]
+): Promise<Map<string, { igdbId: number; rating: number }>> {
+  const results = new Map<string, { igdbId: number; rating: number }>();
+  let consecutive429s = 0;
+  const CIRCUIT_BREAKER_THRESHOLD = 3;
+
+  for (const game of games) {
+    if (consecutive429s >= CIRCUIT_BREAKER_THRESHOLD) {
+      console.warn(`  IGDB rating circuit breaker tripped — stopping early`);
+      break;
+    }
+
+    try {
+      const result = await getIGDBRating(game.title, game.igdbId);
+      if (result) {
+        results.set(game.id, { igdbId: result.igdbId, rating: result.rating });
+        console.log(`  IGDB rating: "${game.title}" → ${result.rating}`);
+      }
+      consecutive429s = 0;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("429")) {
+        consecutive429s++;
+        console.warn(`  IGDB rate limit (${consecutive429s}/${CIRCUIT_BREAKER_THRESHOLD})`);
+      } else {
+        console.error(`  IGDB rating error for "${game.title}":`, err);
+        consecutive429s = 0;
+      }
+    }
+
+    await sleep(500);
+  }
+
+  return results;
+}
+
 // Rate-limited batch processor with circuit breaker for 429s
 export async function batchGetReleaseDates(
   games: { id: string; title: string }[]
