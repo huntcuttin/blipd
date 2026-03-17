@@ -18,7 +18,7 @@ export default function BottomNav() {
 
   const tabs = [
     { href: "/home", label: "Home", icon: HomeIcon },
-    { href: "/sales", label: "Sales", icon: TagIcon },
+    { href: "/sales", label: "Deals", icon: TagIcon },
     { href: "/upcoming", label: "Upcoming", icon: CalendarIcon },
     { href: "/alerts", label: "Alerts", icon: BellIcon, badge: unreadCount },
   ];

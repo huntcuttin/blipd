@@ -168,7 +168,7 @@ export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
     .neq("release_date", "2020-01-01")
     .order("igdb_hype", { ascending: false, nullsFirst: false })
     .order("release_date", { ascending: true })
-    .limit(20);
+    .limit(100);
   if (error) throw error;
   return (data ?? []).map(mapGame);
 }

@@ -17,7 +17,7 @@ import { computeTrendingScore } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
 // Game used in DiscoverTab and search; Franchise used in MyFranchisesTab
 
-const TABS = ["Discover", "My Games", "My Franchises"] as const;
+const TABS = ["Discover", "Library", "My Franchises"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function HomePage() {
@@ -158,7 +158,7 @@ export default function HomePage() {
             {TABS.map((tab) => {
               const isActive = activeTab === tab;
               const count =
-                tab === "My Games"
+                tab === "Library"
                   ? followedGames.length
                   : tab === "My Franchises"
                   ? followedFranchiseList.length
@@ -218,7 +218,7 @@ export default function HomePage() {
                 followedFranchises={followedFranchiseNames}
               />
             )}
-            {activeTab === "My Games" && (
+            {activeTab === "Library" && (
               <MyGamesTab games={followedGames} ownedGameIds={ownedGameIds} />
             )}
             {activeTab === "My Franchises" && (
@@ -388,7 +388,7 @@ function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<
         </div>
         <h2 className="text-lg font-semibold text-white mb-2">No games yet</h2>
         <p className="text-[#666666] text-sm text-center max-w-[260px]">
-          Follow games to track prices and get alerts, or mark ones you own
+          Follow games to track prices and get alerts. Mark games you own to build your library.
         </p>
       </div>
     );
@@ -409,7 +409,7 @@ function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<
       )}
       {notOnSale.length > 0 && (
         <div>
-          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">WATCHING</h3>
+          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">FOLLOWING</h3>
           <div className="space-y-2">
             {notOnSale.map((game) => <GameCard key={game.id} game={game} />)}
           </div>

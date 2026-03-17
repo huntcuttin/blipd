@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { computeTrendingScore } from "@/lib/ranking";
 import type { Game } from "@/lib/types";
 
-const FILTERS = ["All", "My Games", "My Franchises"] as const;
+const FILTERS = ["All", "Watchlist", "My Franchises"] as const;
 type Filter = (typeof FILTERS)[number];
 
 const SORTS = ["Best Deals", "Biggest Discount", "Lowest Price", "Ending Soon"] as const;
@@ -81,17 +81,16 @@ export default function SalesPage() {
 
   // Games are already filtered to on-sale by the query
   const filteredSales =
-    filter === "My Games"
+    filter === "Watchlist"
       ? allGames.filter((g) => followedGameIds.has(g.id))
       : filter === "My Franchises"
       ? allGames.filter((g) => g.franchise && followedFranchiseNames.has(g.franchise))
       : allGames;
 
-  const isReleased = (g: Game) => g.releaseStatus === "released" || g.releaseStatus === "out_today";
-  const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow && isReleased(g));
-  const sortedSales = sortGames(filteredSales.filter(isReleased), sort, followedFranchiseNames);
+  const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow);
+  const sortedSales = sortGames(filteredSales, sort, followedFranchiseNames);
 
-  const myGamesCount = allGames.filter((g) => followedGameIds.has(g.id)).length;
+  const watchlistCount = allGames.filter((g) => followedGameIds.has(g.id)).length;
   const myFranchisesCount = allGames.filter(
     (g) => g.franchise && followedFranchiseNames.has(g.franchise)
   ).length;
@@ -155,8 +154,8 @@ export default function SalesPage() {
             {FILTERS.map((f) => {
               const isActive = filter === f;
               const count =
-                f === "My Games"
-                  ? myGamesCount
+                f === "Watchlist"
+                  ? watchlistCount
                   : f === "My Franchises"
                   ? myFranchisesCount
                   : 0;
@@ -198,8 +197,8 @@ export default function SalesPage() {
                 No sales found
               </h2>
               <p className="text-[#666666] text-sm text-center max-w-[260px]">
-                {filter === "My Games"
-                  ? "None of your followed games are on sale right now"
+                {filter === "Watchlist"
+                  ? "None of your watchlisted games are on sale right now"
                   : filter === "My Franchises"
                   ? "None of your followed franchise games are on sale right now"
                   : "No games are on sale right now"}

@@ -3,11 +3,11 @@
 import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
-import { formatPrice, isPlaceholderDate } from "@/lib/format";
+import { formatPrice, isPlaceholderDate, formatReleaseDate, isYearOnlyDate } from "@/lib/format";
 import FollowButton from "./FollowButton";
 import GameCoverImage from "./GameCoverImage";
 
-export default memo(function GameCard({ game, showHype }: { game: Game; showHype?: boolean }) {
+export default memo(function GameCard({ game }: { game: Game }) {
   const daysUntilRelease = getDaysUntil(game.releaseDate);
   const releaseLabel = getReleaseLabel(game, daysUntilRelease);
   const saleEndLabel = game.isOnSale && game.saleEndDate ? getSaleEndLabel(game.saleEndDate) : null;
@@ -44,7 +44,7 @@ export default memo(function GameCard({ game, showHype }: { game: Game; showHype
                   : game.metacriticScore >= 50 ? " text-[#ffbd3f]"
                   : " text-[#ff6874]"
                 }>
-                  {" "}· {game.metacriticScore}
+                  {" "}· MC {game.metacriticScore}
                 </span>
               )}
             </p>
@@ -94,11 +94,6 @@ export default memo(function GameCard({ game, showHype }: { game: Game; showHype
             {saleEndLabel && (
               <span className="text-[#ff6874] text-[10px] font-medium">
                 {saleEndLabel}
-              </span>
-            )}
-            {showHype && game.igdbHype != null && game.igdbHype > 0 && (
-              <span className="px-1.5 py-0.5 rounded-md bg-[#ff6b35]/15 text-[#ff6b35] text-[10px] font-bold">
-                {game.igdbHype} hype
               </span>
             )}
             {releaseLabel && (
@@ -167,8 +162,8 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
                   <span className="text-white font-bold text-xs">{formatPrice(game.currentPrice)}</span>
                 )}
                 <span className="text-[#666666] text-[10px]">
-                  {game.releaseDate && game.releaseDate !== "2099-12-31" && game.releaseDate !== "2020-01-01"
-                    ? new Date(game.releaseDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                  {game.releaseDate && !isPlaceholderDate(game.releaseDate)
+                    ? formatReleaseDate(game.releaseDate)
                     : "Coming soon"}
                 </span>
               </div>
@@ -239,6 +234,7 @@ function getReleaseLabel(game: Game, daysUntil: number): string | null {
     if (daysUntil === 0) return "Releases today";
     if (daysUntil === 1) return "Out tomorrow";
     if (daysUntil <= 7) return `Out in ${daysUntil} days`;
+    if (isYearOnlyDate(game.releaseDate)) return new Date(game.releaseDate + "T12:00:00").getFullYear().toString();
     const d = new Date(game.releaseDate);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   }

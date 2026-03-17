@@ -9,7 +9,6 @@ import { useAuth } from "@/lib/AuthContext";
 
 type SubTab = "Out Now" | "Coming Soon";
 type PlatformFilter = "all" | "switch2";
-type SortMode = "date" | "hype";
 
 export default function UpcomingPage() {
   const { consolePreference } = useAuth();
@@ -18,7 +17,6 @@ export default function UpcomingPage() {
   const { data: announcedGames } = useSupabaseQuery(getAnnouncedGames);
   const [subTab, setSubTab] = useState<SubTab>("Out Now");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
-  const [sortMode, setSortMode] = useState<SortMode>("date");
 
   // Sync platform filter with user preference once auth loads
   useEffect(() => {
@@ -33,16 +31,10 @@ export default function UpcomingPage() {
   );
 
   const filtered = useMemo(() => {
-    let games = platformFilter === "switch2"
-      ? rawGames.filter((g) => g.switch2Nsuid || /switch\s*2/i.test(g.title))
+    return platformFilter === "switch2"
+      ? rawGames.filter((g) => g.platform === "switch2" || g.switch2Nsuid || /switch\s*2/i.test(g.title))
       : rawGames;
-
-    if (subTab === "Coming Soon" && sortMode === "hype") {
-      games = [...games].sort((a, b) => (b.igdbHype ?? 0) - (a.igdbHype ?? 0));
-    }
-
-    return games;
-  }, [rawGames, platformFilter, subTab, sortMode]);
+  }, [rawGames, platformFilter]);
 
   const announcedFiltered = useMemo(() => {
     const all = announcedGames ?? [];
@@ -52,10 +44,6 @@ export default function UpcomingPage() {
   }, [announcedGames, platformFilter]);
 
   const isFiltered = platformFilter === "switch2";
-  const hasAnyHype = subTab === "Coming Soon" && (
-    rawGames.some((g) => g.igdbHype && g.igdbHype > 0) ||
-    (announcedGames ?? []).some((g) => g.igdbHype && g.igdbHype > 0)
-  );
 
   return (
     <div className="px-4 pb-28">
@@ -103,33 +91,6 @@ export default function UpcomingPage() {
           ))}
         </div>
 
-        {/* Sort toggle — only on Coming Soon when hype data exists */}
-        {hasAnyHype && subTab === "Coming Soon" && (
-          <div className="flex gap-1 bg-[#111111] rounded-lg p-0.5 border border-[#222222]">
-            <button
-              onClick={() => setSortMode("date")}
-              aria-pressed={sortMode === "date"}
-              className={`px-3 py-2.5 rounded-md text-[10px] font-medium transition-all ${
-                sortMode === "date"
-                  ? "bg-[#1a1a1a] text-white"
-                  : "text-[#666666] hover:text-white"
-              }`}
-            >
-              Date
-            </button>
-            <button
-              onClick={() => setSortMode("hype")}
-              aria-pressed={sortMode === "hype"}
-              className={`px-3 py-2.5 rounded-md text-[10px] font-medium transition-all ${
-                sortMode === "hype"
-                  ? "bg-[#1a1a1a] text-white"
-                  : "text-[#666666] hover:text-white"
-              }`}
-            >
-              Hype
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Content */}
@@ -148,7 +109,7 @@ export default function UpcomingPage() {
           {filtered.length > 0 && (
             <div className="space-y-2 mb-4">
               {filtered.map((game) => (
-                <GameCard key={game.id} game={game} showHype={subTab === "Coming Soon"} />
+                <GameCard key={game.id} game={game} />
               ))}
             </div>
           )}
@@ -161,7 +122,7 @@ export default function UpcomingPage() {
               )}
               <div className="space-y-2">
                 {announcedFiltered.map((game) => (
-                  <GameCard key={game.id} game={game} showHype />
+                  <GameCard key={game.id} game={game} />
                 ))}
               </div>
             </div>

@@ -26,3 +26,16 @@ export const PLACEHOLDER_DATES = ["2099-12-31", "2020-01-01"] as const;
 export function isPlaceholderDate(date: string): boolean {
   return (PLACEHOLDER_DATES as readonly string[]).includes(date);
 }
+
+/** Returns true if a date is a year-only placeholder (IGDB convention: Dec 31 = "sometime this year"). */
+export function isYearOnlyDate(date: string): boolean {
+  return date.endsWith("-12-31") && !isPlaceholderDate(date);
+}
+
+/** Smart release date display: "TBA" for unknown, "2027" for year-only, "Mar 7, 2026" otherwise. */
+export function formatReleaseDate(date: string | null | undefined): string {
+  if (!date) return "";
+  if (isPlaceholderDate(date)) return "TBA";
+  if (isYearOnlyDate(date)) return new Date(date + "T12:00:00").getFullYear().toString();
+  return formatShortDate(date);
+}
