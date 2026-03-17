@@ -169,7 +169,7 @@ export async function getRecentReleases(supabase: Client): Promise<Game[]> {
     .neq("release_date", "2099-12-31")
     .neq("release_date", "2020-01-01")
     .order("release_date", { ascending: false })
-    .limit(50);
+    .limit(100);
   if (error) throw error;
   return (data ?? []).map(mapGame);
 }

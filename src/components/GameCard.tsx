@@ -4,6 +4,7 @@ import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
 import { formatPrice, isPlaceholderDate, formatReleaseDate, isYearOnlyDate } from "@/lib/format";
+import { isRarelyOnSale } from "@/lib/ranking";
 import FollowButton from "./FollowButton";
 import GameCoverImage from "./GameCoverImage";
 
@@ -11,6 +12,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
   const daysUntilRelease = getDaysUntil(game.releaseDate);
   const releaseLabel = getReleaseLabel(game, daysUntilRelease);
   const saleEndLabel = game.isOnSale && game.saleEndDate ? getSaleEndLabel(game.saleEndDate) : null;
+  const rarelyOnSale = isRarelyOnSale(game);
   const { base, edition } = splitTitle(game.title);
 
   return (
@@ -86,7 +88,12 @@ export default memo(function GameCard({ game }: { game: Game }) {
                 ALL TIME LOW
               </span>
             )}
-            {game.switch2Nsuid && !game.isAllTimeLow && (
+            {rarelyOnSale && !game.isAllTimeLow && (
+              <span className="px-2 py-0.5 rounded-md bg-[#ff6ec7]/15 text-[#ff6ec7] text-[10px] font-bold tracking-wide">
+                RARELY ON SALE
+              </span>
+            )}
+            {game.switch2Nsuid && !game.isAllTimeLow && !rarelyOnSale && (
               <span className="px-1.5 py-0.5 rounded-md bg-[#00aaff]/15 text-[#00aaff] text-[10px] font-bold">
                 Switch 2
               </span>

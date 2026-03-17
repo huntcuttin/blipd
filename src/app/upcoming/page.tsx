@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getRecentReleases, getUpcomingGames, getAnnouncedGames } from "@/lib/queries";
+import { computeTrendingScore } from "@/lib/ranking";
 import QueryError from "@/components/QueryError";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -70,10 +71,15 @@ export default function UpcomingPage() {
   );
 
   const filtered = useMemo(() => {
-    return platformFilter === "switch2"
+    const games = platformFilter === "switch2"
       ? rawGames.filter((g) => g.platform === "switch2" || g.switch2Nsuid || /switch\s*2/i.test(g.title))
       : rawGames;
-  }, [rawGames, platformFilter]);
+    // Sort "Out Now" by quality score so acclaimed games surface above shovelware
+    if (subTab === "Out Now") {
+      return [...games].sort((a, b) => computeTrendingScore(b) - computeTrendingScore(a));
+    }
+    return games;
+  }, [rawGames, platformFilter, subTab]);
 
   const announcedFiltered = useMemo(() => {
     const all = announcedGames ?? [];
