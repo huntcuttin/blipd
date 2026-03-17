@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } from "@/components/GameCard";
+import SwipeableGameCard from "@/components/SwipeableGameCard";
 import NamedSaleBanner from "@/components/NamedSaleBanner";
 
 import QueryError from "@/components/QueryError";
@@ -138,7 +139,7 @@ export default function SalesPage() {
           </p>
           {searchResults.length > 0 ? (
             searchResults.map((game) => (
-              <GameCard key={game.id} game={game} />
+              <SwipeableGameCard key={game.id} game={game} />
             ))
           ) : (
             <div className="flex flex-col items-center py-16 px-4">
@@ -261,7 +262,7 @@ export default function SalesPage() {
               {/* Sorted deals */}
               <div className="space-y-2 pb-4">
                 {sortedSales.map((game) => (
-                  <GameCard key={game.id} game={game} />
+                  <SwipeableGameCard key={game.id} game={game} />
                 ))}
               </div>
             </>

@@ -7,12 +7,13 @@ import SearchBar from "@/components/SearchBar";
 import DirectBanner from "@/components/DirectBanner";
 import NamedSaleBanner from "@/components/NamedSaleBanner";
 import GameCard, { GameCardCompact, GameCardCompactSkeleton, GameCardSkeleton } from "@/components/GameCard";
+import SwipeableGameCard from "@/components/SwipeableGameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getTrendingGames, getUpcomingGames, getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
+import { getTrendingGames, getUpcomingGames, getGamesByIds, getAllFranchises, searchGames, getRecentReleases } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { computeTrendingScore, deduplicateGames, isQualityGame } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
@@ -29,6 +30,7 @@ export default function HomePage() {
   const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
   const { data: upcomingData } = useSupabaseQuery(getUpcomingGames);
+  const { data: recentReleasesData } = useSupabaseQuery(getRecentReleases);
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
   const { data: followedGamesData } = useSupabaseQuery(
     (sb) => getGamesByIds(sb, followedIds),
@@ -217,6 +219,7 @@ export default function HomePage() {
               <DiscoverTab
                 trendingGames={trendingData ?? []}
                 upcomingGames={upcomingData ?? []}
+                recentReleases={recentReleasesData ?? []}
                 loading={trendingLoading}
                 error={trendingError}
                 followedFranchises={followedFranchiseNames}
@@ -245,20 +248,20 @@ const PAGE_SIZE = 30;
 function DiscoverTab({
   trendingGames,
   upcomingGames,
+  recentReleases,
   loading,
   error,
   followedFranchises,
 }: {
   trendingGames: Game[];
   upcomingGames: Game[];
+  recentReleases: Game[];
   loading: boolean;
   error: Error | null;
   followedFranchises: Set<string>;
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
-
-  const now = useMemo(() => Date.now(), []);
 
   const sorted = useMemo(() => {
     const deduped = deduplicateGames(trendingGames);
@@ -269,15 +272,14 @@ function DiscoverTab({
     );
   }, [trendingGames, followedFranchises]);
 
-  // New releases: last 30 days, require cover art + real price (no free shovelware)
+  // New releases: dedicated recent-releases query sorted by trending score
+  // Uses getRecentReleases (last 30 days, all games) so no-metacritic indie games show up
   const newReleases = useMemo(() => {
-    return sorted
-      .filter((g) => {
-        const days = Math.round((now - new Date(g.releaseDate).getTime()) / 86400000);
-        return days >= 0 && days <= 30 && !!g.coverArt && g.originalPrice > 0;
-      })
+    return recentReleases
+      .filter((g) => !!g.coverArt && g.originalPrice > 0)
+      .sort((a, b) => computeTrendingScore(b, { followedFranchises }) - computeTrendingScore(a, { followedFranchises }))
       .slice(0, 10);
-  }, [sorted, now]);
+  }, [recentReleases, followedFranchises]);
 
   // Reset visible count when data changes
   useEffect(() => {
@@ -363,7 +365,7 @@ function DiscoverTab({
         <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">DISCOVER</h2>
         <div className="space-y-2">
           {visible.map((game) => (
-            <GameCard key={game.id} game={game} />
+            <SwipeableGameCard key={game.id} game={game} />
           ))}
           <div ref={sentinelRef} className="h-4" />
           {hasMore && (
