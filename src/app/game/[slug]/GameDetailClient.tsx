@@ -106,14 +106,14 @@ export default function GameDetailClient({ slug }: { slug: string }) {
             {game.publisher && <span className="text-[#888888] text-sm">{game.publisher}</span>}
             {game.metacriticScore !== null && (
               <span
-                aria-label={`Metacritic score: ${game.metacriticScore}`}
+                aria-label={`Critic rating: ${game.metacriticScore}`}
                 className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
                   game.metacriticScore >= 85 ? "bg-[#00ce7a]/20 text-[#00ce7a]"
                   : game.metacriticScore >= 70 ? "bg-[#ffbd3f]/20 text-[#ffbd3f]"
                   : "bg-[#ff6874]/20 text-[#ff6874]"
                 }`}
               >
-                MC {game.metacriticScore}
+                {game.metacriticScore}%
               </span>
             )}
             {franchise && (

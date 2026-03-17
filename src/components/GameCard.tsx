@@ -44,7 +44,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
                   : game.metacriticScore >= 50 ? " text-[#ffbd3f]"
                   : " text-[#ff6874]"
                 }>
-                  {" "}· MC {game.metacriticScore}
+                  {" "}· {game.metacriticScore}%
                 </span>
               )}
             </p>

@@ -23,7 +23,7 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 | Database + Auth | Supabase (Postgres + magic link) |
 | Email | Resend — sender: alerts@blippd.app |
 | Hosting | Vercel (free tier) |
-| Cron | cron-job.org (7 jobs configured) |
+| Cron | cron-job.org (9 jobs configured) |
 | Payments | None (ad-supported, free forever) |
 | iOS (v2) | Expo / React Native |
 | Data | nintendo-switch-eshop npm + ITAD API + IGDB API + Algolia |
@@ -41,7 +41,7 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 - CatalogTier (top500, full)
 - price_us, msrp_us
 - releaseDate, platform
-- igdb_id, igdb_hype
+- igdb_id, igdb_hype, metacritic_score
 
 ### PriceSnapshot
 - id, game_id, price, msrp, discount_pct, is_on_sale
@@ -58,7 +58,32 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 
 ### NamedSaleEvent
 - id, name ("Mar10 Sale", "Black Friday Drop", "Nintendo Direct Sale")
-- detected_at, active, games_count
+- detected_at, active, games_count, dedup_key (UNIQUE — prevents race condition duplicates)
+
+## Cron Jobs
+
+All cron endpoints live at `/api/cron/*` and require `Authorization: Bearer {CRON_SECRET}`.
+
+| Endpoint | Frequency | What it does |
+|---|---|---|
+| `/api/cron/update-prices` | Every 10 min | Polls eShop prices, detects drops/sales/ATL, generates alerts, detects named sale events |
+| `/api/cron/dispatch-notifications` | Every 10 min (after update-prices) | Sends email/push for recent alerts, batches 5+ price alerts into digest |
+| `/api/cron/sync-catalog` | Daily | Full catalog sync from Nintendo eShop Algolia, deduplication, franchise linking |
+| `/api/cron/sync-hype-scores` | Every 6 hours | Fetches IGDB hype counts for upcoming games |
+| `/api/cron/sync-ratings` | Every 6 hours | Fetches IGDB aggregated_rating for released games → metacritic_score column |
+| `/api/cron/sync-release-dates` | Every 6 hours | Fetches IGDB release dates for games with placeholder dates |
+| `/api/cron/detect-directs` | Every 5 min | YouTube RSS check for Nintendo Direct videos, creates banner |
+| `/api/cron/detect-trailers` | Every 15 min | YouTube RSS + Claude API matching for game trailers |
+| `/api/cron/weekly-digest` | Weekly (Sunday) | Sends digest email of followed games currently on sale |
+
+### Reliability infrastructure
+- **`src/lib/retry.ts`** — `withRetry` (exponential backoff), `withTimeout`, `fetchWithRetry` (drop-in fetch replacement)
+- All YouTube RSS fetches use `fetchWithRetry` with 2 retries + 10s timeout
+- Claude API calls wrapped with 20s `withTimeout`
+- IGDB batch operations have circuit breaker (stops after 3 consecutive 429s)
+- Named sale event creation uses `dedup_key` upsert to prevent race conditions
+- Notification dispatch tracks actual send success/failure counts
+- Alert payloads validated (NaN, negative, >100% discount blocked)
 
 ## eShop Link Format
 ```
@@ -133,6 +158,9 @@ GET https://api.isthereanydeal.com/games/history/v2
 - [ ] Add blippd.app to Resend, update sender to alerts@blippd.app
 - [ ] Rename Blipd->Blippd everywhere in codebase (exclude node_modules, .next, lock files)
 - [ ] Update cron-job.org endpoints if Vercel URL changed
+- [ ] Run migration: `ALTER TABLE named_sale_events ADD COLUMN IF NOT EXISTS dedup_key text UNIQUE;`
+- [ ] Add cron job for /api/cron/sync-ratings (every 6 hours) to backfill critic scores
+- [ ] Merge branch `claude/review-recent-commits-LI1DF` into main and push to deploy
 
 ### MVP (Current Focus)
 
@@ -148,9 +176,10 @@ GET https://api.isthereanydeal.com/games/history/v2
 - "Sale ending soon" alert type
 - Named sale event detection + two-tier notification system
 - Notification batching rule (5+ games = one digest)
-- Per-game release time SEO pages (/games/[slug]/release-time)
-- Nintendo Direct detection banner (YouTube RSS)
-- IGDB hype score on Upcoming page
+- [x] Per-game release time SEO pages (/games/[slug]/release-time)
+- [x] Nintendo Direct detection banner (YouTube RSS)
+- [x] IGDB hype score on Upcoming page
+- [x] Critic rating scores on game cards (IGDB aggregated_rating)
 - Weekly digest re-engagement email
 
 ### V2
@@ -256,6 +285,28 @@ These are captured for later evaluation. None are in active scope.
 - "Rarely goes on sale" badge
 - Multi-region support
 - SMS notifications
+
+## Key Pages & Features Built
+
+| Page | Status | Notes |
+|---|---|---|
+| `/home` | Done | Discover/Watchlist/Franchises tabs, search, Direct banner, sale banner |
+| `/game/[slug]` | Done | Price, follow, own, notify prefs, price history chart, eShop link |
+| `/games/[slug]/release-time` | Done | SEO page: countdown, timezone converter (8 zones), launch time rules, Schema.org |
+| `/upcoming` | Done | Out Now / Coming Soon tabs, platform filter, critic ratings on cards |
+| `/sales` | Done | Active deals |
+| `/alerts` | Done | User's notification feed |
+| `/profile` | Done | Stats, owned games, watchlist, franchises, savings |
+| `/settings` | Done | Account (auth provider badge), console switcher, notification toggles, push enable |
+| `/vs/nt-deals` | Done | SEO comparison table |
+| `/privacy` | Done | Privacy policy |
+| `/terms` | Done | Terms of service |
+
+### Settings page features
+- Console preference switcher (Switch vs Switch 2) — saves immediately, color-coded
+- Auth provider badge (Google / Apple / Email) on account row
+- Push notification enable/disable
+- Email and weekly digest toggles
 
 ## Response Format for Claude Code Sessions
 
