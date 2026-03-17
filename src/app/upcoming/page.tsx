@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getRecentReleases, getUpcomingGames, getAnnouncedGames } from "@/lib/queries";
