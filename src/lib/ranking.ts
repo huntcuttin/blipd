@@ -110,6 +110,15 @@ export function computeTrendingScore(
     score -= 5;
   }
 
+  // ── IGDB HYPE (0-20 pts) ────────────────────────────────────
+  // Pre-release community anticipation — the strongest signal for unreleased games
+  if (game.igdbHype) {
+    if (game.igdbHype >= 500) score += 20;
+    else if (game.igdbHype >= 200) score += 15;
+    else if (game.igdbHype >= 50) score += 10;
+    else if (game.igdbHype >= 10) score += 5;
+  }
+
   // ── COVER ART PENALTY ──────────────────────────────────────
   // Games without cover art clutter the UI — push them down hard
   if (!game.coverArt) score -= 40;
@@ -172,6 +181,19 @@ export function isRarelyOnSale(game: Game): boolean {
 // Keep old alias for backward compat
 export function computeGameScore(game: Game): number {
   return computeTrendingScore(game);
+}
+
+/**
+ * Quality gate — returns true for games worth surfacing in curated sections.
+ * Requires cover art + at least one quality signal.
+ */
+export function isQualityGame(game: Game): boolean {
+  if (!game.coverArt) return false;
+  if (game.metacriticScore !== null && game.metacriticScore >= 70) return true;
+  if (game.igdbHype && game.igdbHype >= 20) return true;
+  if (game.franchise && (NINTENDO_1ST_PARTY.has(game.franchise) || REPUTABLE_3RD_PARTY.has(game.franchise))) return true;
+  if (game.publisher && REPUTABLE_PUBLISHERS.has(game.publisher)) return true;
+  return false;
 }
 
 // Edition suffixes to strip when finding duplicate games

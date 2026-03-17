@@ -14,7 +14,7 @@ import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getTrendingGames, getUpcomingGames, getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
-import { computeTrendingScore, deduplicateGames } from "@/lib/ranking";
+import { computeTrendingScore, deduplicateGames, isQualityGame } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
 // Game used in DiscoverTab and search; Franchise used in MyFranchisesTab
 
@@ -269,14 +269,14 @@ function DiscoverTab({
     );
   }, [trendingGames, followedFranchises]);
 
-  // New releases: released in the last 60 days, sorted by quality score
+  // New releases: last 30 days, quality-gated, already sorted by trending score
   const newReleases = useMemo(() => {
     return sorted
       .filter((g) => {
         const days = Math.round((now - new Date(g.releaseDate).getTime()) / 86400000);
-        return days >= 0 && days <= 60;
+        return days >= 0 && days <= 30 && isQualityGame(g);
       })
-      .slice(0, 12);
+      .slice(0, 10);
   }, [sorted, now]);
 
   // Reset visible count when data changes
@@ -334,12 +334,12 @@ function DiscoverTab({
 
   return (
     <div className="space-y-4">
-      {/* Coming Soon */}
-      {upcomingGames.length > 0 && (
+      {/* Coming Soon — quality-gated: Nintendo franchises + critically acclaimed + hyped */}
+      {upcomingGames.filter(isQualityGame).length > 0 && (
         <section>
           <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">COMING SOON</h2>
           <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-            {upcomingGames.map((game) => (
+            {upcomingGames.filter(isQualityGame).slice(0, 15).map((game) => (
               <GameCardCompact key={game.id} game={game} />
             ))}
           </div>
