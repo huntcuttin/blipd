@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import ProfileButton from "@/components/ProfileButton";
 import { AuthProvider } from "@/lib/AuthContext";
 import { FollowProvider } from "@/lib/FollowContext";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
@@ -53,6 +54,7 @@ export default function RootLayout({
             <div className="max-w-[430px] mx-auto min-h-screen">
               <main style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>{children}</main>
             </div>
+            <ProfileButton />
             <BottomNav />
             <ServiceWorkerRegistration />
           </FollowProvider>

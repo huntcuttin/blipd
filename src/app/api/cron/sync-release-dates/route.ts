@@ -42,25 +42,19 @@ export async function GET(request: Request) {
 
     const results = await batchGetReleaseDates(games);
 
-    let updated = 0;
-    for (const [gameId, result] of Array.from(results.entries())) {
-      const releaseStatus = computeReleaseStatus(result.releaseDate);
+    const now = new Date().toISOString();
+    const updates = Array.from(results.entries()).map(([gameId, result]) => ({
+      id: gameId,
+      release_date: result.releaseDate,
+      release_status: computeReleaseStatus(result.releaseDate),
+      release_date_source: "igdb",
+      updated_at: now,
+    }));
 
-      const { error: updateError } = await supabase
-        .from("games")
-        .update({
-          release_date: result.releaseDate,
-          release_status: releaseStatus,
-          release_date_source: "igdb",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", gameId);
-
-      if (updateError) {
-        console.error(`  Failed to update ${gameId}:`, updateError.message);
-      } else {
-        updated++;
-      }
+    const { error: upsertError } = await supabase.from("games").upsert(updates);
+    const updated = upsertError ? 0 : updates.length;
+    if (upsertError) {
+      console.error("Batch upsert failed:", upsertError.message);
     }
 
     console.log(`Release date sync complete: ${games.length} checked, ${updated} updated`);
