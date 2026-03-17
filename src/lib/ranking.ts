@@ -111,8 +111,8 @@ export function computeTrendingScore(
   }
 
   // ── COVER ART PENALTY ──────────────────────────────────────
-  // Games without cover art clutter the UI — push them down
-  if (!game.coverArt) score -= 25;
+  // Games without cover art clutter the UI — push them down hard
+  if (!game.coverArt) score -= 40;
 
   // ── FULL-PRICE PREMIUM PENALTY ──────────────────────────────
   // $50+ games not on sale aren't actionable for a price alert app
@@ -172,4 +172,48 @@ export function isRarelyOnSale(game: Game): boolean {
 // Keep old alias for backward compat
 export function computeGameScore(game: Game): number {
   return computeTrendingScore(game);
+}
+
+// Edition suffixes to strip when finding duplicate games
+const EDITION_RE = /\s*[-–:]?\s*(Digital\s+)?(Deluxe|Standard|Complete|Ultimate|Gold|Platinum|Collector'?s?|Anniversary|Encore|Special|Limited|Premium)\s+Edition\s*$/i;
+const BUNDLE_RE = /\s*[-–:]?\s*Bundle\s*$/i;
+
+function baseTitle(title: string): string {
+  return title.replace(EDITION_RE, "").replace(BUNDLE_RE, "").trim().toLowerCase();
+}
+
+/**
+ * Deduplicates games that are edition variants of the same title.
+ * Keeps the best representative: base game first, then highest discount.
+ * Order of the input array is preserved for non-duplicates.
+ */
+export function deduplicateGames(games: Game[]): Game[] {
+  const groups = new Map<string, Game[]>();
+  for (const game of games) {
+    const key = baseTitle(game.title);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(game);
+  }
+
+  // Build a set of winner IDs in insertion order
+  const winnerIds = new Set<string>();
+  for (const group of Array.from(groups.values())) {
+    if (group.length === 1) {
+      winnerIds.add(group[0].id);
+      continue;
+    }
+    // Prefer the version with no edition suffix (pure base title)
+    const base = group.find((g) => baseTitle(g.title) === g.title.trim().toLowerCase());
+    if (base) {
+      winnerIds.add(base.id);
+    } else {
+      // No clean base — pick highest discount, then lowest price
+      const best = [...group].sort(
+        (a, b) => (b.discount ?? 0) - (a.discount ?? 0) || a.currentPrice - b.currentPrice
+      )[0];
+      winnerIds.add(best.id);
+    }
+  }
+
+  return games.filter((g) => winnerIds.has(g.id));
 }

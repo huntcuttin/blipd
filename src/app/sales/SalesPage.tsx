@@ -12,7 +12,7 @@ import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGamesOnSale, getAllFranchises, searchGames, getActiveNamedSaleEvents } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/AuthContext";
-import { computeTrendingScore } from "@/lib/ranking";
+import { computeTrendingScore, deduplicateGames } from "@/lib/ranking";
 import type { Game } from "@/lib/types";
 
 const FILTERS = ["All", "Watchlist", "My Franchises"] as const;
@@ -75,7 +75,7 @@ export default function SalesPage() {
     return () => clearTimeout(timer);
   }, [search, consolePreference]);
 
-  const allGames = games ?? [];
+  const allGames = deduplicateGames(games ?? []);
   const allFranchises = franchises ?? [];
 
   const followedFranchiseNames = new Set(

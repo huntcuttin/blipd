@@ -14,7 +14,7 @@ import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getTrendingGames, getUpcomingGames, getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
-import { computeTrendingScore } from "@/lib/ranking";
+import { computeTrendingScore, deduplicateGames } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
 // Game used in DiscoverTab and search; Franchise used in MyFranchisesTab
 
@@ -261,7 +261,8 @@ function DiscoverTab({
   const now = useMemo(() => Date.now(), []);
 
   const sorted = useMemo(() => {
-    return [...trendingGames].sort(
+    const deduped = deduplicateGames(trendingGames);
+    return deduped.sort(
       (a, b) =>
         computeTrendingScore(b, { followedFranchises }) -
         computeTrendingScore(a, { followedFranchises })
