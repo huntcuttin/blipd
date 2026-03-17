@@ -67,7 +67,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
             ) : (
               <span className="text-white font-bold text-sm">
                 {game.currentPrice === 0 && game.originalPrice === 0
-                  ? "Free"
+                  ? game.releaseStatus === "released" ? "Free" : ""
                   : game.currentPrice > 0
                   ? formatPrice(game.currentPrice)
                   : game.originalPrice > 0

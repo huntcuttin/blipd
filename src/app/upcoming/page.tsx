@@ -16,7 +16,7 @@ export default function UpcomingPage() {
   const { data: recentReleases, loading: recentLoading, error: recentError } = useSupabaseQuery(getRecentReleases);
   const { data: upcomingGames, loading: upcomingLoading, error: upcomingError } = useSupabaseQuery(getUpcomingGames);
   const { data: announcedGames } = useSupabaseQuery(getAnnouncedGames);
-  const [subTab, setSubTab] = useState<SubTab>("Out Now");
+  const [subTab, setSubTab] = useState<SubTab>("Coming Soon");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
@@ -47,7 +47,7 @@ export default function UpcomingPage() {
       const dx = touchStartX.current - e.changedTouches[0].clientX;
       const dy = Math.abs(touchStartY.current - e.changedTouches[0].clientY);
       if (Math.abs(dx) < 50 || dy > Math.abs(dx)) return;
-      const tabs: SubTab[] = ["Out Now", "Coming Soon"];
+      const tabs: SubTab[] = ["Coming Soon", "Out Now"];
       const i = tabs.indexOf(subTab);
       if (dx > 0 && i < tabs.length - 1) setSubTab(tabs[i + 1]);
       else if (dx < 0 && i > 0) setSubTab(tabs[i - 1]);
@@ -101,7 +101,7 @@ export default function UpcomingPage() {
       <div className="flex items-center gap-2 mb-4">
         {/* Sub-tab pills */}
         <div className="flex gap-2" role="tablist">
-          {(["Out Now", "Coming Soon"] as SubTab[]).map((tab) => (
+          {(["Coming Soon", "Out Now"] as SubTab[]).map((tab) => (
             <button
               key={tab}
               role="tab"

@@ -269,12 +269,12 @@ function DiscoverTab({
     );
   }, [trendingGames, followedFranchises]);
 
-  // New releases: last 30 days, quality-gated, already sorted by trending score
+  // New releases: last 30 days, require cover art + real price (no free shovelware)
   const newReleases = useMemo(() => {
     return sorted
       .filter((g) => {
         const days = Math.round((now - new Date(g.releaseDate).getTime()) / 86400000);
-        return days >= 0 && days <= 30 && isQualityGame(g);
+        return days >= 0 && days <= 30 && !!g.coverArt && g.originalPrice > 0;
       })
       .slice(0, 10);
   }, [sorted, now]);
