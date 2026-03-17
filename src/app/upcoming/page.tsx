@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getRecentReleases, getUpcomingGames, getAnnouncedGames } from "@/lib/queries";
@@ -17,11 +17,50 @@ export default function UpcomingPage() {
   const { data: announcedGames } = useSupabaseQuery(getAnnouncedGames);
   const [subTab, setSubTab] = useState<SubTab>("Out Now");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
 
   // Sync platform filter with user preference once auth loads
   useEffect(() => {
     if (consolePreference === "switch2") setPlatformFilter("switch2");
   }, [consolePreference]);
+
+  // Active touchmove listener — prevents iOS Safari back gesture on horizontal swipes
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const onMove = (e: TouchEvent) => {
+      const dx = Math.abs(e.touches[0].clientX - touchStartX.current);
+      const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+      if (dx > dy && dx > 10) e.preventDefault();
+    };
+
+    const onEnd = (e: TouchEvent) => {
+      const dx = touchStartX.current - e.changedTouches[0].clientX;
+      const dy = Math.abs(touchStartY.current - e.changedTouches[0].clientY);
+      if (Math.abs(dx) < 50 || dy > Math.abs(dx)) return;
+      const tabs: SubTab[] = ["Out Now", "Coming Soon"];
+      const i = tabs.indexOf(subTab);
+      if (dx > 0 && i < tabs.length - 1) setSubTab(tabs[i + 1]);
+      else if (dx < 0 && i > 0) setSubTab(tabs[i - 1]);
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+    };
+  }, [subTab]);
 
   const loading = subTab === "Out Now" ? recentLoading : upcomingLoading;
   const queryError = subTab === "Out Now" ? recentError : upcomingError;
@@ -46,7 +85,7 @@ export default function UpcomingPage() {
   const isFiltered = platformFilter === "switch2";
 
   return (
-    <div className="px-4 pb-28">
+    <div ref={containerRef} className="px-4 pb-28">
       {/* Header */}
       <div className="flex items-center justify-between py-4">
         <h1 className="text-lg font-bold text-white">Upcoming</h1>
