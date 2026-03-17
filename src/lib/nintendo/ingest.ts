@@ -817,9 +817,11 @@ export async function runReleaseStatusUpdate(): Promise<number> {
 
   if (pricedUpcoming && pricedUpcoming.length > 0) {
     const ids = pricedUpcoming.map((g) => g.id);
+    // Set release_date to today as best approximation — at minimum it makes them
+    // visible in New Releases rather than staying stuck behind the 2099 exclusion filter
     await supabase
       .from("games")
-      .update({ release_status: "released", updated_at: new Date().toISOString() })
+      .update({ release_status: "released", release_date: todayStr, updated_at: new Date().toISOString() })
       .in("id", ids);
     updated += ids.length;
   }
