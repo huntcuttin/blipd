@@ -18,7 +18,7 @@ import { computeTrendingScore } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
 // Game used in DiscoverTab and search; Franchise used in MyFranchisesTab
 
-const TABS = ["Discover", "Library", "My Franchises"] as const;
+const TABS = ["Discover", "Watchlist", "My Franchises"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function HomePage() {
@@ -97,7 +97,7 @@ export default function HomePage() {
   return (
     <div className="px-4">
       {/* Header */}
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between py-3">
         <Logo size={28} />
         <div className="flex items-center gap-2">
           <SearchBar
@@ -158,11 +158,11 @@ export default function HomePage() {
       ) : (
         <>
           {/* Tab bar */}
-          <div className="flex gap-1 p-1 bg-[#111111] rounded-xl mb-4">
+          <div className="flex gap-1 p-1 bg-[#111111] rounded-xl mb-2">
             {TABS.map((tab) => {
               const isActive = activeTab === tab;
               const count =
-                tab === "Library"
+                tab === "Watchlist"
                   ? followedGames.length
                   : tab === "My Franchises"
                   ? followedFranchiseList.length
@@ -193,7 +193,7 @@ export default function HomePage() {
           </div>
 
           {/* Swipe indicator dots */}
-          <div className="flex justify-center gap-1.5 mb-4">
+          <div className="flex justify-center gap-1.5 mb-3">
             {TABS.map((tab) => (
               <div
                 key={tab}
@@ -222,7 +222,7 @@ export default function HomePage() {
                 followedFranchises={followedFranchiseNames}
               />
             )}
-            {activeTab === "Library" && (
+            {activeTab === "Watchlist" && (
               <MyGamesTab games={followedGames} ownedGameIds={ownedGameIds} />
             )}
             {activeTab === "My Franchises" && (
@@ -332,7 +332,7 @@ function DiscoverTab({
   const hasMore = visibleCount < sorted.length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Coming Soon */}
       {upcomingGames.length > 0 && (
         <section>
