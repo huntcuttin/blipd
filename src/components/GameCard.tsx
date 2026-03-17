@@ -41,12 +41,8 @@ export default memo(function GameCard({ game }: { game: Game }) {
             <p className="text-[#555555] text-[11px] mt-0.5 truncate">
               {game.publisher}
               {game.metacriticScore !== null && (
-                <span className={
-                  game.metacriticScore >= 75 ? " text-[#00ce7a]"
-                  : game.metacriticScore >= 50 ? " text-[#ffbd3f]"
-                  : " text-[#ff6874]"
-                }>
-                  {" "}· {game.metacriticScore}%
+                <span className="text-[#666666]">
+                  {" "}· ★ {game.metacriticScore}%
                 </span>
               )}
             </p>

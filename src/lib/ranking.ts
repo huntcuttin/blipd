@@ -110,6 +110,14 @@ export function computeTrendingScore(
     score -= 5;
   }
 
+  // ── COVER ART PENALTY ──────────────────────────────────────
+  // Games without cover art clutter the UI — push them down
+  if (!game.coverArt) score -= 25;
+
+  // ── FULL-PRICE PREMIUM PENALTY ──────────────────────────────
+  // $50+ games not on sale aren't actionable for a price alert app
+  if (!game.isOnSale && msrp >= 50) score -= 15;
+
   // ── RECENCY (0-15 pts) ─────────────────────────────────────
   // New releases deserve discovery exposure
   if (daysSinceRelease >= 0 && daysSinceRelease <= 14) score += 15;
