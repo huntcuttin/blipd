@@ -7,7 +7,8 @@ import GameCard, { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } 
 import QueryError from "@/components/QueryError";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getGamesOnSale, getAllFranchises, searchGames } from "@/lib/queries";
+import { getGamesOnSale, getAllFranchises, searchGames, getActiveNamedSaleEvents } from "@/lib/queries";
+import type { NamedSaleEvent } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/AuthContext";
 import { computeTrendingScore } from "@/lib/ranking";
@@ -47,11 +48,13 @@ export default function SalesPage() {
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const [filter, setFilter] = useState<Filter>("All");
   const [sort, setSort] = useState<SortMode>("Best Deals");
+  const [activeSaleEvent, setActiveSaleEvent] = useState<NamedSaleEvent | null>(null);
   const { followedGameIds, followedFranchiseIds } = useFollow();
   const { consolePreference } = useAuth();
 
   const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getGamesOnSale);
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
+  const { data: saleEvents } = useSupabaseQuery(getActiveNamedSaleEvents);
 
   useEffect(() => {
     if (!search) {
@@ -80,12 +83,16 @@ export default function SalesPage() {
   );
 
   // Games are already filtered to on-sale by the query
+  const eventFilteredGames = activeSaleEvent
+    ? allGames.filter((g) => g.saleEventId === activeSaleEvent.id)
+    : allGames;
+
   const filteredSales =
     filter === "Watchlist"
-      ? allGames.filter((g) => followedGameIds.has(g.id))
+      ? eventFilteredGames.filter((g) => followedGameIds.has(g.id))
       : filter === "My Franchises"
-      ? allGames.filter((g) => g.franchise && followedFranchiseNames.has(g.franchise))
-      : allGames;
+      ? eventFilteredGames.filter((g) => g.franchise && followedFranchiseNames.has(g.franchise))
+      : eventFilteredGames;
 
   const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow);
   const sortedSales = sortGames(filteredSales, sort, followedFranchiseNames);
@@ -106,6 +113,37 @@ export default function SalesPage() {
           placeholder="Search deals..."
         />
       </div>
+
+      {/* Named sale event banners */}
+      {saleEvents && saleEvents.length > 0 && !search && (
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-3">
+          {saleEvents.map((event) => {
+            const isActive = activeSaleEvent?.id === event.id;
+            return (
+              <button
+                key={event.id}
+                onClick={() => setActiveSaleEvent(isActive ? null : event)}
+                className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${
+                  isActive
+                    ? "bg-[#ffaa00]/15 border-[#ffaa00]/50 text-[#ffaa00]"
+                    : "bg-[#111111] border-[#222222] text-white hover:border-[#333333]"
+                }`}
+              >
+                <span className={`text-lg ${isActive ? "" : "grayscale"}`}>🏷️</span>
+                <div>
+                  <div className="text-xs font-bold leading-tight">{event.name}</div>
+                  <div className={`text-[10px] ${isActive ? "text-[#ffaa00]/70" : "text-[#555555]"}`}>
+                    {event.gamesCount} games on sale
+                  </div>
+                </div>
+                {isActive && (
+                  <span className="ml-1 text-[#ffaa00]/60 text-xs">✕</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Search results */}
       {searchResults ? (

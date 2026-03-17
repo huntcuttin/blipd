@@ -531,6 +531,7 @@ export async function runPriceUpdate(options?: {
       discount,
       is_on_sale: isOnSale,
       sale_end_date: isOnSale && priceInfo.endDate ? priceInfo.endDate.split("T")[0] : null,
+      ...(isOnSale ? {} : { sale_event_id: null }), // clear event link when sale ends
       updated_at: new Date().toISOString(),
     };
 
@@ -724,8 +725,14 @@ async function detectAndFireNamedSaleEvent(
 
   console.log(`  Named sale event: "${saleName}" (${totalGames} games on sale, event ${event.id})`);
 
-  // Collect all unique followers of any on-sale game with notify_sales on
+  // Tag all current on-sale games with this event ID
   const gameIds = (allSaleGames ?? newSaleGames).map((g) => g.id);
+  for (let i = 0; i < gameIds.length; i += 200) {
+    const batch = gameIds.slice(i, i + 200);
+    await supabase.from("games").update({ sale_event_id: event.id }).in("id", batch);
+  }
+
+  // Collect all unique followers of any on-sale game with notify_sales on
   const uniqueUserIds = new Set<string>();
   for (let i = 0; i < gameIds.length; i += 200) {
     const batch = gameIds.slice(i, i + 200);

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs } from "@/lib/types";
+import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent } from "@/lib/types";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DEFAULT_NOTIFY_PREFS } from "@/lib/types";
 
@@ -35,6 +35,7 @@ function mapGame(row: any): Game {
     isSuppressed: row.is_suppressed ?? false,
     igdbHype: row.igdb_hype ?? null,
     platform: row.platform ?? null,
+    saleEventId: row.sale_event_id ?? null,
   };
 }
 
@@ -138,6 +139,23 @@ export async function getGamesOnSale(supabase: Client): Promise<Game[]> {
     .limit(500);
   if (error) throw error;
   return (data ?? []).map(mapGame);
+}
+
+export async function getActiveNamedSaleEvents(supabase: Client): Promise<NamedSaleEvent[]> {
+  const { data, error } = await supabase
+    .from("named_sale_events")
+    .select("*")
+    .eq("active", true)
+    .order("detected_at", { ascending: false })
+    .limit(10);
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    detectedAt: row.detected_at,
+    active: row.active,
+    gamesCount: row.games_count,
+  }));
 }
 
 export async function getRecentReleases(supabase: Client): Promise<Game[]> {

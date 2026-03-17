@@ -23,6 +23,15 @@ export interface Game {
   isSuppressed: boolean;
   igdbHype: number | null;
   platform: "switch" | "switch2" | null;
+  saleEventId: string | null;
+}
+
+export interface NamedSaleEvent {
+  id: string;
+  name: string;
+  detectedAt: string;
+  active: boolean;
+  gamesCount: number;
 }
 
 export interface NotifyPrefs {
