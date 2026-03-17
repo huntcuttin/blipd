@@ -45,8 +45,8 @@ function detectUserTimezone(): string {
   }
 }
 
-export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle }: Props) {
-  const [countdown, setCountdown] = useState<string | null>(null);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle: _gameTitle }: Props) {
   const [countdownParts, setCountdownParts] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
   const [selectedZone, setSelectedZone] = useState("America/Los_Angeles");
   const [localTime, setLocalTime] = useState<string | null>(null);
@@ -74,7 +74,6 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle }: Pr
       const diff = launchUTC.getTime() - now;
 
       if (diff <= 0) {
-        setCountdown(null);
         setCountdownParts(null);
         return;
       }
@@ -85,12 +84,6 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle }: Pr
       const s = Math.floor((diff % (1000 * 60)) / 1000);
       setCountdownParts({ d, h, m, s });
 
-      const parts: string[] = [];
-      if (d > 0) parts.push(`${d}d`);
-      if (h > 0 || d > 0) parts.push(`${h}h`);
-      parts.push(`${m}m`);
-      if (d === 0) parts.push(`${s}s`);
-      setCountdown(parts.join(" "));
     }
 
     updateCountdown();
