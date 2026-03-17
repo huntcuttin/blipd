@@ -1,17 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { createClient } from "@/lib/supabase/client";
-import { getUserProfile, setConsolePreference } from "@/lib/queries";
-import type { ConsolePreference } from "@/lib/types";
+import { getUserProfile, setConsolePreference, getPopularGames, markGameOwned } from "@/lib/queries";
+import type { ConsolePreference, Game } from "@/lib/types";
+import { formatPrice } from "@/lib/format";
+import GameCoverImage from "@/components/GameCoverImage";
+import Logo from "@/components/Logo";
+
+type Step = "console" | "games" | "done";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [checking, setChecking] = useState(true);
+  const [step, setStep] = useState<Step>("console");
   const [saving, setSaving] = useState(false);
+  const [selectedConsole, setSelectedConsole] = useState<ConsolePreference | null>(null);
+
+  // Game picker state
+  const [popularGames, setPopularGames] = useState<Game[]>([]);
+  const [loadingGames, setLoadingGames] = useState(false);
+  const [selectedGameIds, setSelectedGameIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading) return;
@@ -21,9 +33,13 @@ export default function OnboardingPage() {
     }
     const supabase = createClient();
     getUserProfile(supabase, user.id)
-      .then(({ consolePreference }) => {
-        if (consolePreference) {
+      .then(({ consolePreference, onboardingCompleted }) => {
+        if (onboardingCompleted) {
           router.replace("/home");
+        } else if (consolePreference) {
+          setSelectedConsole(consolePreference);
+          setStep("games");
+          setChecking(false);
         } else {
           setChecking(false);
         }
@@ -33,16 +49,81 @@ export default function OnboardingPage() {
       });
   }, [user, authLoading, router]);
 
-  async function handleSelect(preference: ConsolePreference) {
+  // Load popular games when entering the games step
+  useEffect(() => {
+    if (step !== "games") return;
+    setLoadingGames(true);
+    const supabase = createClient();
+    getPopularGames(supabase).then((games) => {
+      setPopularGames(games);
+      setLoadingGames(false);
+    }).catch(() => setLoadingGames(false));
+  }, [step]);
+
+  async function handleConsoleSelect(preference: ConsolePreference) {
     if (!user || saving) return;
     setSaving(true);
     try {
       const supabase = createClient();
       await setConsolePreference(supabase, user.id, preference);
-      router.replace("/home");
+      setSelectedConsole(preference);
+      setStep("games");
     } catch {
+      // stay on step
+    } finally {
       setSaving(false);
     }
+  }
+
+  const toggleGame = useCallback((gameId: string) => {
+    setSelectedGameIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(gameId)) {
+        next.delete(gameId);
+      } else if (next.size < 5) {
+        next.add(gameId);
+      }
+      return next;
+    });
+  }, []);
+
+  async function handleFinish() {
+    if (!user || saving) return;
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      // Save owned games
+      const promises = Array.from(selectedGameIds).map((gameId) =>
+        markGameOwned(supabase, user.id, gameId)
+      );
+      await Promise.allSettled(promises);
+      // Mark onboarding complete
+      await supabase
+        .from("user_profiles")
+        .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+      setStep("done");
+      // Brief pause on the done screen then redirect
+      setTimeout(() => router.replace("/home"), 1500);
+    } catch {
+      // still redirect on error
+      router.replace("/home");
+    }
+  }
+
+  async function handleSkip() {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("user_profiles")
+        .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+    } catch {
+      // continue anyway
+    }
+    router.replace("/home");
   }
 
   if (authLoading || checking) {
@@ -54,15 +135,50 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] px-6">
-      <h1 className="text-2xl font-bold text-white mb-2">Welcome to blippd</h1>
+    <div className="flex flex-col items-center min-h-[80vh] px-6 pt-12 pb-24">
+      {/* Progress dots */}
+      <div className="flex items-center gap-2 mb-8">
+        <div className={`w-2 h-2 rounded-full transition-colors ${step === "console" ? "bg-[#00ff88]" : "bg-[#00ff88]/40"}`} />
+        <div className={`w-2 h-2 rounded-full transition-colors ${step === "games" ? "bg-[#00ff88]" : step === "done" ? "bg-[#00ff88]/40" : "bg-[#333333]"}`} />
+        <div className={`w-2 h-2 rounded-full transition-colors ${step === "done" ? "bg-[#00ff88]" : "bg-[#333333]"}`} />
+      </div>
+
+      {step === "console" && (
+        <ConsoleStep saving={saving} onSelect={handleConsoleSelect} />
+      )}
+
+      {step === "games" && (
+        <GamePickerStep
+          games={popularGames}
+          loading={loadingGames}
+          selectedIds={selectedGameIds}
+          onToggle={toggleGame}
+          onFinish={handleFinish}
+          onSkip={handleSkip}
+          saving={saving}
+          consoleName={selectedConsole === "switch2" ? "Switch 2" : "Switch"}
+        />
+      )}
+
+      {step === "done" && <DoneStep />}
+    </div>
+  );
+}
+
+// ── Step 1: Console selection ───────────────────────────────────
+
+function ConsoleStep({ saving, onSelect }: { saving: boolean; onSelect: (p: ConsolePreference) => void }) {
+  return (
+    <>
+      <Logo size={48} />
+      <h1 className="text-2xl font-bold text-white mt-5 mb-2">Welcome to Blippd</h1>
       <p className="text-[#666666] text-sm text-center mb-10">
         Which console do you play on?
       </p>
 
       <div className="flex flex-col gap-4 w-full max-w-[320px]">
         <button
-          onClick={() => handleSelect("switch")}
+          onClick={() => onSelect("switch")}
           disabled={saving}
           className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#00ff88]/50 transition-all active:scale-[0.98]"
         >
@@ -79,7 +195,7 @@ export default function OnboardingPage() {
         </button>
 
         <button
-          onClick={() => handleSelect("switch2")}
+          onClick={() => onSelect("switch2")}
           disabled={saving}
           className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#00ff88]/50 transition-all active:scale-[0.98]"
         >
@@ -95,6 +211,130 @@ export default function OnboardingPage() {
           </div>
         </button>
       </div>
+    </>
+  );
+}
+
+// ── Step 2: Pick games you own ──────────────────────────────────
+
+function GamePickerStep({
+  games,
+  loading,
+  selectedIds,
+  onToggle,
+  onFinish,
+  onSkip,
+  saving,
+  consoleName,
+}: {
+  games: Game[];
+  loading: boolean;
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+  onFinish: () => void;
+  onSkip: () => void;
+  saving: boolean;
+  consoleName: string;
+}) {
+  return (
+    <>
+      <h1 className="text-2xl font-bold text-white mb-2 text-center">
+        Games you own
+      </h1>
+      <p className="text-[#666666] text-sm text-center mb-1 max-w-xs">
+        Tap up to 5 {consoleName} games you already own. This helps us suggest better deals.
+      </p>
+      <p className="text-[#555555] text-xs mb-6">
+        {selectedIds.size}/5 selected
+      </p>
+
+      {loading ? (
+        <div className="grid grid-cols-3 gap-3 w-full max-w-md">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="aspect-[16/10] rounded-lg bg-[#1a1a1a]" />
+              <div className="h-3 bg-[#1a1a1a] rounded mt-2 w-3/4" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-3 w-full max-w-md overflow-y-auto max-h-[50vh] pr-1">
+          {games.map((game) => {
+            const selected = selectedIds.has(game.id);
+            return (
+              <button
+                key={game.id}
+                onClick={() => onToggle(game.id)}
+                disabled={!selected && selectedIds.size >= 5}
+                className={`text-left rounded-xl border-2 p-1.5 transition-all active:scale-[0.97] ${
+                  selected
+                    ? "border-[#00ff88] bg-[#00ff88]/5"
+                    : selectedIds.size >= 5
+                    ? "border-[#1a1a1a] opacity-40"
+                    : "border-[#1a1a1a] hover:border-[#333333]"
+                }`}
+              >
+                <div className="relative">
+                  <GameCoverImage
+                    src={game.coverArt}
+                    alt={game.title}
+                    className={`w-full aspect-[16/10] rounded-lg bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
+                  />
+                  {selected && (
+                    <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#00ff88] flex items-center justify-center">
+                      <svg className="w-3 h-3 text-[#0a0a0a]" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <p className="text-white text-[11px] font-medium mt-1.5 leading-tight line-clamp-2 px-0.5">
+                  {game.title}
+                </p>
+                {game.currentPrice > 0 && (
+                  <p className="text-[#555555] text-[10px] mt-0.5 px-0.5">
+                    {formatPrice(game.currentPrice)}
+                  </p>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="w-full max-w-md mt-6 space-y-3">
+        <button
+          onClick={onFinish}
+          disabled={saving}
+          className="w-full py-3.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844] disabled:opacity-50 active:scale-[0.98]"
+        >
+          {saving ? "Saving..." : selectedIds.size > 0 ? `Continue with ${selectedIds.size} game${selectedIds.size !== 1 ? "s" : ""}` : "Continue"}
+        </button>
+        <button
+          onClick={onSkip}
+          disabled={saving}
+          className="w-full py-3 text-[#666666] text-sm hover:text-white transition-colors"
+        >
+          Skip for now
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Step 3: Done ────────────────────────────────────────────────
+
+function DoneStep() {
+  return (
+    <div className="flex flex-col items-center justify-center flex-1 mt-12">
+      <div className="w-16 h-16 rounded-full bg-[#00ff88]/10 flex items-center justify-center mb-4 shadow-[0_0_24px_#00ff8844]">
+        <svg className="w-8 h-8 text-[#00ff88]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+        </svg>
+      </div>
+      <h1 className="text-2xl font-bold text-white mb-2">You&apos;re all set</h1>
+      <p className="text-[#666666] text-sm">Taking you to Blippd...</p>
     </div>
   );
 }

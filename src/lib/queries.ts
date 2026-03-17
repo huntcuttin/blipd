@@ -204,6 +204,21 @@ export async function getAnnouncedGames(supabase: Client): Promise<Game[]> {
   return (data ?? []).map(mapGame);
 }
 
+/** Top ~30 well-known released games for the onboarding "games you own" picker. */
+export async function getPopularGames(supabase: Client): Promise<Game[]> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("release_status", "released")
+    .eq("is_suppressed", false)
+    .gt("original_price", 0)
+    .not("metacritic_score", "is", null)
+    .order("metacritic_score", { ascending: false })
+    .limit(30);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
+}
+
 export async function getGameBySlug(supabase: Client, slug: string): Promise<Game | null> {
   const { data, error } = await supabase.from("games").select("*").eq("slug", slug).maybeSingle();
   if (error || !data) return null;
@@ -442,13 +457,16 @@ export async function remindAlert(supabase: Client, userId: string, alertId: str
 
 // ── User profile queries ──────────────────────────────────────
 
-export async function getUserProfile(supabase: Client, userId: string): Promise<{ consolePreference: ConsolePreference | null }> {
+export async function getUserProfile(supabase: Client, userId: string): Promise<{ consolePreference: ConsolePreference | null; onboardingCompleted: boolean }> {
   const { data } = await supabase
     .from("user_profiles")
-    .select("console_preference")
+    .select("console_preference, onboarding_completed")
     .eq("user_id", userId)
     .maybeSingle();
-  return { consolePreference: data?.console_preference ?? null };
+  return {
+    consolePreference: data?.console_preference ?? null,
+    onboardingCompleted: data?.onboarding_completed ?? false,
+  };
 }
 
 export async function setConsolePreference(supabase: Client, userId: string, preference: ConsolePreference) {

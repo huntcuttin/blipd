@@ -193,12 +193,14 @@ export interface Database {
         Row: {
           user_id: string;
           console_preference: "switch" | "switch2" | null;
+          onboarding_completed: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           user_id: string;
           console_preference?: "switch" | "switch2" | null;
+          onboarding_completed?: boolean;
           created_at?: string;
           updated_at?: string;
         };
