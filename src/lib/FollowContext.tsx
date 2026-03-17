@@ -141,22 +141,42 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     (gameId: string): void => {
       const supabase = createClient();
       if (ownedGameIds.has(gameId)) {
+        // Unmarking owned — if following with announcement-only prefs, restore full alerts
         setOwnedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
         if (user) {
           dbUnmarkOwned(supabase, user.id, gameId).catch(() => {
             setOwnedGameIds((prev) => new Set(prev).add(gameId));
           });
+          if (followedGameIds.has(gameId)) {
+            const prefs = gamePrefsMap.get(gameId);
+            if (prefs && !prefs.sales && !prefs.allTimeLow && !prefs.releases && prefs.announcements) {
+              // Was muted for ownership — restore full prefs
+              const fullPrefs: NotifyPrefs = { ...DEFAULT_NOTIFY_PREFS };
+              setGamePrefsMap((prev) => new Map(prev).set(gameId, fullPrefs));
+              dbUpdateGamePrefs(supabase, user.id, gameId, fullPrefs).catch((err) =>
+                console.error("Failed to restore game prefs:", err)
+              );
+            }
+          }
         }
       } else {
+        // Marking owned — mute price alerts, keep DLC announcements
         setOwnedGameIds((prev) => new Set(prev).add(gameId));
         if (user) {
           dbMarkOwned(supabase, user.id, gameId).catch(() => {
             setOwnedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
           });
+          if (followedGameIds.has(gameId)) {
+            const ownedPrefs: NotifyPrefs = { sales: false, allTimeLow: false, releases: false, announcements: true };
+            setGamePrefsMap((prev) => new Map(prev).set(gameId, ownedPrefs));
+            dbUpdateGamePrefs(supabase, user.id, gameId, ownedPrefs).catch((err) =>
+              console.error("Failed to mute game prefs:", err)
+            );
+          }
         }
       }
     },
-    [ownedGameIds, user]
+    [ownedGameIds, followedGameIds, gamePrefsMap, user]
   );
 
   const isOwningGame = useCallback(

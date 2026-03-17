@@ -380,6 +380,7 @@ function DiscoverTab({
 // ── My Games Tab ──────────────────────────────────────────────
 
 function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<string> }) {
+  const { toggleOwnGame } = useFollow();
   const watching = games.filter((g) => !ownedGameIds.has(g.id));
   const owned = games.filter((g) => ownedGameIds.has(g.id));
 
@@ -404,25 +405,46 @@ function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<
 
   return (
     <div className="space-y-4 pb-4">
+      <p className="text-[#444444] text-xs">Watching = price alerts · Library = DLC announcements only</p>
       {onSale.length > 0 && (
         <div>
           <h3 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2">ON SALE NOW</h3>
           <div className="space-y-2">
-            {onSale.map((game) => <GameCard key={game.id} game={game} />)}
+            {onSale.map((game) => (
+              <div key={game.id}>
+                <GameCard game={game} />
+                <button
+                  onClick={() => toggleOwnGame(game.id)}
+                  className="w-full text-left px-3 py-1.5 text-[11px] text-[#555555] hover:text-[#a78bfa] transition-colors"
+                >
+                  📚 I bought this → Move to Library
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
       {notOnSale.length > 0 && (
         <div>
-          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">FOLLOWING</h3>
+          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">WATCHING FOR DEALS</h3>
           <div className="space-y-2">
-            {notOnSale.map((game) => <GameCard key={game.id} game={game} />)}
+            {notOnSale.map((game) => (
+              <div key={game.id}>
+                <GameCard game={game} />
+                <button
+                  onClick={() => toggleOwnGame(game.id)}
+                  className="w-full text-left px-3 py-1.5 text-[11px] text-[#555555] hover:text-[#a78bfa] transition-colors"
+                >
+                  📚 I bought this → Move to Library
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
       {owned.length > 0 && (
         <div>
-          <h3 className="text-[10px] font-bold text-[#555555] tracking-wider mb-2">OWNED</h3>
+          <h3 className="text-[10px] font-bold text-[#7c3aed]/60 tracking-wider mb-2">MY LIBRARY</h3>
           <div className="space-y-2">
             {owned.map((game) => <GameCard key={game.id} game={game} />)}
           </div>

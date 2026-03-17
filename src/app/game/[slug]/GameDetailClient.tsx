@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import FollowButton from "@/components/FollowButton";
 import AlertCard from "@/components/AlertCard";
@@ -14,6 +15,7 @@ import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailClient({ slug }: { slug: string }) {
   const { isFollowingFranchise, isFollowingGame, isOwningGame, toggleOwnGame, getGamePrefs, updateGamePrefs } = useFollow();
+  const [justAdded, setJustAdded] = useState(false);
 
   const { data: game, loading: gameLoading, error: gameError } = useSupabaseQuery(
     (sb) => getGameBySlug(sb, slug),
@@ -55,6 +57,15 @@ export default function GameDetailClient({ slug }: { slug: string }) {
       </div>
     );
   }
+
+  const handleLibraryToggle = () => {
+    const wasOwned = isOwningGame(game!.id);
+    toggleOwnGame(game!.id);
+    if (!wasOwned) {
+      setJustAdded(true);
+      setTimeout(() => setJustAdded(false), 700);
+    }
+  };
 
   const followingFranchise = franchise ? isFollowingFranchise(franchise.id) : false;
   const placeholderDate = isPlaceholderDate(game.releaseDate);
@@ -213,15 +224,17 @@ export default function GameDetailClient({ slug }: { slug: string }) {
               <FollowButton gameId={game.id} size="large" />
             </div>
             <button
-              onClick={() => toggleOwnGame(game.id)}
+              onClick={handleLibraryToggle}
               aria-pressed={isOwningGame(game.id)}
-              className={`shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-                isOwningGame(game.id)
-                  ? "bg-[#ffffff]/10 border-[#ffffff]/20 text-white"
+              className={`shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all duration-300 ${
+                justAdded
+                  ? "scale-110 bg-[#003322] border-[#00ff88]/60 text-[#00ff88]"
+                  : isOwningGame(game.id)
+                  ? "bg-[#1a0f3a] border-[#7c3aed]/40 text-[#a78bfa]"
                   : "bg-[#111111] border-[#222222] text-[#666666] hover:border-[#444444] hover:text-white"
               }`}
             >
-              {isOwningGame(game.id) ? "✓ Owned" : "Own this"}
+              {justAdded ? "🎮 Added!" : isOwningGame(game.id) ? "✓ In Library" : "Add to Library"}
             </button>
           </div>
         </div>
