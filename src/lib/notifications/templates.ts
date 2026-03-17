@@ -193,6 +193,25 @@ export function announced(payload: AlertPayload): { subject: string; html: strin
   };
 }
 
+export function namedSaleEvent(
+  eventName: string,
+  totalGames: number,
+  saleEndDate: string | null
+): { subject: string; html: string } {
+  const endStr = saleEndDate ? ` · Ends ${formatShortDate(saleEndDate)}` : "";
+  return {
+    subject: `🔔 ${eventName} — ${totalGames} games on sale now`,
+    html: layout(`
+  <div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:20px;">
+    <div style="display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:rgba(255,170,0,0.15);color:#ffaa00;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">SALE EVENT</div>
+    <h1 style="font-size:18px;font-weight:700;margin:12px 0 4px;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${eventName} is live</h1>
+    <p style="font-size:14px;color:#999999;margin:0 0 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${totalGames} games on sale now, including ones you're watching${endStr}</p>
+    <a href="${APP_URL}/sales" style="display:inline-block;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #00ff88;color:#00ff88;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">See all deals →</a>
+  </div>`,
+    `${eventName} is live — ${totalGames} games on sale on Nintendo eShop${endStr}`),
+  };
+}
+
 export function getTemplate(alertType: string): ((payload: AlertPayload) => { subject: string; html: string }) | null {
   switch (alertType) {
     case "price_drop": return priceDrop;

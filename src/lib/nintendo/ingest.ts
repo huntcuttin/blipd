@@ -459,7 +459,7 @@ export async function runPriceUpdate(options?: {
   // Get games that need price checking, ordered by stalest first
   const { data: games, error } = await supabase
     .from("games")
-    .select("id, title, nsuid, current_price, original_price, is_on_sale, price_history")
+    .select("id, title, nsuid, current_price, original_price, is_on_sale, price_history, publisher")
     .not("nsuid", "is", null)
     .order("last_price_check", { ascending: true, nullsFirst: true })
     .limit(100);
@@ -560,6 +560,7 @@ export async function runPriceUpdate(options?: {
   );
 
   // Generate alerts for games that updated successfully and had price changes
+  const newSaleGames: Array<{ id: string; title: string; publisher: string | null }> = [];
   const gameIds: string[] = [];
   for (let i = 0; i < pendingUpdates.length; i++) {
     if (!updateResults[i]) continue;
@@ -583,6 +584,7 @@ export async function runPriceUpdate(options?: {
             if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers, isOnSale ? endDate : null)) alertsCreated++;
           } else if (isNewSale) {
             if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, endDate, followers)) alertsCreated++;
+            newSaleGames.push({ id: game.id, title: game.title, publisher: (game as typeof game & { publisher?: string }).publisher ?? null });
           }
           if (allTimeLow) {
             if (await generateAllTimeLowAlert(supabase, ref, newPrice, followers)) alertsCreated++;
@@ -627,8 +629,122 @@ export async function runPriceUpdate(options?: {
     }
   }
 
+  // Named sale event detection — if 5+ games just went on sale, fire a Tier 1 blast
+  if (shouldAlert && newSaleGames.length >= 5) {
+    await detectAndFireNamedSaleEvent(supabase, newSaleGames).catch((e) =>
+      console.error("Named sale event detection failed:", e)
+    );
+  }
+
   console.log(`Price update complete: ${games.length} checked, ${priceChanges} changes, ${alertsCreated} alerts`);
   return { checked: games.length, priceChanges, alertsCreated };
+}
+
+function detectSaleName(publishers: (string | null)[]): string {
+  const counts = new Map<string, number>();
+  for (const raw of publishers) {
+    if (!raw) continue;
+    const lower = raw.toLowerCase();
+    let key = raw;
+    if (lower.includes("square enix")) key = "Square Enix";
+    else if (lower.includes("nintendo")) key = "Nintendo";
+    else if (lower.includes("capcom")) key = "Capcom";
+    else if (lower.includes("sega")) key = "SEGA";
+    else if (lower.includes("konami")) key = "Konami";
+    else if (lower.includes("bandai")) key = "Bandai Namco";
+    else if (lower.includes("ubisoft")) key = "Ubisoft";
+    else if (lower === "ea" || lower.startsWith("ea ")) key = "EA";
+    else if (lower.includes("devolver")) key = "Devolver Digital";
+    else if (lower.includes("505")) key = "505 Games";
+    else if (lower.includes("team17")) key = "Team17";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  let dominant: string | null = null;
+  let maxCount = 0;
+  Array.from(counts.entries()).forEach(([pub, count]) => {
+    if (count > maxCount) { maxCount = count; dominant = pub; }
+  });
+  if (dominant && maxCount >= publishers.filter(Boolean).length * 0.5) {
+    return `${dominant} Sale`;
+  }
+  return "Nintendo eShop Sale";
+}
+
+async function detectAndFireNamedSaleEvent(
+  supabase: ReturnType<typeof createAdminClient>,
+  newSaleGames: Array<{ id: string; title: string; publisher: string | null }>
+): Promise<void> {
+  // Avoid duplicate events — check if one was created in the last 2 hours
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const { data: recentEvents } = await supabase
+    .from("named_sale_events")
+    .select("id")
+    .eq("active", true)
+    .gte("detected_at", twoHoursAgo)
+    .limit(1);
+
+  if (recentEvents && recentEvents.length > 0) {
+    console.log("  Named sale event: recent event exists, skipping");
+    return;
+  }
+
+  // Get all currently on-sale games to determine full scope and publisher
+  const { data: allSaleGames } = await supabase
+    .from("games")
+    .select("id, publisher, sale_end_date")
+    .eq("is_on_sale", true)
+    .eq("is_suppressed", false);
+
+  const totalGames = allSaleGames?.length ?? newSaleGames.length;
+  if (totalGames < 5) return;
+
+  const publishers = (allSaleGames ?? newSaleGames).map((g) => g.publisher ?? null);
+  const saleName = detectSaleName(publishers);
+
+  // Pick the most common sale_end_date
+  const endDateCounts = new Map<string, number>();
+  for (const g of allSaleGames ?? []) {
+    if (g.sale_end_date) endDateCounts.set(g.sale_end_date, (endDateCounts.get(g.sale_end_date) ?? 0) + 1);
+  }
+  const saleEndDate = endDateCounts.size > 0
+    ? Array.from(endDateCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
+    : null;
+
+  // Create the named sale event
+  const { data: event, error: eventError } = await supabase
+    .from("named_sale_events")
+    .insert({ name: saleName, detected_at: new Date().toISOString(), active: true, games_count: totalGames })
+    .select("id")
+    .single();
+
+  if (!event || eventError) {
+    console.error("  Failed to create named_sale_event:", eventError?.message);
+    return;
+  }
+
+  console.log(`  Named sale event: "${saleName}" (${totalGames} games on sale, event ${event.id})`);
+
+  // Collect all unique followers of any on-sale game with notify_sales on
+  const gameIds = (allSaleGames ?? newSaleGames).map((g) => g.id);
+  const uniqueUserIds = new Set<string>();
+  for (let i = 0; i < gameIds.length; i += 200) {
+    const batch = gameIds.slice(i, i + 200);
+    const { data: follows } = await supabase
+      .from("user_game_follows")
+      .select("user_id")
+      .in("game_id", batch)
+      .eq("notify_sales", true);
+    for (const f of (follows ?? [])) uniqueUserIds.add(f.user_id);
+  }
+
+  if (uniqueUserIds.size === 0) {
+    console.log("  Named sale event: no followers to notify");
+    return;
+  }
+
+  console.log(`  Sending named sale Tier 1 blast to ${uniqueUserIds.size} users`);
+  const { sendNamedSaleEventEmail } = await import("@/lib/notifications/send-batch");
+  await sendNamedSaleEventEmail(Array.from(uniqueUserIds), saleName, totalGames, saleEndDate);
 }
 
 export async function runReleaseStatusUpdate(): Promise<number> {
@@ -674,6 +790,23 @@ export async function runReleaseStatusUpdate(): Promise<number> {
         .eq("id", game.id);
       updated++;
     }
+  }
+
+  // Games with a real price but stuck on placeholder date — definitely released
+  const { data: pricedUpcoming } = await supabase
+    .from("games")
+    .select("id")
+    .in("release_status", ["upcoming", "out_today"])
+    .eq("release_date", "2099-12-31")
+    .gt("current_price", 0);
+
+  if (pricedUpcoming && pricedUpcoming.length > 0) {
+    const ids = pricedUpcoming.map((g) => g.id);
+    await supabase
+      .from("games")
+      .update({ release_status: "released", updated_at: new Date().toISOString() })
+      .in("id", ids);
+    updated += ids.length;
   }
 
   if (updated > 0) {

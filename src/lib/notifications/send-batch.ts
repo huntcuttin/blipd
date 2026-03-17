@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { batchedAlerts } from "./batch-template";
+import { namedSaleEvent } from "./templates";
 import type { BatchAlertGame } from "./batch-template";
 
 const FROM_ADDRESS = "Blippd <alerts@blippd.app>";
@@ -67,4 +68,41 @@ export async function sendBatchedDigest(
 
     return false;
   }
+}
+
+/**
+ * Sends a named sale event Tier 1 blast — one email per user about the sale event.
+ * Does not require an alert_id. Dedup is handled by named_sale_events.detected_at.
+ */
+export async function sendNamedSaleEventEmail(
+  userIds: string[],
+  eventName: string,
+  totalGames: number,
+  saleEndDate: string | null
+): Promise<number> {
+  const supabase = createAdminClient();
+  const { subject, html } = namedSaleEvent(eventName, totalGames, saleEndDate);
+  let sent = 0;
+
+  for (let i = 0; i < userIds.length; i += 3) {
+    const batch = userIds.slice(i, i + 3);
+    await Promise.all(
+      batch.map(async (userId) => {
+        const { data: userData } = await supabase.auth.admin.getUserById(userId);
+        const email = userData?.user?.email;
+        if (!email) return;
+        try {
+          const resend = getResend();
+          await resend.emails.send({ from: FROM_ADDRESS, to: email, subject, html });
+          sent++;
+        } catch (e) {
+          console.error(`Failed to send named sale email to ${email}:`, e instanceof Error ? e.message : e);
+        }
+      })
+    );
+    if (i + 3 < userIds.length) await new Promise((r) => setTimeout(r, 1100));
+  }
+
+  console.log(`  Named sale event email: ${sent}/${userIds.length} sent`);
+  return sent;
 }
