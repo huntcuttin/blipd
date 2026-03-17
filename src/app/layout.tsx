@@ -6,6 +6,7 @@ import ProfileButton from "@/components/ProfileButton";
 import { AuthProvider } from "@/lib/AuthContext";
 import { FollowProvider } from "@/lib/FollowContext";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -59,6 +60,7 @@ export default function RootLayout({
             <ServiceWorkerRegistration />
           </FollowProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );

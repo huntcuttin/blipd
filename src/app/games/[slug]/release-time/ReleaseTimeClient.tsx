@@ -45,8 +45,8 @@ function detectUserTimezone(): string {
   }
 }
 
-export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle }: Props) {
-  const [countdown, setCountdown] = useState<string | null>(null);
+export default function ReleaseTimeClient({ releaseDate, gameId }: Props) {
+  const [, setCountdown] = useState<string | null>(null);
   const [countdownParts, setCountdownParts] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
   const [selectedZone, setSelectedZone] = useState("America/Los_Angeles");
   const [localTime, setLocalTime] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle }: Pr
   useEffect(() => {
     if (!mounted) return;
     setLocalTime(formatInTimezone(launchUTC, selectedZone));
-  }, [selectedZone, mounted, releaseDate]);
+  }, [selectedZone, mounted, releaseDate, launchUTC]);
 
   // Countdown tick
   useEffect(() => {
@@ -96,7 +96,7 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle }: Pr
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [releaseDate]);
+  }, [releaseDate, launchUTC]);
 
   return (
     <div className="mt-4 space-y-4">
