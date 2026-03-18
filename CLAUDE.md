@@ -209,23 +209,23 @@ GET https://api.isthereanydeal.com/games/history/v2
 **High-impact features:**
 - [x] Landing page at `/` — live stats, CTAs, trust signals (2026-03-17)
 - [x] "Set my target price" on game detail — `target_price` column on `user_game_follows`, progress bar, edit/remove (2026-03-17)
-- [ ] Price history chart on game detail — use `price_history` jsonb already on games table + ITAD API for pre-launch history. #1 feature users cite for deciding "is this deal actually good?"
+- [x] Price history chart on game detail — bar chart from `price_history` jsonb, shows when 3+ data points (2026-03-17)
 - [x] Share a deal card — Web Share API + clipboard fallback on game detail (2026-03-17)
 
 **Retention / stickiness:**
-- [ ] "My Savings" counter on profile — total $ saved across owned games that were followed before buying on sale
-- [ ] Target price progress indicator — "You want this at $14.99 — currently $19.99 (66% there)" on game card
-- [ ] "Last price drop" on game detail — "This game was last on sale 47 days ago" from alert history
+- [x] "My Savings" counter on profile — always visible, contextual message when $0 (2026-03-17)
+- [x] Target price progress indicator — progress bar + "Target $X" on game card, "HIT TARGET!" when reached (2026-03-17)
+- [x] "Last price drop" on game detail — shows days since last sale/price drop alert (2026-03-17)
 - [x] "X people watching" on game detail — follower count per game (2026-03-17)
 
 **SEO / organic growth:**
-- [ ] `/deals` public page — unauthenticated, SSR, structured data. Ranks for "nintendo switch deals today"
-- [ ] Product schema.org markup on `/game/[slug]` — `offers.price` so Google shows price in search results
+- [x] `/deals` public page — SSR with ISR, schema.org ItemList, stats, ATL section, CTA (2026-03-17)
+- [x] Product schema.org markup on `/game/[slug]` — JSON-LD with offers.price (2026-03-17)
 
 **Quick wins:**
 - [x] Haptic feedback on follow/unfollow — `navigator.vibrate(10)` on tap (2026-03-17)
-- [ ] Pull-to-refresh on main pages
-- [ ] Better empty states — guide new users with 0 follows to discover and follow games
+- [x] Pull-to-refresh on all pages — global PullToRefresh component in layout (2026-03-17)
+- [x] Better empty states — Watchlist tab has "Discover games" CTA (2026-03-17)
 
 ### V2
 
@@ -317,6 +317,7 @@ What they do well (don't underestimate):
 | `/alerts` | Done | User's notification feed |
 | `/profile` | Done | Stats, owned games, watchlist, franchises, savings |
 | `/settings` | Done | Account (auth provider badge), console switcher, notification toggles, push enable |
+| `/deals` | Done | Public SSR deals page with structured data |
 | `/vs/nt-deals` | Done | SEO comparison table |
 | `/privacy` | Done | Privacy policy |
 | `/terms` | Done | Terms of service |

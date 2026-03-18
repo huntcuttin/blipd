@@ -6,6 +6,7 @@ import ProfileButton from "@/components/ProfileButton";
 import { AuthProvider } from "@/lib/AuthContext";
 import { FollowProvider } from "@/lib/FollowContext";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import PullToRefresh from "@/components/PullToRefresh";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -64,7 +65,9 @@ export default function RootLayout({
         <AuthProvider>
           <FollowProvider>
             <div className="max-w-[430px] mx-auto min-h-screen">
-              <main style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>{children}</main>
+              <PullToRefresh>
+                <main style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>{children}</main>
+              </PullToRefresh>
             </div>
             <ProfileButton />
             <BottomNav />

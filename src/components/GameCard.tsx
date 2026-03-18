@@ -5,10 +5,13 @@ import Link from "next/link";
 import type { Game } from "@/lib/types";
 import { formatPrice, isPlaceholderDate, formatReleaseDate, isYearOnlyDate } from "@/lib/format";
 import { isRarelyOnSale } from "@/lib/ranking";
+import { useFollow } from "@/lib/FollowContext";
 import FollowButton from "./FollowButton";
 import GameCoverImage from "./GameCoverImage";
 
 export default memo(function GameCard({ game }: { game: Game }) {
+  const { getTargetPrice } = useFollow();
+  const targetPrice = getTargetPrice(game.id);
   const daysUntilRelease = getDaysUntil(game.releaseDate);
   const releaseLabel = getReleaseLabel(game, daysUntilRelease);
   const saleEndLabel = game.isOnSale && game.saleEndDate ? getSaleEndLabel(game.saleEndDate) : null;
@@ -103,6 +106,28 @@ export default memo(function GameCard({ game }: { game: Game }) {
               <span className="text-[#00aaff] text-[10px] font-medium">{releaseLabel}</span>
             )}
           </div>
+
+          {/* Target price progress */}
+          {targetPrice !== null && game.currentPrice > targetPrice && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex-1 h-1 rounded-full bg-[#222222] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[#00ff88]/40"
+                  style={{ width: `${Math.min(100, Math.round((1 - (game.currentPrice - targetPrice) / (game.originalPrice - targetPrice)) * 100))}%` }}
+                />
+              </div>
+              <span className="text-[9px] text-[#555555] font-mono shrink-0">
+                Target {formatPrice(targetPrice)}
+              </span>
+            </div>
+          )}
+          {targetPrice !== null && game.currentPrice <= targetPrice && (
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-[9px] text-[#00ff88] font-bold">
+                HIT TARGET {formatPrice(targetPrice)}!
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Follow button */}
