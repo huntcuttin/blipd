@@ -8,9 +8,8 @@ function gameLink(payload: AlertPayload): string {
 }
 
 function eshopLink(payload: AlertPayload): string {
-  if (payload.nsuid) {
-    return `https://www.nintendo.com/us/store/products/${payload.nsuid}`;
-  }
+  if (payload.nintendoUrl) return payload.nintendoUrl;
+  if (payload.nsuid) return `https://www.nintendo.com/us/store/products/${payload.nsuid}`;
   return "https://www.nintendo.com/us/store/";
 }
 

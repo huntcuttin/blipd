@@ -15,4 +15,5 @@ export interface AlertPayload {
   discount?: number;
   saleEndDate?: string | null;
   nsuid?: string | null;
+  nintendoUrl?: string | null;
 }

@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     // Fetch game data for all followed games that are on sale
     const { data: gamesOnSale } = await supabase
       .from("games")
-      .select("id, title, slug, current_price, original_price, discount, is_all_time_low, nsuid")
+      .select("id, title, slug, current_price, original_price, discount, is_all_time_low, nsuid, nintendo_url")
       .in("id", allGameIds)
       .eq("is_on_sale", true)
       .eq("is_suppressed", false);
@@ -97,6 +97,7 @@ export async function GET(request: Request) {
               discount: g.discount ?? 0,
               isAllTimeLow: g.is_all_time_low ?? false,
               nsuid: g.nsuid,
+              nintendoUrl: g.nintendo_url ?? null,
             }))
             .sort((a, b) => b.discount - a.discount); // Highest discount first
 

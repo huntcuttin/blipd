@@ -10,6 +10,7 @@ interface DigestGame {
   discount: number;
   isAllTimeLow: boolean;
   nsuid: string | null;
+  nintendoUrl: string | null;
 }
 
 interface DigestData {
@@ -20,9 +21,8 @@ interface DigestData {
 
 function gameRow(game: DigestGame): string {
   const link = `${APP_URL}/game/${game.slug}`;
-  const eshopLink = game.nsuid
-    ? `https://www.nintendo.com/us/store/products/${game.nsuid}`
-    : "https://www.nintendo.com/us/store/";
+  const eshopLink = game.nintendoUrl
+    || (game.nsuid ? `https://www.nintendo.com/us/store/products/${game.nsuid}` : "https://www.nintendo.com/us/store/");
   const atlBadge = game.isAllTimeLow
     ? ' <span style="color:#FFD700;font-size:10px;font-weight:700;">ALL TIME LOW</span>'
     : "";

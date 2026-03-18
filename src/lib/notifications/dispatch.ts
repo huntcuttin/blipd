@@ -19,6 +19,7 @@ interface AlertGame {
   title: string;
   cover_art: string | null;
   nsuid: string | null;
+  nintendo_url: string | null;
   franchise: string | null;
 }
 
@@ -64,7 +65,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   // Get alerts created since the given timestamp
   const { data: alerts, error } = await supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, franchise )")
+    .select("id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, nintendo_url, franchise )")
     .gte("created_at", since)
     .order("created_at", { ascending: true });
 
@@ -182,6 +183,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       headline: alert.headline,
       subtext: alert.subtext,
       nsuid: game.nsuid ?? null,
+      nintendoUrl: game.nintendo_url ?? null,
     };
 
     if (alert.new_price != null) {

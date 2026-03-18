@@ -272,9 +272,8 @@ export default function GameDetailClient({ slug }: { slug: string }) {
         {/* eShop link + Share */}
         <div className="flex gap-2 py-3">
           <a
-            href={game.nsuid
-              ? `https://www.nintendo.com/us/store/products/${game.nsuid}`
-              : "https://www.nintendo.com/us/store/"
+            href={game.nintendoUrl
+              || (game.nsuid ? `https://www.nintendo.com/us/store/products/${game.nsuid}` : "https://www.nintendo.com/us/store/")
             }
             target="_blank"
             rel="noopener noreferrer"
