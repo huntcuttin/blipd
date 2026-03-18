@@ -275,7 +275,7 @@ function DiscoverTab({
   // New releases: dedicated recent-releases query sorted by trending score
   // Uses getRecentReleases (last 30 days, all games) so no-metacritic indie games show up
   const newReleases = useMemo(() => {
-    return recentReleases
+    return deduplicateGames(recentReleases)
       .filter((g) => !!g.coverArt && g.originalPrice > 0)
       .sort((a, b) => computeTrendingScore(b, { followedFranchises }) - computeTrendingScore(a, { followedFranchises }))
       .slice(0, 10);
