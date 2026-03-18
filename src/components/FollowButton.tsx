@@ -25,6 +25,7 @@ export default function FollowButton({
       return;
     }
     toggleFollowGame(gameId);
+    if (navigator.vibrate) navigator.vibrate(10);
   };
 
   const isLarge = size === "large";

@@ -14,6 +14,7 @@ import {
   unfollowFranchise as dbUnfollowFranchise,
   updateGameFollowPrefs as dbUpdateGamePrefs,
   updateFranchiseFollowPrefs as dbUpdateFranchisePrefs,
+  setTargetPrice as dbSetTargetPrice,
   getUserGameOwns,
   markGameOwned as dbMarkOwned,
   unmarkGameOwned as dbUnmarkOwned,
@@ -33,6 +34,8 @@ interface FollowContextType {
   getFranchisePrefs: (franchiseId: string) => NotifyPrefs;
   updateGamePrefs: (gameId: string, prefs: Partial<NotifyPrefs>) => void;
   updateFranchisePrefs: (franchiseId: string, prefs: Partial<NotifyPrefs>) => void;
+  getTargetPrice: (gameId: string) => number | null;
+  setTargetPrice: (gameId: string, price: number | null) => void;
   loading: boolean;
 }
 
@@ -44,6 +47,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
   const [followedFranchiseIds, setFollowedFranchiseIds] = useState<Set<string>>(new Set());
   const [ownedGameIds, setOwnedGameIds] = useState<Set<string>>(new Set());
   const [gamePrefsMap, setGamePrefsMap] = useState<Map<string, NotifyPrefs>>(new Map());
+  const [targetPriceMap, setTargetPriceMap] = useState<Map<string, number | null>>(new Map());
   const [franchisePrefsMap, setFranchisePrefsMap] = useState<Map<string, NotifyPrefs>>(new Map());
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +58,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       setOwnedGameIds(new Set());
       setGamePrefsMap(new Map());
       setFranchisePrefsMap(new Map());
+      setTargetPriceMap(new Map());
       return;
     }
 
@@ -67,8 +72,13 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       .then(([gameFollows, franchiseFollows, ownedIds]) => {
         setFollowedGameIds(new Set(gameFollows.map((f) => f.gameId)));
         const gPrefs = new Map<string, NotifyPrefs>();
-        for (const f of gameFollows) gPrefs.set(f.gameId, f.prefs);
+        const tPrices = new Map<string, number | null>();
+        for (const f of gameFollows) {
+          gPrefs.set(f.gameId, f.prefs);
+          tPrices.set(f.gameId, f.targetPrice);
+        }
         setGamePrefsMap(gPrefs);
+        setTargetPriceMap(tPrices);
 
         setFollowedFranchiseIds(new Set(franchiseFollows.map((f) => f.franchiseId)));
         const fPrefs = new Map<string, NotifyPrefs>();
@@ -222,6 +232,24 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     [user]
   );
 
+  const getTargetPrice = useCallback(
+    (gameId: string) => targetPriceMap.get(gameId) ?? null,
+    [targetPriceMap]
+  );
+
+  const setTargetPrice = useCallback(
+    (gameId: string, price: number | null) => {
+      setTargetPriceMap((prev) => new Map(prev).set(gameId, price));
+      if (user) {
+        const supabase = createClient();
+        dbSetTargetPrice(supabase, user.id, gameId, price).catch((err) =>
+          console.error("Failed to set target price:", err)
+        );
+      }
+    },
+    [user]
+  );
+
   const updateFranchisePrefs = useCallback(
     (franchiseId: string, prefs: Partial<NotifyPrefs>) => {
       setFranchisePrefsMap((prev) => {
@@ -254,13 +282,16 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     getFranchisePrefs,
     updateGamePrefs,
     updateFranchisePrefs,
+    getTargetPrice,
+    setTargetPrice,
     loading,
   }), [
     followedGameIds, followedFranchiseIds, ownedGameIds,
     toggleFollowGame, toggleFollowFranchise, toggleOwnGame,
     isFollowingGame, isFollowingFranchise, isOwningGame,
     getGamePrefs, getFranchisePrefs,
-    updateGamePrefs, updateFranchisePrefs, loading,
+    updateGamePrefs, updateFranchisePrefs,
+    getTargetPrice, setTargetPrice, loading,
   ]);
 
   return (

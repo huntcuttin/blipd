@@ -311,6 +311,15 @@ export async function searchGames(
   }
 }
 
+export async function getGameFollowerCount(supabase: Client, gameId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("user_game_follows")
+    .select("id", { count: "exact", head: true })
+    .eq("game_id", gameId);
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export async function getGamesByFranchise(supabase: Client, franchiseName: string): Promise<Game[]> {
   const { data, error } = await supabase.from("games").select("*").eq("franchise", franchiseName);
   if (error) throw error;
@@ -481,18 +490,20 @@ export async function setConsolePreference(supabase: Client, userId: string, pre
 export interface GameFollowRecord {
   gameId: string;
   prefs: NotifyPrefs;
+  targetPrice: number | null;
 }
 
 export async function getUserGameFollows(supabase: Client, userId: string): Promise<GameFollowRecord[]> {
   const { data, error } = await supabase
     .from("user_game_follows")
-    .select("game_id, notify_announcements, notify_sales, notify_all_time_low, notify_releases")
+    .select("game_id, notify_announcements, notify_sales, notify_all_time_low, notify_releases, target_price")
     .eq("user_id", userId);
   if (error) throw error;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (data ?? []).map((r: any) => ({
     gameId: r.game_id,
     prefs: mapNotifyPrefs(r),
+    targetPrice: r.target_price != null ? Number(r.target_price) : null,
   }));
 }
 
@@ -542,6 +553,15 @@ export async function updateGameFollowPrefs(supabase: Client, userId: string, ga
   if (prefs.allTimeLow !== undefined) update.notify_all_time_low = prefs.allTimeLow;
   if (prefs.releases !== undefined) update.notify_releases = prefs.releases;
   const { error } = await supabase.from("user_game_follows").update(update).eq("user_id", userId).eq("game_id", gameId);
+  if (error) throw error;
+}
+
+export async function setTargetPrice(supabase: Client, userId: string, gameId: string, targetPrice: number | null) {
+  const { error } = await supabase
+    .from("user_game_follows")
+    .update({ target_price: targetPrice })
+    .eq("user_id", userId)
+    .eq("game_id", gameId);
   if (error) throw error;
 }
 

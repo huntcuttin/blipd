@@ -204,6 +204,29 @@ GET https://api.isthereanydeal.com/games/history/v2
 - [x] Critic rating scores on game cards (IGDB aggregated_rating)
 - [x] Weekly digest re-engagement email (cron job 7358907, Sunday)
 
+### Pre-Launch Polish (Current Focus)
+
+**High-impact features:**
+- [ ] Landing page at `/` — new visitors currently see empty app. Show game count, sale count, sign-up CTA. Convert cold traffic.
+- [ ] "Set my target price" on game detail — `target_price` column on `user_game_follows`. Alert fires when price hits it. NT Deals charges $5/mo for this. We give it free.
+- [ ] Price history chart on game detail — use `price_history` jsonb already on games table + ITAD API for pre-launch history. #1 feature users cite for deciding "is this deal actually good?"
+- [ ] Share a deal card — share button on game detail when on sale. Copy link + clean OG preview. Free word-of-mouth.
+
+**Retention / stickiness:**
+- [ ] "My Savings" counter on profile — total $ saved across owned games that were followed before buying on sale
+- [ ] Target price progress indicator — "You want this at $14.99 — currently $19.99 (66% there)" on game card
+- [ ] "Last price drop" on game detail — "This game was last on sale 47 days ago" from alert history
+- [ ] "X people watching" on game detail — follower count per game. Social proof nudges follows.
+
+**SEO / organic growth:**
+- [ ] `/deals` public page — unauthenticated, SSR, structured data. Ranks for "nintendo switch deals today"
+- [ ] Product schema.org markup on `/game/[slug]` — `offers.price` so Google shows price in search results
+
+**Quick wins:**
+- [ ] Haptic feedback on follow/unfollow — `navigator.vibrate(10)` on tap
+- [ ] Pull-to-refresh on main pages
+- [ ] Better empty states — guide new users with 0 follows to discover and follow games
+
 ### V2
 
 - Expo iOS app
@@ -220,7 +243,6 @@ GET https://api.isthereanydeal.com/games/history/v2
 - Publisher/developer following (e.g. follow Devolver Digital)
 - Franchise following (e.g. follow "Zelda", "Mario")
 - Platform expansion (PlayStation, Xbox, Steam) — ~2 days schema work
-- "My Savings" counter (running total saved per user)
 
 ## SEO Strategy
 
@@ -240,26 +262,7 @@ Competitor comparison page: `/vs/nt-deals` — honest comparison table, surfaces
 
 ## Marketing Strategy
 
-### Reddit Launch Plan
-
-Origin story hook:
-> "On December 22, 2025, Cyberpunk 2077 was accidentally 75% off on Switch 2 eShop for a few hours (CDPR swapped discount percentages with The Witcher 3). Most people missed it. I built Blippd so you never miss that again."
-
-Timing: Post when the next major Nintendo sale drops. Use origin story as hook, tie to the live sale as immediate reason to sign up.
-
-Subreddits: r/NintendoSwitch, r/patientgamers, r/NintendoSwitchDeals
-
-Rules:
-- Build ~25+ karma first by participating genuinely
-- Frame as story, not ad
-- Reply to every comment personally in first 2 hours
-- One great post at the right moment beats ongoing presence
-
-Priority order (don't deviate until 1,000 users):
-1. Working product with confirmed alerts
-2. One Reddit post at right moment
-3. Passive SEO from game detail pages
-4. Skip Twitter/X, TikTok, ProductHunt until 1k users
+Deferred until the app is ready. Focus on product quality first.
 
 ## Competitive Context
 
@@ -294,17 +297,11 @@ What they do well (don't underestimate):
 
 ## Future Ideas Backlog (Don't Build Yet)
 
-These are captured for later evaluation. None are in active scope.
-
 - Gift card arbitrage alerts
-- "My Savings" counter
 - Rarity scoring
 - Discord bot
-- Publisher/developer following
 - "The deal you missed" onboarding
-- Shareable deal card
 - Budget mode
-- "Rarely goes on sale" badge
 - Multi-region support
 - SMS notifications
 

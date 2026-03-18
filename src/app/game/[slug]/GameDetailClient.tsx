@@ -5,17 +5,19 @@ import Link from "next/link";
 import FollowButton from "@/components/FollowButton";
 import AlertCard from "@/components/AlertCard";
 import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
+import TargetPriceInput from "@/components/TargetPriceInput";
 import QueryError from "@/components/QueryError";
 import GameCoverImage from "@/components/GameCoverImage";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getGameBySlug, getAlertsForGame, getFranchiseByName } from "@/lib/queries";
+import { getGameBySlug, getAlertsForGame, getFranchiseByName, getGameFollowerCount } from "@/lib/queries";
 import { formatPrice, formatShortDate, formatLongDate, isPlaceholderDate, isYearOnlyDate } from "@/lib/format";
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailClient({ slug }: { slug: string }) {
   const { isFollowingFranchise, isFollowingGame, isOwningGame, toggleOwnGame, getGamePrefs, updateGamePrefs } = useFollow();
   const [justAdded, setJustAdded] = useState(false);
+  const [showCopied, setShowCopied] = useState(false);
 
   const { data: game, loading: gameLoading, error: gameError } = useSupabaseQuery(
     (sb) => getGameBySlug(sb, slug),
@@ -30,6 +32,11 @@ export default function GameDetailClient({ slug }: { slug: string }) {
   const { data: franchise } = useSupabaseQuery(
     (sb) => (game?.franchise ? getFranchiseByName(sb, game.franchise) : Promise.resolve(null)),
     [game?.franchise]
+  );
+
+  const { data: followerCount } = useSupabaseQuery(
+    (sb) => (game ? getGameFollowerCount(sb, game.id) : Promise.resolve(0)),
+    [game?.id]
   );
 
   if (gameLoading) {
@@ -115,6 +122,11 @@ export default function GameDetailClient({ slug }: { slug: string }) {
           </h1>
           <div className="flex items-center gap-2 mt-1">
             {game.publisher && <span className="text-[#888888] text-sm">{game.publisher}</span>}
+            {(followerCount ?? 0) > 0 && (
+              <span className="text-[#555555] text-xs">
+                {followerCount} watching
+              </span>
+            )}
             {game.metacriticScore !== null && (
               <span
                 aria-label={`Critic rating: ${game.metacriticScore}`}
@@ -250,8 +262,15 @@ export default function GameDetailClient({ slug }: { slug: string }) {
           </div>
         )}
 
-        {/* eShop link */}
-        <div className="py-3">
+        {/* Target price */}
+        <TargetPriceInput
+          gameId={game.id}
+          currentPrice={game.currentPrice}
+          originalPrice={game.originalPrice}
+        />
+
+        {/* eShop link + Share */}
+        <div className="flex gap-2 py-3">
           <a
             href={game.nsuid
               ? `https://www.nintendo.com/us/store/products/${game.nsuid}`
@@ -259,13 +278,34 @@ export default function GameDetailClient({ slug }: { slug: string }) {
             }
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#111111] border border-[#222222] text-[#999999] text-sm font-medium hover:border-[#333333] transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#111111] border border-[#222222] text-[#999999] text-sm font-medium hover:border-[#333333] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
             </svg>
-            View on Nintendo eShop
+            eShop
           </a>
+          <button
+            onClick={async () => {
+              const url = `https://www.blippd.app/game/${game.slug}`;
+              const text = game.isOnSale
+                ? `${game.title} is ${game.discount}% off — ${formatPrice(game.currentPrice)} on Nintendo eShop`
+                : `${game.title} on Nintendo eShop — ${formatPrice(game.currentPrice)}`;
+              if (navigator.share) {
+                try { await navigator.share({ title: text, url }); } catch { /* cancelled */ }
+              } else {
+                await navigator.clipboard.writeText(url);
+                setShowCopied(true);
+                setTimeout(() => setShowCopied(false), 2000);
+              }
+            }}
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#111111] border border-[#222222] text-[#999999] text-sm font-medium hover:border-[#333333] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
+            </svg>
+            {showCopied ? "Copied!" : "Share"}
+          </button>
         </div>
 
         {/* Price history — only shown when enough data points exist */}
