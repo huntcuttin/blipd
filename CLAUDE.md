@@ -34,31 +34,53 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 - **Ads:** Carbon Ads at 5k+ users (light touch, banner only, never interstitials). No Stripe, no subscription tier.
 - Stripe removed from roadmap entirely.
 
-## Database Schema (Core Tables)
+## Database Schema (Core Tables — Supabase public schema)
 
-### Game
-- id, nsuid, title, slug, publisher, developer
-- CatalogTier (top500, full)
-- price_us, msrp_us
-- releaseDate, platform
-- igdb_id, igdb_hype, metacritic_score
+### games
+- id (uuid PK), nsuid, switch2_nsuid, upgrade_pack_nsuid, title, slug, publisher, developer, franchise
+- current_price, original_price, upgrade_pack_price (numeric)
+- discount (int), is_on_sale, is_all_time_low, is_suppressed (bool)
+- release_date, release_status (released/upcoming/out_today), sale_end_date
+- platform, cover_art, nintendo_url, price_history (jsonb)
+- igdb_id, igdb_hype, metacritic_score, sale_event_id
 
-### PriceSnapshot
-- id, game_id, price, msrp, discount_pct, is_on_sale
-- captured_at, sale_id (nullable — links to NamedSaleEvent)
+### alerts
+- id (uuid PK), game_id (FK→games), type, headline, subtext
+- new_price, old_price (numeric), discount (int), sale_end_date
+- created_at (timestamptz)
 
-### UserWatch
-- id, user_id, game_id, created_at
+### user_profiles
+- user_id (FK→auth.users), console_preference, onboarding_completed, updated_at
 
-### NotificationLog
-- id, user_id, game_id, alert_type, sent_at, channel
+### user_game_follows
+- user_id, game_id, notify_announcements, notify_sales, notify_all_time_low, notify_releases (bool)
 
-### UserAlertState
-- id, user_id, game_id, status (seen/remind/dismissed), updated_at
+### user_franchise_follows
+- user_id, franchise_id, notify_announcements, notify_sales, notify_all_time_low, notify_releases
 
-### NamedSaleEvent
-- id, name ("Mar10 Sale", "Black Friday Drop", "Nintendo Direct Sale")
-- detected_at, active, games_count, dedup_key (UNIQUE — prevents race condition duplicates)
+### user_game_owns
+- user_id, game_id
+
+### user_alert_status
+- user_id, alert_id (FK→alerts), read, dismissed, remind_at
+
+### notification_log
+- id, user_id, alert_id, channel (email/web_push), status (sent/failed), error, created_at
+
+### named_sale_events
+- id, name, detected_at, active, games_count, dedup_key (UNIQUE)
+
+### franchises
+- id, name, game_count, logo, popularity_score
+
+### push_subscriptions
+- id, user_id, endpoint, p256dh, auth, created_at
+
+### nintendo_directs
+- id, video_id, title, detected_at, active
+
+### trailer_detections
+- id, video_id, title, game_id, franchise_id, confidence, status, detected_at
 
 ## Cron Jobs
 
@@ -155,32 +177,32 @@ GET https://api.isthereanydeal.com/games/history/v2
 ### Immediate (Unblocking — Do First)
 
 - [x] Connect blippd.app domain to Vercel — DNS records added in Namecheap, propagating
-- [ ] Add blippd.app to Resend, update sender to alerts@blippd.app
+- [x] Add blippd.app to Resend, update sender to alerts@blippd.app (emails sending successfully since 2026-03-15)
 - [x] Rename Blipd->Blippd everywhere in codebase (exclude node_modules, .next, lock files)
 - [x] Update cron-job.org endpoints if Vercel URL changed
 - [x] Run migration: `ALTER TABLE named_sale_events ADD COLUMN IF NOT EXISTS dedup_key text UNIQUE;`
-- [ ] Add cron job for /api/cron/sync-ratings (every 6 hours) to backfill critic scores
-- [ ] Merge branch `claude/review-recent-commits-LI1DF` into main and push to deploy
+- [x] Add cron job for /api/cron/sync-ratings (every 6 hours) — job 7382994 on cron-job.org
+- [x] Branch `claude/review-recent-commits-LI1DF` — deleted (was stale, no commits ahead of main)
 
-### MVP (Current Focus)
+### MVP (Complete)
 
-- Confirmed email alerts firing end-to-end
-- Stable catalog + pricing pipeline
-- Domain live on Vercel
-- Top 500 game catalog seeded
+- [x] Confirmed email alerts firing end-to-end (923 alerts generated, 12 emails sent as of 2026-03-17)
+- [x] Stable catalog + pricing pipeline (2785 games, 205 on sale, prices polling every 10 min)
+- [x] Domain live on Vercel (www.blippd.app)
+- [x] Top 500+ game catalog seeded (2785 games from Algolia + IGDB)
 
 ### V1.5
 
 - ~~Stripe Pro tier~~ (removed — ad-supported free model)
-- Web push notifications
-- "Sale ending soon" alert type
-- Named sale event detection + two-tier notification system
-- Notification batching rule (5+ games = one digest)
+- [x] Web push notifications (VAPID keys, sw.js, push_subscriptions table, integrated in dispatch)
+- [x] "Sale ending soon" alert type (sale_ending in dispatch, 48h before sale ends)
+- [x] Named sale event detection + two-tier notification system (Tier 1 blast + Tier 2 individual)
+- [x] Notification batching rule (5+ games = one digest, BATCH_THRESHOLD in dispatch.ts)
 - [x] Per-game release time SEO pages (/games/[slug]/release-time)
 - [x] Nintendo Direct detection banner (YouTube RSS)
 - [x] IGDB hype score on Upcoming page
 - [x] Critic rating scores on game cards (IGDB aggregated_rating)
-- Weekly digest re-engagement email
+- [x] Weekly digest re-engagement email (cron job 7358907, Sunday)
 
 ### V2
 

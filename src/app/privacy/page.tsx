@@ -8,8 +8,9 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-white font-semibold text-base mb-2">What we collect</h2>
           <p>
-            Blippd collects your email address when you sign in via magic link. We use
-            this to send you price alerts and notifications for games you follow.
+            Blippd collects your email address when you sign in (via Google, Apple, or
+            magic link). We use this to send you price alerts and notifications for
+            games you follow.
           </p>
         </section>
 

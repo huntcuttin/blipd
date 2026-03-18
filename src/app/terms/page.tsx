@@ -23,11 +23,10 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-white font-semibold text-base mb-2">Free &amp; Pro tiers</h2>
+          <h2 className="text-white font-semibold text-base mb-2">Pricing</h2>
           <p>
-            Blippd is free to use with unlimited game follows and email alerts. A Pro tier
-            ($3/month) is planned for instant alerts and additional features. You can cancel
-            anytime.
+            Blippd is free forever. Unlimited game follows, email alerts, push notifications,
+            and all features — no paywall, no premium tier.
           </p>
         </section>
 
