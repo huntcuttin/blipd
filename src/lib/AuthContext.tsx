@@ -11,6 +11,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   consolePreference: ConsolePreference | null;
+  setConsolePreference: (pref: ConsolePreference) => void;
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithApple: () => Promise<{ error: Error | null }>;
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, consolePreference, signInWithMagicLink, signInWithGoogle, signInWithApple, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, consolePreference, setConsolePreference, signInWithMagicLink, signInWithGoogle, signInWithApple, signOut }}>
       {children}
     </AuthContext.Provider>
   );

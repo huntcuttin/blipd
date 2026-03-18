@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Syne, DM_Mono } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import ProfileButton from "@/components/ProfileButton";
@@ -10,6 +10,17 @@ import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+});
+
+const syne = Syne({
+  subsets: ["latin"],
+  variable: "--font-syne",
+});
+
+const dmMono = DM_Mono({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  variable: "--font-dm-mono",
 });
 
 export const viewport: Viewport = {
@@ -25,6 +36,7 @@ export const metadata: Metadata = {
   description: "Track Nintendo eShop prices, get alerts when they drop. Follow games, get instant price drop alerts, and never miss a sale.",
   icons: {
     icon: "/favicon.svg",
+    apple: "/icon-180.png",
   },
   openGraph: {
     title: "blippd — Never miss a Nintendo drop.",
@@ -48,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
+      <body className={`${inter.variable} ${syne.variable} ${dmMono.variable} antialiased`}>
         <AuthProvider>
           <FollowProvider>
             <div className="max-w-[430px] mx-auto min-h-screen">

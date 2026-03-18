@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 
-const HIDE_ON = ["/login", "/onboarding", "/profile"];
+const HIDE_ON = ["/login", "/onboarding", "/profile", "/home"];
 
 export default function ProfileButton() {
   const pathname = usePathname();

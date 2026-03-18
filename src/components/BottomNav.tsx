@@ -4,23 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getAlerts } from "@/lib/queries";
+import { getUnreadAlertCount } from "@/lib/queries";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { data: alerts } = useSupabaseQuery(
-    (sb) => user ? getAlerts(sb, user.id) : Promise.resolve([]),
+  const { data: unreadCount } = useSupabaseQuery(
+    (sb) => user ? getUnreadAlertCount(sb, user.id) : Promise.resolve(0),
     [user?.id]
   );
-
-  const unreadCount = (alerts ?? []).filter((a) => !a.read).length;
 
   const tabs = [
     { href: "/home", label: "Home", icon: HomeIcon },
     { href: "/sales", label: "Deals", icon: TagIcon },
     { href: "/upcoming", label: "Upcoming", icon: CalendarIcon },
-    { href: "/alerts", label: "Alerts", icon: BellIcon, badge: unreadCount },
+    { href: "/alerts", label: "Alerts", icon: BellIcon, badge: unreadCount ?? 0 },
   ];
 
   // Hide nav on login page

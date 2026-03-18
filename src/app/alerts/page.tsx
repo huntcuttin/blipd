@@ -144,7 +144,7 @@ export default function AlertsPage() {
       <div className="py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white">Alerts</h1>
+            <h1 className="text-2xl font-syne font-bold text-white">Alerts</h1>
             {unreadCount > 0 && (
               <span className="px-2 py-0.5 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-xs font-bold">
                 {unreadCount} new

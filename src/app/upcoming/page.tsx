@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import GameCard, { GameCardSkeleton } from "@/components/GameCard";
+import { GameCardSkeleton } from "@/components/GameCard";
 import SwipeableGameCard from "@/components/SwipeableGameCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getRecentReleases, getUpcomingGames, getAnnouncedGames } from "@/lib/queries";
@@ -92,10 +92,10 @@ export default function UpcomingPage() {
   const isFiltered = platformFilter === "switch2";
 
   return (
-    <div ref={containerRef} className="px-4 pb-28">
+    <div ref={containerRef} className="px-4">
       {/* Header */}
       <div className="flex items-center justify-between py-4">
-        <h1 className="text-lg font-bold text-white">Upcoming</h1>
+        <h1 className="text-lg font-syne font-bold text-white">Upcoming</h1>
       </div>
 
       {/* Filters row */}

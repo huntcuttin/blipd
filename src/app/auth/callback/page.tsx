@@ -3,12 +3,20 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getUserProfile } from "@/lib/queries";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
+
+    async function redirectAfterAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace("/onboarding"); return; }
+      const { onboardingCompleted } = await getUserProfile(supabase, user.id);
+      router.replace(onboardingCompleted ? "/home" : "/onboarding");
+    }
 
     const hash = window.location.hash;
     const params = new URLSearchParams(window.location.search);
@@ -20,7 +28,7 @@ export default function AuthCallbackPage() {
           console.error("Auth callback error:", error.message);
           router.replace("/login");
         } else {
-          router.replace("/onboarding");
+          redirectAfterAuth();
         }
       });
     } else if (hash) {
@@ -28,7 +36,7 @@ export default function AuthCallbackPage() {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
         if (event === "SIGNED_IN") {
           subscription.unsubscribe();
-          router.replace("/onboarding");
+          redirectAfterAuth();
         }
       });
 

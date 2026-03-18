@@ -10,7 +10,7 @@ import { setConsolePreference } from "@/lib/queries";
 import type { ConsolePreference } from "@/lib/types";
 
 export default function SettingsPage() {
-  const { user, consolePreference, signOut } = useAuth();
+  const { user, consolePreference, setConsolePreference: setAuthConsolePref, signOut } = useAuth();
   const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
   const [pushState, setPushState] = useState<"default" | "granted" | "denied" | "unsupported">("default");
   const [pushLoading, setPushLoading] = useState(false);
@@ -34,6 +34,7 @@ export default function SettingsPage() {
     try {
       const supabase = createClient();
       await setConsolePreference(supabase, user.id, pref);
+      setAuthConsolePref(pref);
     } catch {
       setConsolePref(prev);
     } finally {
@@ -50,7 +51,7 @@ export default function SettingsPage() {
 
   return (
     <div className="px-4 py-6 min-h-[calc(100svh-80px)] flex flex-col">
-      <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
+      <h1 className="text-2xl font-syne font-bold text-white mb-6">Settings</h1>
 
       {user ? (
         <div className="space-y-4">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
-import GameCard, { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } from "@/components/GameCard";
+import { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } from "@/components/GameCard";
 import SwipeableGameCard from "@/components/SwipeableGameCard";
 import NamedSaleBanner from "@/components/NamedSaleBanner";
 
@@ -106,10 +106,10 @@ export default function SalesPage() {
   ).length;
 
   return (
-    <div className="px-4 pb-28">
+    <div className="px-4">
       {/* Header */}
       <div className="flex items-center justify-between py-4">
-        <h1 className="text-2xl font-bold text-white">Sales</h1>
+        <h1 className="text-2xl font-syne font-bold text-white">Sales</h1>
         <SearchBar
           value={search}
           onChange={setSearch}

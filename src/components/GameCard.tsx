@@ -30,7 +30,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
         {/* Info */}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
-            <h3 className="font-semibold text-white text-[15px] leading-snug line-clamp-2">
+            <h3 className="font-syne font-semibold text-white text-[15px] leading-snug line-clamp-2">
               {base}
             </h3>
             {edition && (
@@ -38,7 +38,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
                 {edition}
               </p>
             )}
-            <p className="text-[#555555] text-[11px] mt-0.5 truncate">
+            <p className="text-[#555555] text-[11px] mt-0.5 truncate min-w-0">
               {game.publisher}
               {game.metacriticScore !== null && (
                 <span className="text-[#666666]">
@@ -52,20 +52,20 @@ export default memo(function GameCard({ game }: { game: Game }) {
           <div className="flex items-center gap-1.5 mt-2">
             {game.isOnSale ? (
               <>
-                <span className="text-[#00ff88] font-bold text-sm shrink-0">
+                <span className="font-mono text-[#00ff88] font-bold text-sm shrink-0">
                   {formatPrice(game.currentPrice)}
                 </span>
-                <span className="text-[#555555] text-[11px] line-through">
+                <span className="font-mono text-[#555555] text-[11px] line-through">
                   {formatPrice(game.originalPrice)}
                 </span>
                 {game.discount != null && (
-                  <span className="px-1.5 py-0.5 rounded-md bg-[#00cc6e]/20 text-[#00ff88] text-[11px] font-bold shrink-0">
+                  <span className="font-mono px-1.5 py-0.5 rounded-md bg-[#00cc6e]/20 text-[#00ff88] text-[11px] font-bold flex-shrink-0">
                     -{game.discount}%
                   </span>
                 )}
               </>
             ) : (
-              <span className="text-white font-bold text-sm">
+              <span className="font-mono text-white font-bold text-sm">
                 {game.currentPrice === 0 && game.originalPrice === 0
                   ? game.releaseStatus === "released" ? "Free" : ""
                   : game.currentPrice > 0
@@ -143,18 +143,18 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
           className={`w-full aspect-[16/10] bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
         />
         <div className="p-2.5">
-          <h3 className="font-semibold text-white text-xs leading-tight truncate">
+          <h3 className="font-syne font-semibold text-white text-xs leading-tight truncate">
             {game.title}
           </h3>
           <p className="text-[#555555] text-[10px] mt-0.5">{game.publisher}</p>
           <div className="flex items-center gap-1.5 mt-1.5">
             {game.isOnSale ? (
               <>
-                <span className="text-[#00ff88] font-bold text-xs">
+                <span className="font-mono text-[#00ff88] font-bold text-xs">
                   {formatPrice(game.currentPrice)}
                 </span>
                 {game.discount != null && (
-                  <span className="px-1 py-0.5 rounded bg-[#00cc6e]/20 text-[#00ff88] text-[9px] font-bold">
+                  <span className="font-mono px-1 py-0.5 rounded bg-[#00cc6e]/20 text-[#00ff88] text-[9px] font-bold">
                     -{game.discount}%
                   </span>
                 )}

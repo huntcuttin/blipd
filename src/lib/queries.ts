@@ -557,6 +557,37 @@ export async function updateFranchiseFollowPrefs(supabase: Client, userId: strin
 
 // ── Games I Own queries ───────────────────────────────────────
 
+export async function getUnreadAlertCount(supabase: Client, userId: string): Promise<number> {
+  // Get game IDs the user follows
+  const { data: follows } = await supabase
+    .from("user_game_follows")
+    .select("game_id")
+    .eq("user_id", userId);
+  const gameIds = (follows ?? []).map((f: { game_id: string }) => f.game_id);
+  if (gameIds.length === 0) return 0;
+
+  // Get recent alert IDs for followed games + read statuses in parallel
+  const [alertsRes, statusesRes] = await Promise.all([
+    supabase
+      .from("alerts")
+      .select("id")
+      .in("game_id", gameIds)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("user_alert_status")
+      .select("alert_id")
+      .eq("user_id", userId)
+      .eq("read", true),
+  ]);
+
+  const alertIds = (alertsRes.data ?? []).map((a: { id: string }) => a.id);
+  if (alertIds.length === 0) return 0;
+
+  const readIds = new Set((statusesRes.data ?? []).map((s: { alert_id: string }) => s.alert_id));
+  return alertIds.filter((id: string) => !readIds.has(id)).length;
+}
+
 export async function getUserGameOwns(supabase: Client, userId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from("user_game_owns")

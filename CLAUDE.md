@@ -344,3 +344,15 @@ When helping with Blippd, default to:
 - Mobile-first touch targets on all interactive elements, especially price charts and game cards.
 - Session persistence: users should never have to re-authenticate unless they explicitly log out.
 - Game catalog coverage matters. If a user's game isn't there, they churn. Prioritize catalog completeness.
+
+## Session Log — 2026-03-17
+
+### Production Audit Fixes (8 items)
+1. **Auth callback skip onboarding for returning users** — checks `user_profiles.onboarding_completed` before redirect
+2. **Console preference syncs to AuthContext** — added `setConsolePreference` setter, Settings page calls it after DB write
+3. **Removed duplicate pb-28** from Sales + Upcoming pages (layout.tsx already adds 96px bottom padding)
+4. **Lightweight BottomNav alert count** — added `getUnreadAlertCount()` query instead of fetching full `getAlerts()`
+5. **ProfileButton overlap fix** — hidden on `/home` route to avoid header button overlap
+6. **PWA icons** — generated 180/192/512px PNGs from favicon SVG, added apple-touch-icon + updated manifest.json
+7. **GameCard price row overflow** — added `min-w-0` to publisher, `flex-shrink-0` to discount badge
+8. **Added Syne + DM Mono fonts** — Syne on page headings + game titles, DM Mono on prices/badges. CSS vars via `next/font/google`, Tailwind `font-syne`/`font-mono` utilities
