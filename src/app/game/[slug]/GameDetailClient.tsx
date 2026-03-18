@@ -359,6 +359,25 @@ export default function GameDetailClient({ slug }: { slug: string }) {
           </div>
         )}
 
+        {/* Last price drop */}
+        {(() => {
+          const lastSaleAlert = gameAlerts.find((a) =>
+            a.type === "sale_started" || a.type === "price_drop" || a.type === "all_time_low"
+          );
+          if (!lastSaleAlert) return null;
+          const daysAgo = Math.floor(
+            (Date.now() - new Date(lastSaleAlert.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const label = daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`;
+          return (
+            <div className="py-3 border-t border-[#222222]">
+              <p className="text-[#555555] text-xs">
+                Last price drop: <span className="text-[#888888] font-medium">{label}</span>
+              </p>
+            </div>
+          );
+        })()}
+
         {/* Recent alerts */}
         <div className="py-4 border-t border-[#222222]">
           <h2 className="text-sm font-bold text-white mb-3">

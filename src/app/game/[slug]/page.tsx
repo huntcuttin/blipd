@@ -69,5 +69,35 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function GameDetailPage({ params }: Props) {
   const { slug } = await params;
-  return <GameDetailClient slug={slug} />;
+  const game = await getGameForMetadata(slug);
+
+  const jsonLd = game ? {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: game.title,
+    image: game.cover_art || undefined,
+    brand: { "@type": "Brand", name: game.publisher || "Nintendo" },
+    offers: {
+      "@type": "Offer",
+      price: game.current_price,
+      priceCurrency: "USD",
+      availability: game.release_status === "released"
+        ? "https://schema.org/InStock"
+        : "https://schema.org/PreOrder",
+      url: `https://www.blippd.app/game/${slug}`,
+      seller: { "@type": "Organization", name: "Nintendo eShop" },
+    },
+  } : null;
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <GameDetailClient slug={slug} />
+    </>
+  );
 }

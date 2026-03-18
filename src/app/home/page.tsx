@@ -172,6 +172,7 @@ export default function HomePage() {
               return (
                 <button
                   key={tab}
+                  data-tab={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all ${
                     isActive
@@ -394,10 +395,19 @@ function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-white mb-2">No games yet</h2>
-        <p className="text-[#666666] text-sm text-center max-w-[260px]">
-          Follow games to track prices and get alerts. Mark games you own to build your library.
+        <h2 className="text-lg font-syne font-semibold text-white mb-2">No games yet</h2>
+        <p className="text-[#666666] text-sm text-center max-w-[260px] mb-4">
+          Follow games to track prices and get alerts when they go on sale.
         </p>
+        <button
+          onClick={() => {
+            const tabEl = document.querySelector('[data-tab="Discover"]');
+            if (tabEl) (tabEl as HTMLElement).click();
+          }}
+          className="px-5 py-2.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] text-sm font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
+        >
+          Discover games
+        </button>
       </div>
     );
   }

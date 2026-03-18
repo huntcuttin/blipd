@@ -207,23 +207,23 @@ GET https://api.isthereanydeal.com/games/history/v2
 ### Pre-Launch Polish (Current Focus)
 
 **High-impact features:**
-- [ ] Landing page at `/` — new visitors currently see empty app. Show game count, sale count, sign-up CTA. Convert cold traffic.
-- [ ] "Set my target price" on game detail — `target_price` column on `user_game_follows`. Alert fires when price hits it. NT Deals charges $5/mo for this. We give it free.
+- [x] Landing page at `/` — live stats, CTAs, trust signals (2026-03-17)
+- [x] "Set my target price" on game detail — `target_price` column on `user_game_follows`, progress bar, edit/remove (2026-03-17)
 - [ ] Price history chart on game detail — use `price_history` jsonb already on games table + ITAD API for pre-launch history. #1 feature users cite for deciding "is this deal actually good?"
-- [ ] Share a deal card — share button on game detail when on sale. Copy link + clean OG preview. Free word-of-mouth.
+- [x] Share a deal card — Web Share API + clipboard fallback on game detail (2026-03-17)
 
 **Retention / stickiness:**
 - [ ] "My Savings" counter on profile — total $ saved across owned games that were followed before buying on sale
 - [ ] Target price progress indicator — "You want this at $14.99 — currently $19.99 (66% there)" on game card
 - [ ] "Last price drop" on game detail — "This game was last on sale 47 days ago" from alert history
-- [ ] "X people watching" on game detail — follower count per game. Social proof nudges follows.
+- [x] "X people watching" on game detail — follower count per game (2026-03-17)
 
 **SEO / organic growth:**
 - [ ] `/deals` public page — unauthenticated, SSR, structured data. Ranks for "nintendo switch deals today"
 - [ ] Product schema.org markup on `/game/[slug]` — `offers.price` so Google shows price in search results
 
 **Quick wins:**
-- [ ] Haptic feedback on follow/unfollow — `navigator.vibrate(10)` on tap
+- [x] Haptic feedback on follow/unfollow — `navigator.vibrate(10)` on tap (2026-03-17)
 - [ ] Pull-to-refresh on main pages
 - [ ] Better empty states — guide new users with 0 follows to discover and follow games
 
