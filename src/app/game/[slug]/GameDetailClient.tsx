@@ -124,7 +124,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
             {game.publisher && <span className="text-[#888888] text-sm">{game.publisher}</span>}
             {(followerCount ?? 0) > 0 && (
               <span className="text-[#555555] text-xs">
-                {followerCount} watching
+                {followerCount} {followerCount === 1 ? "person" : "people"} watching
               </span>
             )}
             {game.metacriticScore !== null && (

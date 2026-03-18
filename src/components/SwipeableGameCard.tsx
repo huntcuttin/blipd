@@ -70,7 +70,6 @@ export default function SwipeableGameCard({ game }: { game: Game }) {
           <span className="text-[#a78bfa] text-[11px] font-bold">Added!</span>
         ) : (
           <>
-            <span className="text-[18px]">📚</span>
             <span className="text-[#a78bfa] text-[10px] font-bold tracking-wide">LIBRARY</span>
           </>
         )}

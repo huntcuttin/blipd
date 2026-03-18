@@ -167,7 +167,7 @@ function DealCard({ deal }: { deal: DealRow }) {
         {deal.cover_art && (
           <img
             src={deal.cover_art}
-            alt=""
+            alt={deal.title}
             className="w-[80px] aspect-[16/10] rounded-lg bg-[#1a1a1a] object-cover shrink-0"
             loading="lazy"
           />

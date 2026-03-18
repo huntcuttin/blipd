@@ -2,11 +2,11 @@
 
 import type { NotifyPrefs } from "@/lib/types";
 
-const PREF_OPTIONS: { key: keyof NotifyPrefs; label: string; icon: string }[] = [
-  { key: "announcements", label: "Announcements", icon: "📣" },
-  { key: "sales", label: "Sales & Price Drops", icon: "🏷️" },
-  { key: "allTimeLow", label: "All Time Lows", icon: "🔥" },
-  { key: "releases", label: "Releases", icon: "🎮" },
+const PREF_OPTIONS: { key: keyof NotifyPrefs; label: string }[] = [
+  { key: "announcements", label: "Announcements" },
+  { key: "sales", label: "Sales & Price Drops" },
+  { key: "allTimeLow", label: "All Time Lows" },
+  { key: "releases", label: "Releases" },
 ];
 
 export default function NotifyPrefsPanel({
@@ -32,7 +32,6 @@ export default function NotifyPrefsPanel({
           className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg hover:bg-[#1a1a1a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00ff88] transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <span className="text-sm" aria-hidden="true">{opt.icon}</span>
             <span className="text-sm text-white">{opt.label}</span>
           </div>
           <div

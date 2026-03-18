@@ -6,16 +6,16 @@ import type { GameAlert, AlertType } from "@/lib/types";
 
 const alertConfig: Record<
   AlertType,
-  { emoji: string; label: string; color: string; bg: string }
+  { label: string; color: string; bg: string }
 > = {
-  price_drop: { emoji: "🟢", label: "PRICE DROP", color: "text-[#00ff88]", bg: "bg-[#00ff88]/15" },
-  all_time_low: { emoji: "🔥", label: "ALL TIME LOW", color: "text-[#FFD700]", bg: "bg-[#FFD700]/15" },
-  out_now: { emoji: "🎮", label: "OUT NOW", color: "text-[#00BFFF]", bg: "bg-[#00BFFF]/15" },
-  sale_started: { emoji: "🏷️", label: "SALE STARTED", color: "text-[#FF69B4]", bg: "bg-[#FF69B4]/15" },
-  sale_ending: { emoji: "⏰", label: "SALE ENDING", color: "text-[#ff6874]", bg: "bg-[#ff6874]/15" },
-  release_today: { emoji: "📅", label: "RELEASE TODAY", color: "text-[#FFA500]", bg: "bg-[#FFA500]/15" },
-  announced: { emoji: "📣", label: "ANNOUNCED", color: "text-[#9B59B6]", bg: "bg-[#9B59B6]/15" },
-  switch2_edition_announced: { emoji: "🎮", label: "SWITCH 2", color: "text-[#00aaff]", bg: "bg-[#00aaff]/15" },
+  price_drop: { label: "PRICE DROP", color: "text-[#00ff88]", bg: "bg-[#00ff88]/15" },
+  all_time_low: { label: "ALL TIME LOW", color: "text-[#FFD700]", bg: "bg-[#FFD700]/15" },
+  out_now: { label: "OUT NOW", color: "text-[#00BFFF]", bg: "bg-[#00BFFF]/15" },
+  sale_started: { label: "SALE STARTED", color: "text-[#FF69B4]", bg: "bg-[#FF69B4]/15" },
+  sale_ending: { label: "SALE ENDING", color: "text-[#ff6874]", bg: "bg-[#ff6874]/15" },
+  release_today: { label: "RELEASE TODAY", color: "text-[#FFA500]", bg: "bg-[#FFA500]/15" },
+  announced: { label: "ANNOUNCED", color: "text-[#9B59B6]", bg: "bg-[#9B59B6]/15" },
+  switch2_edition_announced: { label: "SWITCH 2", color: "text-[#00aaff]", bg: "bg-[#00aaff]/15" },
 };
 
 export default function AlertCard({
@@ -27,7 +27,7 @@ export default function AlertCard({
   onTap?: (id: string) => void;
   onRemind?: (id: string) => void;
 }) {
-  const config = alertConfig[alert.type] ?? { emoji: "📢", label: alert.type.toUpperCase(), color: "text-[#888888]", bg: "bg-[#888888]/15" };
+  const config = alertConfig[alert.type] ?? { label: alert.type.toUpperCase(), color: "text-[#888888]", bg: "bg-[#888888]/15" };
   const [reminded, setReminded] = useState(false);
 
   const handleClick = () => {
@@ -76,7 +76,7 @@ export default function AlertCard({
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${config.color} ${config.bg}`}
           >
-            {config.emoji} {config.label}
+            {config.label}
           </span>
           <span className="text-[#555555] text-[10px] ml-auto shrink-0">
             {alert.timestamp}
