@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Syne, DM_Mono } from "next/font/google";
+import { Inter, DM_Mono } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import ProfileButton from "@/components/ProfileButton";
@@ -11,11 +11,6 @@ import PullToRefresh from "@/components/PullToRefresh";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-});
-
-const syne = Syne({
-  subsets: ["latin"],
-  variable: "--font-syne",
 });
 
 const dmMono = DM_Mono({
@@ -61,7 +56,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${syne.variable} ${dmMono.variable} antialiased`}>
+      <body className={`${inter.variable} ${dmMono.variable} antialiased`}>
         <AuthProvider>
           <FollowProvider>
             <div className="max-w-[430px] mx-auto min-h-screen">

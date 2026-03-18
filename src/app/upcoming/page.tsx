@@ -95,7 +95,7 @@ export default function UpcomingPage() {
     <div ref={containerRef} className="px-4">
       {/* Header */}
       <div className="flex items-center justify-between py-4">
-        <h1 className="text-lg font-syne font-bold text-white">Upcoming</h1>
+        <h1 className="text-lg font-bold text-white">Upcoming</h1>
       </div>
 
       {/* Filters row */}

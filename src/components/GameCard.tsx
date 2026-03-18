@@ -33,7 +33,7 @@ export default memo(function GameCard({ game }: { game: Game }) {
         {/* Info */}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
-            <h3 className="font-syne font-semibold text-white text-[15px] leading-snug line-clamp-2">
+            <h3 className="font-semibold text-white text-[15px] leading-snug line-clamp-2">
               {base}
             </h3>
             {edition && (
@@ -168,7 +168,7 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
           className={`w-full aspect-[16/10] bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
         />
         <div className="p-2.5">
-          <h3 className="font-syne font-semibold text-white text-xs leading-tight truncate">
+          <h3 className="font-semibold text-white text-xs leading-tight truncate">
             {game.title}
           </h3>
           <p className="text-[#555555] text-[10px] mt-0.5">{game.publisher}</p>

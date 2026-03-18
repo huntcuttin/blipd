@@ -51,7 +51,7 @@ export default function SettingsPage() {
 
   return (
     <div className="px-4 py-6 min-h-[calc(100svh-80px)] flex flex-col">
-      <h1 className="text-2xl font-syne font-bold text-white mb-6">Settings</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
 
       {user ? (
         <div className="space-y-4">

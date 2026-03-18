@@ -31,7 +31,7 @@ export default async function LandingPage() {
       </div>
 
       {/* Headline */}
-      <h1 className="font-syne text-3xl font-bold text-white leading-tight mb-3">
+      <h1 className="text-3xl font-bold text-white leading-tight mb-3">
         Never miss a<br />
         <span className="text-[#00ff88]">Nintendo deal.</span>
       </h1>

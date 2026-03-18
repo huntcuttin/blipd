@@ -91,7 +91,7 @@ export default async function DealsPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <div className="px-4 py-6 pb-8">
-        <h1 className="font-syne text-2xl font-bold text-white mb-1">
+        <h1 className="text-2xl font-bold text-white mb-1">
           Nintendo Switch Deals
         </h1>
         <p className="text-[#666666] text-sm mb-6">
@@ -173,7 +173,7 @@ function DealCard({ deal }: { deal: DealRow }) {
           />
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-syne font-semibold text-white text-sm leading-snug line-clamp-1">
+          <h3 className="font-semibold text-white text-sm leading-snug line-clamp-1">
             {deal.title}
           </h3>
           <p className="text-[#555555] text-[11px] mt-0.5 truncate">{deal.publisher}</p>

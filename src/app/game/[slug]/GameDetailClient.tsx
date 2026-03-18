@@ -246,7 +246,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
                   : "bg-[#111111] border-[#222222] text-[#666666] hover:border-[#444444] hover:text-white"
               }`}
             >
-              {justAdded ? "🎮 Added!" : isOwningGame(game.id) ? "✓ In Library" : "Add to Library"}
+              {justAdded ? "Added!" : isOwningGame(game.id) ? "✓ In Library" : "Add to Library"}
             </button>
           </div>
         </div>
