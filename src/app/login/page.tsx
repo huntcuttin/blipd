@@ -60,7 +60,7 @@ export default function LoginPage() {
       <Link
         href="/home"
         aria-label="Back to home"
-        className="absolute top-4 left-4 w-11 h-11 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#00ff88]/30 transition-all"
+        className="absolute top-4 left-4 w-11 h-11 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#333333] transition-all"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -116,7 +116,7 @@ export default function LoginPage() {
           {!showEmail ? (
             <button
               onClick={() => setShowEmail(true)}
-              className="w-full py-3.5 rounded-xl border border-[#333333] text-white font-semibold text-sm transition-all hover:border-[#00ff88]/30 hover:bg-[#111111] active:scale-[0.98]"
+              className="w-full py-3.5 rounded-xl border border-[#333333] text-white font-semibold text-sm transition-all hover:border-[#444444] hover:bg-[#111111] active:scale-[0.98]"
             >
               Continue with email
             </button>

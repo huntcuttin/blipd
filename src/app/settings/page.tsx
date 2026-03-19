@@ -307,7 +307,7 @@ export default function SettingsPage() {
         <div className="space-y-2">
           <Link
             href="/vs/nt-deals"
-            className="flex items-center justify-between py-2 text-sm text-white hover:text-[#00ff88] transition-colors"
+            className="flex items-center justify-between py-2 text-sm text-white hover:text-[#aaaaaa] transition-colors"
           >
             <span>Blippd vs NT Deals</span>
             <svg className="w-4 h-4 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
@@ -316,7 +316,7 @@ export default function SettingsPage() {
           </Link>
           <Link
             href="/privacy"
-            className="flex items-center justify-between py-2 text-sm text-white hover:text-[#00ff88] transition-colors"
+            className="flex items-center justify-between py-2 text-sm text-white hover:text-[#aaaaaa] transition-colors"
           >
             <span>Privacy Policy</span>
             <svg className="w-4 h-4 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
@@ -325,7 +325,7 @@ export default function SettingsPage() {
           </Link>
           <Link
             href="/terms"
-            className="flex items-center justify-between py-2 text-sm text-white hover:text-[#00ff88] transition-colors"
+            className="flex items-center justify-between py-2 text-sm text-white hover:text-[#aaaaaa] transition-colors"
           >
             <span>Terms of Service</span>
             <svg className="w-4 h-4 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">

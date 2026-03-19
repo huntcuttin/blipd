@@ -421,7 +421,7 @@ function MyGamesTab({
 
 function FranchiseRow({ franchise }: { franchise: Franchise }) {
   return (
-    <div className="flex items-center justify-between p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#00ff88]/30 transition-all">
+    <div className="flex items-center justify-between p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-all">
       <Link
         href={`/franchise/${encodeURIComponent(franchise.name)}`}
         className="flex items-center gap-3 min-w-0 flex-1 mr-3"

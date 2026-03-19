@@ -144,7 +144,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
                 href={`/franchise/${encodeURIComponent(franchise.name)}`}
                 className={`px-3 py-2 rounded-full text-xs font-medium transition-all ${
                   followingFranchise
-                    ? "bg-[#00ff88]/15 text-[#00ff88] shadow-[0_0_8px_#00ff8844]"
+                    ? "bg-white/10 text-white"
                     : "bg-[#222222] text-[#888888] hover:text-white"
                 }`}
               >
