@@ -136,6 +136,8 @@ const QUALITY_PUBLISHERS = new Set([
   "Focus Home Interactive",
   "Curve Games",
   "Curve Digital",
+  "The Pokémon Company",
+  "The Pokemon Company",
 ]);
 
 function isQualityGame(hit: AlgoliaHit): boolean {

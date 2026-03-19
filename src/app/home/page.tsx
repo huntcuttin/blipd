@@ -434,9 +434,12 @@ function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<
                 <GameCard game={game} />
                 <button
                   onClick={() => toggleOwnGame(game.id)}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-[#555555] hover:text-[#a78bfa] transition-colors"
+                  className="inline-flex items-center gap-1.5 mt-1 ml-3 px-3 py-1.5 min-h-[36px] rounded-lg bg-[#7c3aed]/15 text-[#a78bfa] text-[11px] font-medium border border-[#7c3aed]/20 hover:bg-[#7c3aed]/25 transition-colors"
                 >
-                  I bought this — Move to Library
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                  I own this
                 </button>
               </div>
             ))}
@@ -452,9 +455,12 @@ function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<
                 <GameCard game={game} />
                 <button
                   onClick={() => toggleOwnGame(game.id)}
-                  className="w-full text-left px-3 py-1.5 text-[11px] text-[#555555] hover:text-[#a78bfa] transition-colors"
+                  className="inline-flex items-center gap-1.5 mt-1 ml-3 px-3 py-1.5 min-h-[36px] rounded-lg bg-[#7c3aed]/15 text-[#a78bfa] text-[11px] font-medium border border-[#7c3aed]/20 hover:bg-[#7c3aed]/25 transition-colors"
                 >
-                  I bought this — Move to Library
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                  I own this
                 </button>
               </div>
             ))}

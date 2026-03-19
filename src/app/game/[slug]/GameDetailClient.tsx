@@ -242,7 +242,11 @@ export default function GameDetailClient({ slug }: { slug: string }) {
                   Remove
                 </button>
               </div>
-              <p className="text-[11px] text-[#555555]">You&apos;ll get notified about DLC and updates for this game.</p>
+              <NotifyPrefsPanel
+                prefs={getGamePrefs(game.id)}
+                onChange={(key: keyof NotifyPrefs, value: boolean) => updateGamePrefs(game.id, { [key]: value })}
+                only={["DLC & updates"]}
+              />
             </div>
           ) : (
             <div>

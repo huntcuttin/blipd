@@ -2,54 +2,66 @@
 
 import type { NotifyPrefs } from "@/lib/types";
 
-const PREF_OPTIONS: { key: keyof NotifyPrefs; label: string }[] = [
-  { key: "announcements", label: "Announcements" },
-  { key: "sales", label: "Sales & Price Drops" },
-  { key: "allTimeLow", label: "All Time Lows" },
-  { key: "releases", label: "Releases" },
+type PrefGroup = {
+  keys: (keyof NotifyPrefs)[];
+  label: string;
+};
+
+const PREF_GROUPS: PrefGroup[] = [
+  { keys: ["sales", "allTimeLow"], label: "Price alerts" },
+  { keys: ["releases"], label: "Release alerts" },
+  { keys: ["announcements"], label: "DLC & updates" },
 ];
 
 export default function NotifyPrefsPanel({
   prefs,
   onChange,
+  only,
 }: {
   prefs: NotifyPrefs;
   onChange: (key: keyof NotifyPrefs, value: boolean) => void;
+  only?: string[];
 }) {
+  const groups = only
+    ? PREF_GROUPS.filter((g) => only.includes(g.label))
+    : PREF_GROUPS;
+
   return (
     <div className="space-y-1">
-      {PREF_OPTIONS.map((opt) => (
-        <button
-          key={opt.key}
-          role="switch"
-          aria-checked={prefs[opt.key]}
-          aria-label={`${opt.label} notifications`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onChange(opt.key, !prefs[opt.key]);
-          }}
-          className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg hover:bg-[#1a1a1a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00ff88] transition-colors"
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="text-sm text-white">{opt.label}</span>
-          </div>
-          <div
-            aria-hidden="true"
-            className={`w-9 h-5 rounded-full transition-all relative ${
-              prefs[opt.key]
-                ? "bg-[#00ff88]"
-                : "bg-[#333333]"
-            }`}
+      {groups.map((group) => {
+        const isOn = group.keys.every((k) => prefs[k]);
+        return (
+          <button
+            key={group.label}
+            role="switch"
+            aria-checked={isOn}
+            aria-label={`${group.label} notifications`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const newValue = !isOn;
+              group.keys.forEach((k) => onChange(k, newValue));
+            }}
+            className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg hover:bg-[#1a1a1a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00ff88] transition-colors"
           >
+            <div className="flex items-center gap-2.5">
+              <span className="text-sm text-white">{group.label}</span>
+            </div>
             <div
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
-                prefs[opt.key] ? "left-[18px]" : "left-0.5"
+              aria-hidden="true"
+              className={`w-9 h-5 rounded-full transition-all relative ${
+                isOn ? "bg-[#00ff88]" : "bg-[#333333]"
               }`}
-            />
-          </div>
-        </button>
-      ))}
+            >
+              <div
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                  isOn ? "left-[18px]" : "left-0.5"
+                }`}
+              />
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
