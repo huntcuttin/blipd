@@ -236,7 +236,7 @@ function ConsoleStep({ saving, onSelect }: { saving: boolean; onSelect: (p: Cons
         <button
           onClick={() => onSelect("switch")}
           disabled={saving}
-          className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#00ff88]/50 transition-all active:scale-[0.98]"
+          className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#444444] transition-all active:scale-[0.98]"
         >
           <div className="w-12 h-12 rounded-xl bg-[#ff4444]/15 flex items-center justify-center shrink-0">
             <svg className="w-7 h-7 text-[#ff4444]" viewBox="0 0 24 24" fill="currentColor">
@@ -253,7 +253,7 @@ function ConsoleStep({ saving, onSelect }: { saving: boolean; onSelect: (p: Cons
         <button
           onClick={() => onSelect("switch2")}
           disabled={saving}
-          className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#00ff88]/50 transition-all active:scale-[0.98]"
+          className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#444444] transition-all active:scale-[0.98]"
         >
           <div className="w-12 h-12 rounded-xl bg-[#00aaff]/15 flex items-center justify-center shrink-0">
             <svg className="w-7 h-7 text-[#00aaff]" viewBox="0 0 24 24" fill="currentColor">

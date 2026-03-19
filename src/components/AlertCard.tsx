@@ -48,7 +48,7 @@ export default function AlertCard({
       className={`flex gap-3 p-3 rounded-xl border transition-all ${
         alert.read
           ? "bg-[#111111]/60 border-[#1a1a1a] opacity-60"
-          : "bg-[#111111] border-[#00ff88]/20"
+          : "bg-[#111111] border-[#333333]"
       }`}
     >
       {/* Unread dot */}
@@ -97,7 +97,7 @@ export default function AlertCard({
         {!alert.read && onRemind && !reminded && (
           <button
             onClick={handleRemind}
-            className="mt-1 py-2.5 min-h-[44px] text-[11px] text-[#666666] hover:text-[#00ff88] transition-colors flex items-center"
+            className="mt-1 py-2.5 min-h-[44px] text-[11px] text-[#666666] hover:text-white transition-colors flex items-center"
           >
             Remind me in a few days
           </button>

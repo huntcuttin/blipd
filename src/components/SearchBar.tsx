@@ -25,7 +25,7 @@ export default function SearchBar({
       <button
         onClick={() => setExpanded(true)}
         aria-label="Search games"
-        className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#111111] border border-[#222222] hover:border-[#00ff88]/30 transition-all"
+        className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#111111] border border-[#222222] hover:border-[#333333] transition-all"
       >
         <SearchIcon className="w-4 h-4 text-[#666666]" />
       </button>
