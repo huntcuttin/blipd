@@ -95,8 +95,8 @@ export default function ProfilePage() {
 
       {/* Avatar + username */}
       <div className="flex flex-col items-center py-6">
-        <div className="w-20 h-20 rounded-full bg-[#111111] border-2 border-[#00ff88]/30 flex items-center justify-center mb-3 shadow-[0_0_24px_#00ff8820]">
-          <span className="text-[#00ff88] text-3xl font-bold">{initial}</span>
+        <div className="w-20 h-20 rounded-full bg-[#111111] border-2 border-[#333333] flex items-center justify-center mb-3">
+          <span className="text-white text-3xl font-bold">{initial}</span>
         </div>
         <p className="text-white text-lg font-semibold">{username}</p>
         {consoleName && (

@@ -1,7 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent, TrailerDetection } from "@/lib/types";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { DEFAULT_NOTIFY_PREFS } from "@/lib/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;

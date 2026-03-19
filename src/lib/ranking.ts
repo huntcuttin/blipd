@@ -199,10 +199,6 @@ export function isRarelyOnSale(game: Game): boolean {
   return saleTransitions <= 1;
 }
 
-// Keep old alias for backward compat
-export function computeGameScore(game: Game): number {
-  return computeTrendingScore(game);
-}
 
 /**
  * Quality gate — returns true for games worth surfacing in curated sections.
