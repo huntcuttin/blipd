@@ -188,7 +188,7 @@ export default function LoginPage() {
           </p>
           <button
             onClick={() => setSent(false)}
-            className="mt-6 text-sm text-[#00ff88] hover:underline transition-colors py-2"
+            className="mt-6 text-sm text-[#888888] hover:text-white hover:underline transition-colors py-2"
           >
             Use a different email
           </button>

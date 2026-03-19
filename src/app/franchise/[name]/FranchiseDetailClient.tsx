@@ -44,7 +44,7 @@ export default function FranchiseDetailClient({ name }: { name: string }) {
         <p className="text-[#666666] text-sm">Franchise not found</p>
         <Link
           href="/home"
-          className="inline-block mt-4 text-sm text-[#00ff88] hover:underline"
+          className="inline-block mt-4 text-sm text-[#888888] hover:text-white hover:underline"
         >
           &larr; Back to Home
         </Link>

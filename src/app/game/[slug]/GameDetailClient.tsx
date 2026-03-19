@@ -57,7 +57,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
         <p className="text-[#666666] text-sm">Game not found</p>
         <Link
           href="/home"
-          className="inline-block mt-4 text-sm text-[#00ff88] hover:underline"
+          className="inline-block mt-4 text-sm text-[#888888] hover:text-white hover:underline"
         >
           &larr; Back to Home
         </Link>
@@ -224,7 +224,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
           {game.releaseStatus === "upcoming" && !placeholderDate && !isYearOnlyDate(game.releaseDate) && (
             <a
               href={`/games/${game.slug}/release-time`}
-              className="inline-block mt-1.5 text-[#00ff88] text-xs font-medium hover:underline"
+              className="inline-block mt-1.5 text-[#00aaff] text-xs font-medium hover:underline"
             >
               What time does it launch? →
             </a>
