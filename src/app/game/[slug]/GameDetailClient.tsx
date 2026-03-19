@@ -229,30 +229,36 @@ export default function GameDetailClient({ slug }: { slug: string }) {
           )}
         </div>
 
-        {/* Sticky follow + own buttons */}
+        {/* Follow / Own actions */}
         <div className="sticky z-10 py-4 bg-[#0a0a0a]" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <FollowButton gameId={game.id} size="large" />
+          {isOwningGame(game.id) ? (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-[#a78bfa]">In your library</span>
+                <button
+                  onClick={handleLibraryToggle}
+                  className="text-[11px] text-[#555555] hover:text-[#ff6874] transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+              <p className="text-[11px] text-[#555555]">You&apos;ll get notified about DLC and updates for this game.</p>
             </div>
-            <button
-              onClick={handleLibraryToggle}
-              aria-pressed={isOwningGame(game.id)}
-              className={`shrink-0 px-4 py-3 rounded-xl border text-sm font-medium transition-all duration-300 ${
-                justAdded
-                  ? "scale-110 bg-[#003322] border-[#00ff88]/60 text-[#00ff88]"
-                  : isOwningGame(game.id)
-                  ? "bg-[#1a0f3a] border-[#7c3aed]/40 text-[#a78bfa]"
-                  : "bg-[#111111] border-[#222222] text-[#666666] hover:border-[#444444] hover:text-white"
-              }`}
-            >
-              {justAdded ? "Added!" : isOwningGame(game.id) ? "✓ In Library" : "Add to Library"}
-            </button>
-          </div>
+          ) : (
+            <div>
+              <FollowButton gameId={game.id} size="large" />
+              <button
+                onClick={handleLibraryToggle}
+                className="w-full mt-2 py-1.5 text-[11px] text-[#555555] hover:text-[#a78bfa] transition-colors"
+              >
+                {justAdded ? "Added to library!" : "I own this game"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Notification preferences */}
-        {isFollowingGame(game.id) && (
+        {isFollowingGame(game.id) && !isOwningGame(game.id) && (
           <div className="pb-3 border-b border-[#222222]">
             <h2 className="text-xs font-bold text-[#666666] tracking-wider mb-2">NOTIFY ME ABOUT</h2>
             <NotifyPrefsPanel
