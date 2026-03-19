@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent } from "@/lib/types";
+import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent, TrailerDetection } from "@/lib/types";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DEFAULT_NOTIFY_PREFS } from "@/lib/types";
 
@@ -707,5 +707,80 @@ export async function getRetroFollowers(supabase: Client, consoleName: string): 
     .eq("console", consoleName);
   if (error) return [];
   return (data ?? []).map((r: { user_id: string }) => r.user_id);
+}
+
+// ── Feed queries ──────────────────────────────────────────────
+
+export async function getRecentTrailers(supabase: Client): Promise<TrailerDetection[]> {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("trailer_detections")
+    .select("id, video_id, title, thumbnail_url, matched_game_title, matched_franchise, confidence, status, published_at, detected_at")
+    .in("status", ["auto_published", "approved"])
+    .gte("detected_at", thirtyDaysAgo)
+    .order("published_at", { ascending: false })
+    .limit(30);
+  if (error) throw error;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    videoId: row.video_id,
+    title: row.title,
+    thumbnailUrl: row.thumbnail_url,
+    matchedGameTitle: row.matched_game_title,
+    matchedFranchise: row.matched_franchise,
+    confidence: row.confidence,
+    status: row.status,
+    publishedAt: row.published_at,
+    detectedAt: row.detected_at,
+  }));
+}
+
+export async function getActiveDirects(supabase: Client): Promise<{ id: string; videoId: string; title: string; detectedAt: string }[]> {
+  const { data, error } = await supabase
+    .from("nintendo_directs")
+    .select("id, video_id, title, detected_at")
+    .eq("active", true)
+    .order("detected_at", { ascending: false })
+    .limit(5);
+  if (error) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    videoId: row.video_id,
+    title: row.title,
+    detectedAt: row.detected_at,
+  }));
+}
+
+export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
+  const today = new Date().toISOString().split("T")[0];
+  const sixtyDaysOut = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .in("release_status", ["upcoming", "out_today"])
+    .neq("is_suppressed", true)
+    .gte("release_date", today)
+    .lte("release_date", sixtyDaysOut)
+    .neq("release_date", "2099-12-31")
+    .order("release_date", { ascending: true })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
+}
+
+export async function getDemoGames(supabase: Client): Promise<Game[]> {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("has_demo", true)
+    .eq("is_suppressed", false)
+    .or(`release_status.eq.upcoming,release_date.gte.${thirtyDaysAgo}`)
+    .order("release_date", { ascending: false })
+    .limit(30);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
 }
 

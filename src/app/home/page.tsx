@@ -5,20 +5,18 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
 import DirectBanner from "@/components/DirectBanner";
-import NamedSaleBanner from "@/components/NamedSaleBanner";
-import GameCard, { GameCardCompact, GameCardCompactSkeleton, GameCardSkeleton } from "@/components/GameCard";
+import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getTrendingGames, getUpcomingGames, getGamesByIds, getAllFranchises, searchGames, getRecentReleases, getFollowerCountsBatch } from "@/lib/queries";
+import { getTrendingGames, getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
-import { computeTrendingScore, deduplicateGames, isQualityGame } from "@/lib/ranking";
+import { computeTrendingScore, deduplicateGames } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
-// Game used in DiscoverTab and search; Franchise used in MyFranchisesTab
 
-const TABS = ["Discover", "Watchlist", "My Franchises"] as const;
+const TABS = ["Discover", "My Games"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function HomePage() {
@@ -28,13 +26,6 @@ export default function HomePage() {
   const { user, signOut, consolePreference } = useAuth();
   const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
-  const { data: upcomingData } = useSupabaseQuery(getUpcomingGames);
-  const { data: recentReleasesData } = useSupabaseQuery(getRecentReleases);
-  const recentReleaseIds = useMemo(() => (recentReleasesData ?? []).map((g) => g.id), [recentReleasesData]);
-  const { data: followerCountsData } = useSupabaseQuery(
-    (sb) => getFollowerCountsBatch(sb, recentReleaseIds),
-    [recentReleaseIds.join(",")]
-  );
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
   const { data: followedGamesData } = useSupabaseQuery(
     (sb) => getGamesByIds(sb, followedIds),
@@ -136,9 +127,6 @@ export default function HomePage() {
       {/* Nintendo Direct banner */}
       <DirectBanner />
 
-      {/* Named sale event banners */}
-      {!searchResults && <NamedSaleBanner />}
-
       {/* Search results override */}
       {searchResults ? (
         <div className="space-y-2 pb-4">
@@ -168,10 +156,8 @@ export default function HomePage() {
             {TABS.map((tab) => {
               const isActive = activeTab === tab;
               const count =
-                tab === "Watchlist"
-                  ? followedGames.length
-                  : tab === "My Franchises"
-                  ? followedFranchiseList.length
+                tab === "My Games"
+                  ? followedGames.length + followedFranchiseList.length
                   : 0;
               return (
                 <button
@@ -223,21 +209,17 @@ export default function HomePage() {
             {activeTab === "Discover" && (
               <DiscoverTab
                 trendingGames={trendingData ?? []}
-                upcomingGames={upcomingData ?? []}
-                recentReleases={recentReleasesData ?? []}
                 loading={trendingLoading}
                 error={trendingError}
                 followedFranchises={followedFranchiseNames}
-                followerCounts={followerCountsData ?? new Map()}
               />
             )}
-            {activeTab === "Watchlist" && (
-              <MyGamesTab games={followedGames} ownedGameIds={ownedGameIds} />
-            )}
-            {activeTab === "My Franchises" && (
-              <MyFranchisesTab
-                followed={followedFranchiseList}
-                suggestions={unfollowedFranchises}
+            {activeTab === "My Games" && (
+              <MyGamesTab
+                games={followedGames}
+                ownedGameIds={ownedGameIds}
+                followedFranchises={followedFranchiseList}
+                suggestedFranchises={unfollowedFranchises}
               />
             )}
           </div>
@@ -253,20 +235,14 @@ const PAGE_SIZE = 30;
 
 function DiscoverTab({
   trendingGames,
-  upcomingGames,
-  recentReleases,
   loading,
   error,
   followedFranchises,
-  followerCounts,
 }: {
   trendingGames: Game[];
-  upcomingGames: Game[];
-  recentReleases: Game[];
   loading: boolean;
   error: Error | null;
   followedFranchises: Set<string>;
-  followerCounts: Map<string, number>;
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -280,23 +256,10 @@ function DiscoverTab({
     );
   }, [trendingGames, followedFranchises]);
 
-  // New releases: dedicated recent-releases query sorted by trending score
-  // Uses getRecentReleases (last 30 days, all games) so no-metacritic indie games show up
-  const newReleases = useMemo(() => {
-    return deduplicateGames(recentReleases)
-      .filter((g) => !!g.coverArt && g.originalPrice > 0)
-      .sort((a, b) => computeTrendingScore(b, { followedFranchises, followerCounts }) - computeTrendingScore(a, { followedFranchises, followerCounts }))
-      .slice(0, 10);
-  }, [recentReleases, followedFranchises, followerCounts]);
-
-  // Reset visible count when data changes
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [sorted]);
 
-  // IntersectionObserver: load more when sentinel scrolls into view.
-  // Depend on visibleCount so the observer re-attaches after each batch —
-  // if the sentinel is still visible it fires immediately, filling the screen.
   useEffect(() => {
     if (visibleCount >= sorted.length) return;
     const el = sentinelRef.current;
@@ -315,16 +278,8 @@ function DiscoverTab({
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <div className="h-3 bg-[#1a1a1a] rounded w-28 mb-3" />
-          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-            {Array.from({ length: 4 }).map((_, i) => <GameCardCompactSkeleton key={i} />)}
-          </div>
-        </div>
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <GameCardSkeleton key={i} />)}
-        </div>
+      <div className="space-y-2">
+        {Array.from({ length: 6 }).map((_, i) => <GameCardSkeleton key={i} />)}
       </div>
     );
   }
@@ -343,58 +298,42 @@ function DiscoverTab({
   const hasMore = visibleCount < sorted.length;
 
   return (
-    <div className="space-y-4">
-      {/* Coming Soon — quality-gated: Nintendo franchises + critically acclaimed + hyped */}
-      {upcomingGames.filter(isQualityGame).length > 0 && (
-        <section>
-          <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">COMING SOON</h2>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-            {upcomingGames.filter(isQualityGame).slice(0, 15).map((game) => (
-              <GameCardCompact key={game.id} game={game} />
-            ))}
+    <div>
+      <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">DISCOVER</h2>
+      <div className="space-y-2">
+        {visible.map((game) => (
+          <GameCard key={game.id} game={game} />
+        ))}
+        <div ref={sentinelRef} className="h-4" />
+        {hasMore && (
+          <div className="flex justify-center py-4">
+            <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
           </div>
-        </section>
-      )}
-
-      {/* New Releases */}
-      {newReleases.length > 0 && (
-        <section>
-          <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">NEW RELEASES</h2>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-            {newReleases.map((game) => (
-              <GameCardCompact key={game.id} game={game} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Full catalog — infinite scroll */}
-      <section>
-        <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">DISCOVER</h2>
-        <div className="space-y-2">
-          {visible.map((game) => (
-            <GameCard key={game.id} game={game} />
-          ))}
-          <div ref={sentinelRef} className="h-4" />
-          {hasMore && (
-            <div className="flex justify-center py-4">
-              <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
-      </section>
+        )}
+      </div>
     </div>
   );
 }
 
 // ── My Games Tab ──────────────────────────────────────────────
 
-function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<string> }) {
+function MyGamesTab({
+  games,
+  ownedGameIds,
+  followedFranchises,
+  suggestedFranchises,
+}: {
+  games: Game[];
+  ownedGameIds: Set<string>;
+  followedFranchises: Franchise[];
+  suggestedFranchises: Franchise[];
+}) {
   const { toggleOwnGame } = useFollow();
+  const [showSuggested, setShowSuggested] = useState(false);
   const watching = games.filter((g) => !ownedGameIds.has(g.id));
   const owned = games.filter((g) => ownedGameIds.has(g.id));
 
-  if (watching.length === 0 && owned.length === 0) {
+  if (watching.length === 0 && owned.length === 0 && followedFranchises.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4">
         <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
@@ -475,58 +414,40 @@ function MyGamesTab({ games, ownedGameIds }: { games: Game[]; ownedGameIds: Set<
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ── My Franchises Tab ─────────────────────────────────────────
-
-function MyFranchisesTab({
-  followed,
-  suggestions,
-}: {
-  followed: Franchise[];
-  suggestions: Franchise[];
-}) {
-  return (
-    <div className="pb-4">
-      {followed.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
-            </svg>
-          </div>
-          <h2 className="text-lg font-semibold text-white mb-2">
-            No franchises followed
-          </h2>
-          <p className="text-[#666666] text-sm text-center max-w-[280px]">
-            Follow a franchise to get alerts for every game in the series — new releases, price drops, and sales
-          </p>
-        </div>
-      ) : (
-        <div className="mb-6">
-          <h3 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2">
-            FOLLOWING
-          </h3>
+      {followedFranchises.length > 0 && (
+        <div>
+          <h3 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2">MY FRANCHISES</h3>
           <div className="space-y-2">
-            {followed.map((franchise) => (
+            {followedFranchises.map((franchise) => (
               <FranchiseRow key={franchise.id} franchise={franchise} />
             ))}
           </div>
         </div>
       )}
-
-      {suggestions.length > 0 && (
+      {suggestedFranchises.length > 0 && (
         <div>
-          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">
-            SUGGESTED
-          </h3>
-          <div className="space-y-2">
-            {suggestions.map((franchise) => (
-              <FranchiseRow key={franchise.id} franchise={franchise} />
-            ))}
-          </div>
+          <button
+            onClick={() => setShowSuggested(!showSuggested)}
+            className="flex items-center gap-2 text-[10px] font-bold text-[#666666] tracking-wider mb-2 hover:text-white transition-colors"
+          >
+            SUGGESTED FRANCHISES
+            <svg
+              className={`w-3 h-3 transition-transform ${showSuggested ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          {showSuggested && (
+            <div className="space-y-2">
+              {suggestedFranchises.map((franchise) => (
+                <FranchiseRow key={franchise.id} franchise={franchise} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
