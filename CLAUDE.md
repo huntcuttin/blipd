@@ -365,6 +365,61 @@ When helping with Blippd, default to:
 - Session persistence: users should never have to re-authenticate unless they explicitly log out.
 - Game catalog coverage matters. If a user's game isn't there, they churn. Prioritize catalog completeness.
 
+## Session Log — 2026-03-18 (Overnight Audit)
+
+### UI Audit — Green Hierarchy Fix (6 cycles)
+**Problem:** Accent green (#00ff88) was used on everything simultaneously — active tabs, Following buttons, filter pills, nav icons, alert borders, franchise links, profile avatars, hover states. It created visual noise instead of directing attention.
+
+**New hierarchy:**
+- Green reserved for: sale prices, discount badges, PRICE DROP/ATL badges, primary CTA buttons, toggle "on" states, unread alert dots, alert count badges
+- Following/followed buttons: muted white fill on dark background (not green)
+- Active filter pills and tabs: white/off-white text on subtle bg (not green)
+- Hover states on links/borders: neutral gray (not green)
+- Profile avatar: white initial on gray (not green)
+- BottomNav active: white text + white indicator bar (not green)
+
+### Card Layout Fixes
+- **"I own this" button** — was floating disconnected below its card. Moved inside GameCard via `ownAction` prop, renders as a small inline button in the Follow button column
+- **Feed badges (NEW/SOON/DEMO)** — were overlapping Follow button in top-right. Moved to top-left of cover art with unified neutral style (black/white, no color variation)
+- **Title truncation** — compact cards and deals page changed from `truncate` to `line-clamp-2`
+- **Franchise thumbnails** — increased from 40px to 48px, single initial fallback
+
+### Sale Banner Redesign
+- Was: small left-aligned pill with text
+- Now: full-width gradient card with icon, game count, CTA text
+
+### Urgency Color System
+- Sale end labels now use tiered urgency: 1-3 days (red bold), 4-7 days (amber), 8-14 days (muted gray)
+- Applied consistently to GameCard and /deals page
+
+### Dead Code Removed
+- `SwipeableGameCard.tsx` — unused since consolidation commit
+- `FranchiseCard.tsx` — not imported anywhere
+- `computeGameScore()` — backward-compat alias, unused
+- `DEFAULT_NOTIFY_PREFS` unused import in queries.ts
+
+### Other Fixes
+- Removed swipe indicator dots below Home tabs (redundant with tab bar)
+- Added `focus:outline-none` globally for buttons/links to prevent blue browser focus rings
+- Fixed Watchlist explanatory text left-edge clipping
+- Fixed franchise detail fallback: 2-letter → single initial
+
+### Build Status
+- Zero errors, 3 pre-existing warnings (img element in /deals, useEffect deps in release-time)
+
+### Needs Human Review
+- Admin trailers route (`/api/admin/trailers/[id]`) uses email-based admin check — consider stronger auth if admin panel gets more usage
+- Onboarding and Settings pages share console selection UI — could extract shared component if these pages get more complex
+
+### Not Changed (by design)
+- Green on primary CTA buttons (brand accent, correct)
+- Green on sale prices and discount badges (functional color, correct)
+- Green on toggle switches in NotifyPrefsPanel (standard on/off pattern)
+- Green on Logo component (brand identity)
+- Green glow on input focus states (subtle, appropriate)
+- Console.log in server-side cron routes (appropriate for production logging)
+- .env.local NOT tracked in git (gitignored correctly)
+
 ## Session Log — 2026-03-17
 
 ### Production Audit Fixes (8 items)
