@@ -164,7 +164,7 @@ export default function HomePage() {
                   key={tab}
                   data-tab={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all ${
+                  className={`flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all focus:outline-none ${
                     isActive
                       ? "bg-[#1a1a1a] text-white"
                       : "text-[#666666] hover:text-white"
@@ -174,7 +174,7 @@ export default function HomePage() {
                   {count > 0 && (
                     <span
                       className={`ml-1 ${
-                        isActive ? "text-[#00ff88]" : "text-[#555555]"
+                        isActive ? "text-[#aaaaaa]" : "text-[#555555]"
                       }`}
                     >
                       {count}
@@ -185,19 +185,6 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* Swipe indicator dots */}
-          <div className="flex justify-center gap-1.5 mb-3">
-            {TABS.map((tab) => (
-              <div
-                key={tab}
-                className={`h-1.5 rounded-full transition-all ${
-                  activeTab === tab
-                    ? "w-4 bg-[#00ff88]"
-                    : "w-1.5 bg-[#333333]"
-                }`}
-              />
-            ))}
-          </div>
 
           {/* Swipeable content area */}
           <div
@@ -363,24 +350,13 @@ function MyGamesTab({
 
   return (
     <div className="space-y-4 pb-4">
-      <p className="text-[#444444] text-xs">Watching = price alerts · Library = DLC announcements only</p>
+      <p className="text-[#444444] text-xs px-1">Watching = price alerts · Library = DLC announcements only</p>
       {onSale.length > 0 && (
         <div>
           <h3 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2">ON SALE NOW</h3>
           <div className="space-y-2">
             {onSale.map((game) => (
-              <div key={game.id}>
-                <GameCard game={game} />
-                <button
-                  onClick={() => toggleOwnGame(game.id)}
-                  className="inline-flex items-center gap-1.5 mt-1 ml-3 px-3 py-1.5 min-h-[36px] rounded-lg bg-[#7c3aed]/15 text-[#a78bfa] text-[11px] font-medium border border-[#7c3aed]/20 hover:bg-[#7c3aed]/25 transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  I own this
-                </button>
-              </div>
+              <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
             ))}
           </div>
         </div>
@@ -390,18 +366,7 @@ function MyGamesTab({
           <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">WATCHING FOR DEALS</h3>
           <div className="space-y-2">
             {notOnSale.map((game) => (
-              <div key={game.id}>
-                <GameCard game={game} />
-                <button
-                  onClick={() => toggleOwnGame(game.id)}
-                  className="inline-flex items-center gap-1.5 mt-1 ml-3 px-3 py-1.5 min-h-[36px] rounded-lg bg-[#7c3aed]/15 text-[#a78bfa] text-[11px] font-medium border border-[#7c3aed]/20 hover:bg-[#7c3aed]/25 transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  I own this
-                </button>
-              </div>
+              <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
             ))}
           </div>
         </div>
@@ -416,7 +381,7 @@ function MyGamesTab({
       )}
       {followedFranchises.length > 0 && (
         <div>
-          <h3 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2">MY FRANCHISES</h3>
+          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">MY FRANCHISES</h3>
           <div className="space-y-2">
             {followedFranchises.map((franchise) => (
               <FranchiseRow key={franchise.id} franchise={franchise} />
@@ -466,11 +431,11 @@ function FranchiseRow({ franchise }: { franchise: Franchise }) {
           <img
             src={franchise.logo}
             alt={franchise.name}
-            className="w-10 h-10 rounded-lg object-cover bg-[#1a1a1a] shrink-0"
+            className="w-12 h-12 rounded-xl object-cover bg-[#1a1a1a] shrink-0"
           />
         ) : (
-          <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#333333] flex items-center justify-center shrink-0">
-            <span className="text-[#666666] text-xs font-bold">{franchise.name.slice(0, 2).toUpperCase()}</span>
+          <div className="w-12 h-12 rounded-xl bg-[#1a1a1a] border border-[#333333] flex items-center justify-center shrink-0">
+            <span className="text-[#888888] text-sm font-bold">{franchise.name.charAt(0).toUpperCase()}</span>
           </div>
         )}
         <div className="min-w-0">

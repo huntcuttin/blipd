@@ -9,7 +9,7 @@ import { useFollow } from "@/lib/FollowContext";
 import FollowButton from "./FollowButton";
 import GameCoverImage from "./GameCoverImage";
 
-export default memo(function GameCard({ game }: { game: Game }) {
+export default memo(function GameCard({ game, ownAction }: { game: Game; ownAction?: () => void }) {
   const { getTargetPrice } = useFollow();
   const targetPrice = getTargetPrice(game.id);
   const daysUntilRelease = getDaysUntil(game.releaseDate);
@@ -44,12 +44,16 @@ export default memo(function GameCard({ game }: { game: Game }) {
             <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
               <p className="text-[#555555] text-[11px] truncate min-w-0">
                 {game.publisher}
-                {game.metacriticScore !== null && (
-                  <span className="text-[#666666]">
-                    {" "}· ★ {game.metacriticScore}%
-                  </span>
-                )}
               </p>
+              {game.metacriticScore !== null && game.metacriticScore >= 70 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  game.metacriticScore >= 85
+                    ? "bg-[#FFD700]/15 text-[#FFD700]"
+                    : "bg-[#888888]/15 text-[#888888]"
+                }`}>
+                  ★ {game.metacriticScore}
+                </span>
+              )}
               {game.retroPlatform && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#ffaa00]/15 text-[#ffaa00] shrink-0">
                   {game.retroPlatform.toUpperCase()}
@@ -110,8 +114,8 @@ export default memo(function GameCard({ game }: { game: Game }) {
               </span>
             )}
             {saleEndLabel && (
-              <span className="text-[#ff6874] text-[10px] font-medium">
-                {saleEndLabel}
+              <span className={`text-[10px] font-medium ${saleEndLabel.urgency === "high" ? "text-[#ff4444] font-bold" : saleEndLabel.urgency === "medium" ? "text-[#ffaa00]" : "text-[#777777]"}`}>
+                {saleEndLabel.text}
               </span>
             )}
             {releaseLabel && (
@@ -143,8 +147,19 @@ export default memo(function GameCard({ game }: { game: Game }) {
         </div>
 
         {/* Follow button */}
-        <div className="shrink-0 flex items-start pt-1">
+        <div className="shrink-0 flex flex-col items-end gap-1.5 pt-1">
           <FollowButton gameId={game.id} />
+          {ownAction && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); ownAction(); }}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#7c3aed]/15 text-[#a78bfa] text-[10px] font-medium border border-[#7c3aed]/20 hover:bg-[#7c3aed]/25 transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              I own this
+            </button>
+          )}
         </div>
       </div>
     </Link>
@@ -180,7 +195,7 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
           className={`w-full aspect-[16/10] bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
         />
         <div className="p-2.5">
-          <h3 className="font-semibold text-white text-xs leading-tight truncate">
+          <h3 className="font-semibold text-white text-xs leading-tight line-clamp-2">
             {game.title}
           </h3>
           <p className="text-[#555555] text-[10px] mt-0.5">{game.publisher}</p>
@@ -257,11 +272,13 @@ function getDaysUntil(dateStr: string): number {
   );
 }
 
-function getSaleEndLabel(dateStr: string): string | null {
+function getSaleEndLabel(dateStr: string): { text: string; urgency: "high" | "medium" | "low" } | null {
   const days = getDaysUntil(dateStr);
-  if (days <= 0) return "Ends today";
-  if (days === 1) return "Ends tomorrow";
-  if (days <= 14) return `Ends in ${days} days`;
+  if (days <= 0) return { text: "Ends today", urgency: "high" };
+  if (days === 1) return { text: "Ends tomorrow", urgency: "high" };
+  if (days <= 3) return { text: `Ends in ${days} days`, urgency: "high" };
+  if (days <= 7) return { text: `Ends in ${days} days`, urgency: "medium" };
+  if (days <= 14) return { text: `Ends in ${days} days`, urgency: "low" };
   return null;
 }
 

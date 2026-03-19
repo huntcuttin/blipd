@@ -35,28 +35,22 @@ export default function BottomNav() {
               key={tab.href}
               href={tab.href}
               className={`relative flex flex-col items-center gap-1 px-4 py-2 transition-all ${
-                isActive ? "text-[#00ff88]" : "text-[#444444]"
+                isActive ? "text-white" : "text-[#444444]"
               }`}
             >
               <div className="relative">
-                <tab.icon
-                  className={`w-6 h-6 ${isActive ? "drop-shadow-[0_0_8px_#00ff88]" : ""}`}
-                />
+                <tab.icon className="w-6 h-6" />
                 {typeof tab.badge === "number" && tab.badge > 0 && (
                   <span className="absolute -top-1.5 -right-2.5 min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-[#00ff88] text-[#0a0a0a] text-[10px] font-bold px-1.5 leading-none">
                     {tab.badge > 99 ? "99+" : tab.badge}
                   </span>
                 )}
               </div>
-              <span
-                className={`text-[10px] font-medium ${
-                  isActive ? "drop-shadow-[0_0_6px_#00ff88]" : ""
-                }`}
-              >
+              <span className="text-[10px] font-medium">
                 {tab.label}
               </span>
               {isActive && (
-                <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#00ff88] rounded-full shadow-[0_0_8px_#00ff88]" />
+                <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-white rounded-full" />
               )}
             </Link>
           );

@@ -34,7 +34,7 @@ export default function FollowButton({
     return (
       <button
         onClick={handleClick}
-        className={`flex items-center justify-center gap-1.5 font-semibold rounded-lg bg-[#00ff88] text-[#0a0a0a] transition-all active:scale-95 shadow-[0_0_12px_#00ff8855] ${
+        className={`flex items-center justify-center gap-1.5 font-semibold rounded-lg bg-[#1a1a1a] text-white border border-[#333333] transition-all active:scale-95 ${
           isLarge ? "px-6 py-3 text-base w-full" : "min-h-[36px] px-3 py-1.5 text-xs"
         }`}
       >

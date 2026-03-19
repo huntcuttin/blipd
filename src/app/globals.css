@@ -11,6 +11,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+button:focus, a:focus {
+  outline: none;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);

@@ -33,7 +33,7 @@ export default function FranchiseFollowButton({
     return (
       <button
         onClick={handleClick}
-        className={`flex items-center gap-1.5 font-semibold rounded-lg bg-[#00ff88] text-[#0a0a0a] transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844] ${
+        className={`flex items-center gap-1.5 font-semibold rounded-lg bg-[#1a1a1a] text-white border border-[#333333] transition-all ${
           isLarge ? "px-6 py-3 text-base w-full justify-center" : "px-3 py-1.5 text-xs"
         }`}
       >
@@ -46,7 +46,7 @@ export default function FranchiseFollowButton({
   return (
     <button
       onClick={handleClick}
-      className={`flex items-center gap-1.5 font-semibold rounded-lg border border-[#00ff88] text-[#00ff88] transition-all hover:bg-[#00ff88]/10 ${
+      className={`flex items-center gap-1.5 font-semibold rounded-lg border border-[#333333] text-[#888888] transition-all hover:border-[#00ff88] hover:text-[#00ff88] ${
         isLarge ? "px-6 py-3 text-base w-full justify-center" : "px-3 py-1.5 text-xs"
       }`}
     >

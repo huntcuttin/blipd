@@ -187,7 +187,7 @@ export default function SalesPage() {
                   key={f}
                   onClick={() => setFilter(f)}
                   aria-pressed={isActive}
-                  className={`flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all ${
+                  className={`flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all focus:outline-none ${
                     isActive
                       ? "bg-[#1a1a1a] text-white"
                       : "text-[#666666] hover:text-white"
@@ -197,7 +197,7 @@ export default function SalesPage() {
                   {count > 0 && (
                     <span
                       className={`ml-1 ${
-                        isActive ? "text-[#00ff88]" : "text-[#555555]"
+                        isActive ? "text-[#aaaaaa]" : "text-[#555555]"
                       }`}
                     >
                       {count}
@@ -249,7 +249,7 @@ export default function SalesPage() {
                     aria-pressed={sort === s}
                     className={`px-4 py-3 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                       sort === s
-                        ? "bg-[#00ff88]/15 text-[#00ff88]"
+                        ? "bg-white/10 text-white"
                         : "bg-[#1a1a1a] text-[#666666] hover:text-white"
                     }`}
                   >

@@ -200,7 +200,7 @@ function FeedContent() {
             onClick={() => setFilter(f.value)}
             className={`px-3 py-2.5 rounded-full text-xs font-medium transition-all ${
               filter === f.value
-                ? "bg-[#00ff88]/15 text-[#00ff88]"
+                ? "bg-white/10 text-white"
                 : "bg-[#1a1a1a] text-[#666666] hover:text-white"
             }`}
           >
@@ -245,18 +245,18 @@ function FeedItemRenderer({ item }: { item: FeedItem }) {
 }
 
 function FeedBadge({ type }: { type: FeedItem["type"] }) {
-  const badges: Record<string, { label: string; color: string }> = {
-    new_release: { label: "NEW", color: "bg-[#00ff88]/15 text-[#00ff88]" },
-    coming_soon: { label: "SOON", color: "bg-[#3b82f6]/15 text-[#3b82f6]" },
-    demo: { label: "DEMO", color: "bg-[#a855f7]/15 text-[#a855f7]" },
+  const labels: Record<string, string> = {
+    new_release: "NEW",
+    coming_soon: "SOON",
+    demo: "DEMO",
   };
-  const config = badges[type];
+  const label = labels[type];
 
-  if (!config) return null;
+  if (!label) return null;
 
   return (
-    <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold ${config.color}`}>
-      {config.label}
+    <span className="absolute top-[15px] left-[15px] px-2 py-0.5 rounded-md text-[10px] font-bold bg-black/70 text-white backdrop-blur-sm">
+      {label}
     </span>
   );
 }

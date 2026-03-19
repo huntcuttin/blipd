@@ -146,7 +146,7 @@ export default function AlertsPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-white">Alerts</h1>
             {unreadCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-xs font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-white/10 text-white text-xs font-bold">
                 {unreadCount} new
               </span>
             )}
@@ -154,7 +154,7 @@ export default function AlertsPage() {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="text-xs text-[#00ff88] font-medium hover:underline py-2 px-2"
+              className="text-xs text-[#888888] font-medium hover:text-white hover:underline py-2 px-2"
             >
               Mark all read
             </button>
@@ -211,7 +211,7 @@ export default function AlertsPage() {
                 aria-pressed={filter === f.key}
                 className={`px-3 py-2.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                   filter === f.key
-                    ? "bg-[#00ff88]/15 text-[#00ff88]"
+                    ? "bg-white/10 text-white"
                     : "bg-[#1a1a1a] text-[#666666] hover:text-white"
                 }`}
               >
