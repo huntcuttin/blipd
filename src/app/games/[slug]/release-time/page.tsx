@@ -88,7 +88,7 @@ export default async function ReleaseTimePage({ params }: Props) {
     return (
       <div className="px-4 py-20 text-center">
         <p className="text-[#666666] text-sm">Game not found</p>
-        <Link href="/home" className="inline-block mt-4 text-sm text-[#00ff88] hover:underline">
+        <Link href="/home" className="inline-block mt-4 text-sm text-[#888888] hover:text-white hover:underline">
           &larr; Back to Home
         </Link>
       </div>
@@ -103,7 +103,7 @@ export default async function ReleaseTimePage({ params }: Props) {
     <div className="px-4 pb-28 max-w-2xl mx-auto">
       {/* Back nav */}
       <div className="py-4">
-        <Link href={`/game/${game.slug}`} className="text-[#00ff88] text-sm hover:underline">
+        <Link href={`/game/${game.slug}`} className="text-[#888888] text-sm hover:text-white hover:underline">
           &larr; {game.title}
         </Link>
       </div>
