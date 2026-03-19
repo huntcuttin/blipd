@@ -174,11 +174,16 @@ export default function GameDetailClient({ slug }: { slug: string }) {
                 )}
               </>
             )}
-            {game.isOnSale && game.saleEndDate && (
-              <span className="text-[#ff6874] text-sm font-medium ml-1">
-                Sale ends {formatShortDate(game.saleEndDate)}
-              </span>
-            )}
+            {game.isOnSale && game.saleEndDate && (() => {
+              const target = new Date(game.saleEndDate);
+              const days = Math.round((target.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+              const urgency = days <= 3 ? "text-[#ff4444] font-bold" : days <= 7 ? "text-[#ffaa00]" : "text-[#777777]";
+              return (
+                <span className={`text-sm font-medium ml-1 ${urgency}`}>
+                  Sale ends {formatShortDate(game.saleEndDate)}
+                </span>
+              );
+            })()}
           </div>
           {game.isAllTimeLow && (
             <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFD700]/10 border border-[#FFD700]/20">
