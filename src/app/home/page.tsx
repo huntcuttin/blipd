@@ -7,7 +7,6 @@ import SearchBar from "@/components/SearchBar";
 import DirectBanner from "@/components/DirectBanner";
 import NamedSaleBanner from "@/components/NamedSaleBanner";
 import GameCard, { GameCardCompact, GameCardCompactSkeleton, GameCardSkeleton } from "@/components/GameCard";
-import SwipeableGameCard from "@/components/SwipeableGameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
 import { useAuth } from "@/lib/AuthContext";
@@ -366,7 +365,7 @@ function DiscoverTab({
         <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">DISCOVER</h2>
         <div className="space-y-2">
           {visible.map((game) => (
-            <SwipeableGameCard key={game.id} game={game} />
+            <GameCard key={game.id} game={game} />
           ))}
           <div ref={sentinelRef} className="h-4" />
           {hasMore && (

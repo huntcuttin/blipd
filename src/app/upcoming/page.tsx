@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { GameCardSkeleton } from "@/components/GameCard";
-import SwipeableGameCard from "@/components/SwipeableGameCard";
+import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getRecentReleases, getUpcomingGames, getAnnouncedGames } from "@/lib/queries";
 import { computeTrendingScore } from "@/lib/ranking";
@@ -155,7 +154,7 @@ export default function UpcomingPage() {
           {filtered.length > 0 && (
             <div className="space-y-2 mb-4">
               {filtered.map((game) => (
-                <SwipeableGameCard key={game.id} game={game} />
+                <GameCard key={game.id} game={game} />
               ))}
             </div>
           )}
@@ -168,7 +167,7 @@ export default function UpcomingPage() {
               )}
               <div className="space-y-2">
                 {announcedFiltered.map((game) => (
-                  <SwipeableGameCard key={game.id} game={game} />
+                  <GameCard key={game.id} game={game} />
                 ))}
               </div>
             </div>
