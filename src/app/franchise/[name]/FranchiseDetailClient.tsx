@@ -106,7 +106,7 @@ export default function FranchiseDetailClient({ name }: { name: string }) {
             />
           ) : (
             <div className="w-16 h-16 rounded-2xl bg-[#1a1a1a] border border-[#333333] flex items-center justify-center shrink-0">
-              <span className="text-[#666666] text-lg font-bold">{franchise.name.slice(0, 2).toUpperCase()}</span>
+              <span className="text-[#888888] text-xl font-bold">{franchise.name.charAt(0).toUpperCase()}</span>
             </div>
           )}
           <div className="flex-1 min-w-0">
