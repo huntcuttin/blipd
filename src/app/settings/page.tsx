@@ -6,8 +6,19 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { requestPushPermission } from "@/components/ServiceWorkerRegistration";
 import { createClient } from "@/lib/supabase/client";
-import { setConsolePreference } from "@/lib/queries";
+import { setConsolePreference, getUserRetroFollows, toggleRetroFollow } from "@/lib/queries";
 import type { ConsolePreference } from "@/lib/types";
+
+const RETRO_CONSOLES = [
+  { id: "nes", label: "NES" },
+  { id: "snes", label: "SNES" },
+  { id: "n64", label: "N64" },
+  { id: "gb", label: "Game Boy" },
+  { id: "gba", label: "GBA" },
+  { id: "ds", label: "DS" },
+  { id: "gamecube", label: "GameCube" },
+  { id: "wii", label: "Wii" },
+] as const;
 
 export default function SettingsPage() {
   const { user, consolePreference, setConsolePreference: setAuthConsolePref, signOut } = useAuth();
@@ -16,6 +27,8 @@ export default function SettingsPage() {
   const [pushLoading, setPushLoading] = useState(false);
   const [consolePref, setConsolePref] = useState<ConsolePreference | null>(consolePreference);
   const [consoleSaving, setConsoleSaving] = useState(false);
+  const [retroFollows, setRetroFollows] = useState<Set<string>>(new Set());
+  const [retroLoading, setRetroLoading] = useState<string | null>(null);
 
   useEffect(() => {
     setConsolePref(consolePreference);
@@ -25,6 +38,14 @@ export default function SettingsPage() {
     if (!("Notification" in window)) { setPushState("unsupported"); return; }
     setPushState(Notification.permission as "default" | "granted" | "denied");
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    getUserRetroFollows(supabase, user.id)
+      .then((consoles) => setRetroFollows(new Set(consoles)))
+      .catch(() => {});
+  }, [user]);
 
   async function handleConsoleChange(pref: ConsolePreference) {
     if (!user || consoleSaving || pref === consolePref) return;
@@ -39,6 +60,25 @@ export default function SettingsPage() {
       setConsolePref(prev);
     } finally {
       setConsoleSaving(false);
+    }
+  }
+
+  async function handleRetroToggle(consoleId: string) {
+    if (!user || retroLoading) return;
+    setRetroLoading(consoleId);
+    const prev = new Set(retroFollows);
+    // Optimistic update
+    const next = new Set(retroFollows);
+    if (next.has(consoleId)) next.delete(consoleId);
+    else next.add(consoleId);
+    setRetroFollows(next);
+    try {
+      const supabase = createClient();
+      await toggleRetroFollow(supabase, user.id, consoleId);
+    } catch {
+      setRetroFollows(prev);
+    } finally {
+      setRetroLoading(null);
     }
   }
 
@@ -117,6 +157,35 @@ export default function SettingsPage() {
                   <p className={`text-sm font-semibold ${consolePref === "switch2" ? "text-white" : "text-[#888888]"}`}>Switch 2</p>
                 </div>
               </button>
+            </div>
+          </div>
+
+          {/* Retro consoles */}
+          <div className="bg-[#111111] rounded-xl border border-[#222222] p-4">
+            <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-1">
+              RETRO CONSOLES
+            </h2>
+            <p className="text-[#444444] text-[11px] mb-3">
+              Get alerts when new classic games drop on the eShop
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {RETRO_CONSOLES.map((c) => {
+                const active = retroFollows.has(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => handleRetroToggle(c.id)}
+                    disabled={retroLoading === c.id}
+                    className={`flex items-center justify-center py-2 px-1 rounded-lg border-2 transition-all active:scale-[0.97] text-xs font-bold ${
+                      active
+                        ? "border-[#ffaa00]/40 bg-[#ffaa00]/10 text-[#ffaa00]"
+                        : "border-[#222222] text-[#666666] hover:border-[#333333]"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

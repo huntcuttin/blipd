@@ -41,14 +41,21 @@ export default memo(function GameCard({ game }: { game: Game }) {
                 {edition}
               </p>
             )}
-            <p className="text-[#555555] text-[11px] mt-0.5 truncate min-w-0">
-              {game.publisher}
-              {game.metacriticScore !== null && (
-                <span className="text-[#666666]">
-                  {" "}· ★ {game.metacriticScore}%
+            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <p className="text-[#555555] text-[11px] truncate min-w-0">
+                {game.publisher}
+                {game.metacriticScore !== null && (
+                  <span className="text-[#666666]">
+                    {" "}· ★ {game.metacriticScore}%
+                  </span>
+                )}
+              </p>
+              {game.retroPlatform && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#ffaa00]/15 text-[#ffaa00] shrink-0">
+                  {game.retroPlatform.toUpperCase()}
                 </span>
               )}
-            </p>
+            </div>
           </div>
 
           {/* Price row */}

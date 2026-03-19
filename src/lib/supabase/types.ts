@@ -30,6 +30,7 @@ export interface Database {
           is_suppressed: boolean;
           igdb_id: number | null;
           igdb_hype: number | null;
+          retro_platform: string | null;
           release_date_source: string;
           created_at: string;
           updated_at: string;
@@ -60,6 +61,7 @@ export interface Database {
           is_suppressed?: boolean;
           igdb_id?: number | null;
           igdb_hype?: number | null;
+          retro_platform?: string | null;
           release_date_source?: string;
           created_at?: string;
           updated_at?: string;
@@ -135,7 +137,7 @@ export interface Database {
         Row: {
           id: string;
           game_id: string;
-          type: "price_drop" | "all_time_low" | "out_now" | "sale_started" | "sale_ending" | "release_today" | "announced" | "switch2_edition_announced";
+          type: "price_drop" | "all_time_low" | "out_now" | "sale_started" | "sale_ending" | "release_today" | "announced" | "switch2_edition_announced" | "retro_game_added";
           headline: string;
           subtext: string;
           new_price: number | null;
@@ -225,6 +227,20 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["user_alert_status"]["Insert"]>;
+        Relationships: [];
+      };
+      user_retro_follows: {
+        Row: {
+          user_id: string;
+          console: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          console: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["user_retro_follows"]["Insert"]>;
         Relationships: [];
       };
       nintendo_directs: {

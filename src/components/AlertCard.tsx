@@ -16,6 +16,7 @@ const alertConfig: Record<
   release_today: { label: "RELEASE TODAY", color: "text-[#FFA500]", bg: "bg-[#FFA500]/15" },
   announced: { label: "ANNOUNCED", color: "text-[#9B59B6]", bg: "bg-[#9B59B6]/15" },
   switch2_edition_announced: { label: "SWITCH 2", color: "text-[#00aaff]", bg: "bg-[#00aaff]/15" },
+  retro_game_added: { label: "RETRO DROP", color: "text-[#ffaa00]", bg: "bg-[#ffaa00]/15" },
 };
 
 export default function AlertCard({

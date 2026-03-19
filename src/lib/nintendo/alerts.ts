@@ -176,6 +176,30 @@ export async function generateSaleEndingAlert(
   }, followers);
 }
 
+const RETRO_CONSOLE_LABELS: Record<string, string> = {
+  nes: "NES",
+  snes: "SNES",
+  n64: "N64",
+  gb: "Game Boy",
+  gba: "GBA",
+  ds: "DS",
+  gamecube: "GameCube",
+  wii: "Wii",
+};
+
+export async function generateRetroGameAlert(
+  supabase: AdminClient,
+  game: GameRef,
+  retroPlatform: string,
+  followers: string[]
+): Promise<boolean> {
+  const label = RETRO_CONSOLE_LABELS[retroPlatform] ?? retroPlatform.toUpperCase();
+  return insertAndDispatch(supabase, game, "retro_game_added", {
+    headline: `${game.title} just hit the eShop`,
+    subtext: `Classic ${label} game now available on Nintendo Switch`,
+  }, followers);
+}
+
 export async function generateReleaseAlert(
   supabase: AdminClient,
   game: GameRef,

@@ -37,6 +37,7 @@ export function computeTrendingScore(
   game: Game,
   options?: {
     followedFranchises?: Set<string>;
+    followerCounts?: Map<string, number>;
   }
 ): number {
   let score = 0;
@@ -132,6 +133,26 @@ export function computeTrendingScore(
   if (daysSinceRelease >= 0 && daysSinceRelease <= 14) score += 15;
   else if (daysSinceRelease <= 30) score += 10;
   else if (daysSinceRelease <= 90) score += 5;
+
+  // ── NEW RELEASE FRANCHISE BOOST (0-25 pts) ────────────────
+  // First 2 weeks: Nintendo 1st party + reputable 3rd party titles
+  // get an extra boost so they rank above unrated shovelware
+  if (daysSinceRelease >= 0 && daysSinceRelease <= 14 && game.franchise) {
+    if (NINTENDO_1ST_PARTY.has(game.franchise) || REPUTABLE_3RD_PARTY.has(game.franchise)) {
+      score += 25;
+    }
+  }
+
+  // ── FOLLOWER COUNT (0-35 pts) ─────────────────────────────
+  // Community interest signal — more followers = more prominent
+  if (options?.followerCounts) {
+    const followers = options.followerCounts.get(game.id) ?? 0;
+    if (followers >= 50) score += 35;
+    else if (followers >= 20) score += 25;
+    else if (followers >= 10) score += 18;
+    else if (followers >= 5) score += 12;
+    else if (followers >= 1) score += 5;
+  }
 
   // ── PERSONALIZATION (0-25 pts) ─────────────────────────────
   // Franchise the user follows — boost heavily

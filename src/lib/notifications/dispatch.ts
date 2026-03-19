@@ -41,6 +41,7 @@ function getPrefColumn(alertType: string): PrefColumn {
       return "notify_releases";
     case "announced":
     case "switch2_edition_announced":
+    case "retro_game_added":
       return "notify_announcements";
     default:
       console.warn(`Unknown alert type "${alertType}" — defaulting to notify_sales`);

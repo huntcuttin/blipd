@@ -4,13 +4,24 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { createClient } from "@/lib/supabase/client";
-import { getUserProfile, setConsolePreference, getPopularGames, markGameOwned } from "@/lib/queries";
+import { getUserProfile, setConsolePreference, getPopularGames, markGameOwned, setRetroFollows } from "@/lib/queries";
 import type { ConsolePreference, Game } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import GameCoverImage from "@/components/GameCoverImage";
 import Logo from "@/components/Logo";
 
-type Step = "console" | "games" | "done";
+type Step = "console" | "retro" | "games" | "done";
+
+const RETRO_CONSOLES = [
+  { id: "nes", label: "NES" },
+  { id: "snes", label: "SNES" },
+  { id: "n64", label: "N64" },
+  { id: "gb", label: "Game Boy" },
+  { id: "gba", label: "GBA" },
+  { id: "ds", label: "DS" },
+  { id: "gamecube", label: "GameCube" },
+  { id: "wii", label: "Wii" },
+] as const;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -19,6 +30,9 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<Step>("console");
   const [saving, setSaving] = useState(false);
   const [selectedConsole, setSelectedConsole] = useState<ConsolePreference | null>(null);
+
+  // Retro console state
+  const [selectedRetro, setSelectedRetro] = useState<Set<string>>(new Set());
 
   // Game picker state
   const [popularGames, setPopularGames] = useState<Game[]>([]);
@@ -38,7 +52,7 @@ export default function OnboardingPage() {
           router.replace("/home");
         } else if (consolePreference) {
           setSelectedConsole(consolePreference);
-          setStep("games");
+          setStep("retro");
           setChecking(false);
         } else {
           setChecking(false);
@@ -67,11 +81,36 @@ export default function OnboardingPage() {
       const supabase = createClient();
       await setConsolePreference(supabase, user.id, preference);
       setSelectedConsole(preference);
-      setStep("games");
+      setStep("retro");
     } catch {
       // stay on step
     } finally {
       setSaving(false);
+    }
+  }
+
+  const toggleRetroConsole = useCallback((consoleId: string) => {
+    setSelectedRetro((prev) => {
+      const next = new Set(prev);
+      if (next.has(consoleId)) next.delete(consoleId);
+      else next.add(consoleId);
+      return next;
+    });
+  }, []);
+
+  async function handleRetroNext() {
+    if (!user) return;
+    setSaving(true);
+    try {
+      if (selectedRetro.size > 0) {
+        const supabase = createClient();
+        await setRetroFollows(supabase, user.id, Array.from(selectedRetro));
+      }
+    } catch {
+      // continue anyway
+    } finally {
+      setSaving(false);
+      setStep("games");
     }
   }
 
@@ -134,17 +173,34 @@ export default function OnboardingPage() {
     );
   }
 
+  const stepIndex = step === "console" ? 0 : step === "retro" ? 1 : step === "games" ? 2 : 3;
+
   return (
     <div className="flex flex-col items-center min-h-[80vh] px-6 pt-12 pb-24">
       {/* Progress dots */}
       <div className="flex items-center gap-2 mb-8">
-        <div className={`w-2 h-2 rounded-full transition-colors ${step === "console" ? "bg-[#00ff88]" : "bg-[#00ff88]/40"}`} />
-        <div className={`w-2 h-2 rounded-full transition-colors ${step === "games" ? "bg-[#00ff88]" : step === "done" ? "bg-[#00ff88]/40" : "bg-[#333333]"}`} />
-        <div className={`w-2 h-2 rounded-full transition-colors ${step === "done" ? "bg-[#00ff88]" : "bg-[#333333]"}`} />
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className={`w-2 h-2 rounded-full transition-colors ${
+              i === stepIndex ? "bg-[#00ff88]" : i < stepIndex ? "bg-[#00ff88]/40" : "bg-[#333333]"
+            }`}
+          />
+        ))}
       </div>
 
       {step === "console" && (
         <ConsoleStep saving={saving} onSelect={handleConsoleSelect} />
+      )}
+
+      {step === "retro" && (
+        <RetroConsoleStep
+          selected={selectedRetro}
+          onToggle={toggleRetroConsole}
+          onNext={handleRetroNext}
+          onSkip={() => setStep("games")}
+          saving={saving}
+        />
       )}
 
       {step === "games" && (
@@ -215,7 +271,72 @@ function ConsoleStep({ saving, onSelect }: { saving: boolean; onSelect: (p: Cons
   );
 }
 
-// ── Step 2: Pick games you own ──────────────────────────────────
+// ── Step 2: Retro console selection ─────────────────────────────
+
+function RetroConsoleStep({
+  selected,
+  onToggle,
+  onNext,
+  onSkip,
+  saving,
+}: {
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  onNext: () => void;
+  onSkip: () => void;
+  saving: boolean;
+}) {
+  return (
+    <>
+      <h1 className="text-2xl font-bold text-white mb-2 text-center">
+        Classic consoles
+      </h1>
+      <p className="text-[#666666] text-sm text-center mb-8 max-w-xs">
+        Get notified when classic games drop on the eShop
+      </p>
+
+      <div className="grid grid-cols-4 gap-3 w-full max-w-md">
+        {RETRO_CONSOLES.map((c) => {
+          const active = selected.has(c.id);
+          return (
+            <button
+              key={c.id}
+              onClick={() => onToggle(c.id)}
+              className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all active:scale-[0.97] ${
+                active
+                  ? "border-[#ffaa00] bg-[#ffaa00]/10"
+                  : "border-[#222222] hover:border-[#333333]"
+              }`}
+            >
+              <span className={`text-sm font-bold ${active ? "text-[#ffaa00]" : "text-[#888888]"}`}>
+                {c.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="w-full max-w-md mt-8 space-y-3">
+        <button
+          onClick={onNext}
+          disabled={saving}
+          className="w-full py-3.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844] disabled:opacity-50 active:scale-[0.98]"
+        >
+          {saving ? "Saving..." : selected.size > 0 ? `Continue with ${selected.size} console${selected.size !== 1 ? "s" : ""}` : "Continue"}
+        </button>
+        <button
+          onClick={onSkip}
+          disabled={saving}
+          className="w-full py-3 text-[#666666] text-sm hover:text-white transition-colors"
+        >
+          Skip
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Step 3: Pick games you own ──────────────────────────────────
 
 function GamePickerStep({
   games,
@@ -323,7 +444,7 @@ function GamePickerStep({
   );
 }
 
-// ── Step 3: Done ────────────────────────────────────────────────
+// ── Step 4: Done ────────────────────────────────────────────────
 
 function DoneStep() {
   return (

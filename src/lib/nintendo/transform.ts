@@ -193,6 +193,26 @@ export function detectFranchise(title: string): string | null {
   return null;
 }
 
+const RETRO_PLATFORM_PATTERNS: [RegExp, string][] = [
+  [/\bGame Boy Advance\b/i, "gba"],
+  [/\bGameCube\b/i, "gamecube"],
+  [/\bNintendo 64\b/i, "n64"],
+  [/\bSNES\b/i, "snes"],
+  [/\bSuper Nintendo\b/i, "snes"],
+  [/\bNintendo Entertainment System\b/i, "nes"],
+  [/\bNES(?:\s|™|$)/, "nes"],
+  [/\bGame Boy(?!\s*Advance)\b/i, "gb"],
+  [/\bNintendo DS\b/i, "ds"],
+  [/\bWii(?!\s*U)\b/i, "wii"],
+];
+
+export function detectRetroPlatform(title: string): string | null {
+  for (const [pattern, platform] of RETRO_PLATFORM_PATTERNS) {
+    if (pattern.test(title)) return platform;
+  }
+  return null;
+}
+
 export function algoliaHitToGameRow(hit: AlgoliaHit) {
   const title = hit.title;
   const slug = hit.slug || generateSlug(title);
@@ -230,5 +250,6 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
     release_status: releaseStatus,
     price_history: [{ date: new Date().toISOString().slice(0, 7), price: currentPrice }],
     nintendo_url: hit.url ? `https://www.nintendo.com${hit.url}` : null,
+    retro_platform: detectRetroPlatform(title),
   };
 }

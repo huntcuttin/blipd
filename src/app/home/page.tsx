@@ -12,7 +12,7 @@ import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getTrendingGames, getUpcomingGames, getGamesByIds, getAllFranchises, searchGames, getRecentReleases } from "@/lib/queries";
+import { getTrendingGames, getUpcomingGames, getGamesByIds, getAllFranchises, searchGames, getRecentReleases, getFollowerCountsBatch } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { computeTrendingScore, deduplicateGames, isQualityGame } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
@@ -30,6 +30,11 @@ export default function HomePage() {
   const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
   const { data: upcomingData } = useSupabaseQuery(getUpcomingGames);
   const { data: recentReleasesData } = useSupabaseQuery(getRecentReleases);
+  const recentReleaseIds = useMemo(() => (recentReleasesData ?? []).map((g) => g.id), [recentReleasesData]);
+  const { data: followerCountsData } = useSupabaseQuery(
+    (sb) => getFollowerCountsBatch(sb, recentReleaseIds),
+    [recentReleaseIds.join(",")]
+  );
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
   const { data: followedGamesData } = useSupabaseQuery(
     (sb) => getGamesByIds(sb, followedIds),
@@ -223,6 +228,7 @@ export default function HomePage() {
                 loading={trendingLoading}
                 error={trendingError}
                 followedFranchises={followedFranchiseNames}
+                followerCounts={followerCountsData ?? new Map()}
               />
             )}
             {activeTab === "Watchlist" && (
@@ -252,6 +258,7 @@ function DiscoverTab({
   loading,
   error,
   followedFranchises,
+  followerCounts,
 }: {
   trendingGames: Game[];
   upcomingGames: Game[];
@@ -259,6 +266,7 @@ function DiscoverTab({
   loading: boolean;
   error: Error | null;
   followedFranchises: Set<string>;
+  followerCounts: Map<string, number>;
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -277,9 +285,9 @@ function DiscoverTab({
   const newReleases = useMemo(() => {
     return deduplicateGames(recentReleases)
       .filter((g) => !!g.coverArt && g.originalPrice > 0)
-      .sort((a, b) => computeTrendingScore(b, { followedFranchises }) - computeTrendingScore(a, { followedFranchises }))
+      .sort((a, b) => computeTrendingScore(b, { followedFranchises, followerCounts }) - computeTrendingScore(a, { followedFranchises, followerCounts }))
       .slice(0, 10);
-  }, [recentReleases, followedFranchises]);
+  }, [recentReleases, followedFranchises, followerCounts]);
 
   // Reset visible count when data changes
   useEffect(() => {

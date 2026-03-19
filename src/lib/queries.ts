@@ -36,6 +36,7 @@ function mapGame(row: any): Game {
     igdbHype: row.igdb_hype ?? null,
     platform: row.platform ?? null,
     saleEventId: row.sale_event_id ?? null,
+    retroPlatform: row.retro_platform ?? null,
   };
 }
 
@@ -168,10 +169,25 @@ export async function getRecentReleases(supabase: Client): Promise<Game[]> {
     .gte("release_date", thirtyDaysAgo)
     .neq("release_date", "2099-12-31")
     .neq("release_date", "2020-01-01")
+    .gt("original_price", 0)
     .order("release_date", { ascending: false })
     .limit(100);
   if (error) throw error;
   return (data ?? []).map(mapGame);
+}
+
+export async function getFollowerCountsBatch(supabase: Client, gameIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (gameIds.length === 0) return result;
+  const { data, error } = await supabase
+    .from("user_game_follows")
+    .select("game_id")
+    .in("game_id", gameIds);
+  if (error || !data) return result;
+  for (const row of data) {
+    result.set(row.game_id, (result.get(row.game_id) ?? 0) + 1);
+  }
+  return result;
 }
 
 export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
@@ -625,5 +641,61 @@ export async function markGameOwned(supabase: Client, userId: string, gameId: st
 export async function unmarkGameOwned(supabase: Client, userId: string, gameId: string) {
   const { error } = await supabase.from("user_game_owns").delete().eq("user_id", userId).eq("game_id", gameId);
   if (error) throw error;
+}
+
+// ── Retro console follow queries ─────────────────────────────
+
+export async function getUserRetroFollows(supabase: Client, userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("user_retro_follows")
+    .select("console")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return (data ?? []).map((r: { console: string }) => r.console);
+}
+
+export async function toggleRetroFollow(supabase: Client, userId: string, console: string): Promise<boolean> {
+  // Check if already following
+  const { data } = await supabase
+    .from("user_retro_follows")
+    .select("console")
+    .eq("user_id", userId)
+    .eq("console", console)
+    .maybeSingle();
+
+  if (data) {
+    const { error } = await supabase
+      .from("user_retro_follows")
+      .delete()
+      .eq("user_id", userId)
+      .eq("console", console);
+    if (error) throw error;
+    return false; // unfollowed
+  } else {
+    const { error } = await supabase
+      .from("user_retro_follows")
+      .insert({ user_id: userId, console });
+    if (error) throw error;
+    return true; // followed
+  }
+}
+
+export async function setRetroFollows(supabase: Client, userId: string, consoles: string[]): Promise<void> {
+  // Delete all existing, then insert new ones
+  await supabase.from("user_retro_follows").delete().eq("user_id", userId);
+  if (consoles.length > 0) {
+    const rows = consoles.map((c) => ({ user_id: userId, console: c }));
+    const { error } = await supabase.from("user_retro_follows").insert(rows);
+    if (error) throw error;
+  }
+}
+
+export async function getRetroFollowers(supabase: Client, consoleName: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("user_retro_follows")
+    .select("user_id")
+    .eq("console", consoleName);
+  if (error) return [];
+  return (data ?? []).map((r: { user_id: string }) => r.user_id);
 }
 

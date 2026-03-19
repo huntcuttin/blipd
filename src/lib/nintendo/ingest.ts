@@ -19,6 +19,7 @@ import {
   generateReleaseAlert,
   generateSwitch2EditionAlert,
   generateSaleEndingAlert,
+  generateRetroGameAlert,
 } from "./alerts";
 import type { AlgoliaHit } from "./types";
 
@@ -283,6 +284,61 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
         errors++;
       } else {
         upserted += withoutNsuid.length;
+      }
+    }
+  }
+
+  // Detect newly inserted retro games and fire alerts
+  const newRetroGames = rows.filter((r) => {
+    const isNew = r.nsuid ? !existingNsuids.has(r.nsuid) : !existingSlugs.has(r.slug);
+    return isNew && r.retro_platform;
+  });
+
+  if (newRetroGames.length > 0) {
+    console.log(`  Found ${newRetroGames.length} new retro games — generating alerts...`);
+    for (const row of newRetroGames) {
+      // Look up the game ID from DB (was just upserted)
+      const { data: dbGame } = await supabase
+        .from("games")
+        .select("id, franchise")
+        .eq("slug", row.slug)
+        .maybeSingle();
+      if (!dbGame) continue;
+
+      // Collect followers: franchise followers + retro console followers, deduped
+      const followerSet = new Set<string>();
+
+      // Franchise followers
+      if (dbGame.franchise) {
+        const { data: franchiseRow } = await supabase
+          .from("franchises")
+          .select("id")
+          .eq("name", dbGame.franchise)
+          .maybeSingle();
+        if (franchiseRow) {
+          const { data: fFollows } = await supabase
+            .from("user_franchise_follows")
+            .select("user_id")
+            .eq("franchise_id", franchiseRow.id)
+            .eq("notify_announcements", true);
+          for (const f of fFollows ?? []) followerSet.add(f.user_id);
+        }
+      }
+
+      // Retro console followers
+      const { data: retroFollows } = await supabase
+        .from("user_retro_follows")
+        .select("user_id")
+        .eq("console", row.retro_platform!);
+      for (const f of retroFollows ?? []) followerSet.add(f.user_id);
+
+      if (followerSet.size > 0) {
+        await generateRetroGameAlert(
+          supabase,
+          { id: dbGame.id, title: row.title },
+          row.retro_platform!,
+          Array.from(followerSet)
+        );
       }
     }
   }

@@ -24,6 +24,7 @@ export interface Game {
   igdbHype: number | null;
   platform: "switch" | "switch2" | null;
   saleEventId: string | null;
+  retroPlatform: string | null;
 }
 
 export interface NamedSaleEvent {
@@ -64,7 +65,8 @@ export type AlertType =
   | "sale_ending"
   | "release_today"
   | "announced"
-  | "switch2_edition_announced";
+  | "switch2_edition_announced"
+  | "retro_game_added";
 
 export type ConsolePreference = "switch" | "switch2";
 
