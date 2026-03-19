@@ -47,9 +47,20 @@ export function computeDiscount(currentPrice: number, originalPrice: number): nu
   return Math.round((1 - currentPrice / originalPrice) * 100);
 }
 
+const MONTH_YEAR_RE = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$/i;
+
 function parseReleaseDate(releaseDateDisplay: string): string {
   if (!releaseDateDisplay || releaseDateDisplay === "TBD") {
     return "2099-12-31";
+  }
+  // Detect "Month Year" (no day) — store as last day of month so isMonthOnlyDate() detects it
+  const monthYear = releaseDateDisplay.match(MONTH_YEAR_RE);
+  if (monthYear) {
+    const d = new Date(`${monthYear[1]} 1, ${monthYear[2]}`);
+    if (!isNaN(d.getTime())) {
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return lastDay.toISOString().split("T")[0];
+    }
   }
   const parsed = new Date(releaseDateDisplay);
   if (isNaN(parsed.getTime())) return "2099-12-31";
@@ -57,7 +68,7 @@ function parseReleaseDate(releaseDateDisplay: string): string {
 }
 
 const NINTENDO_CDN_PREFIX =
-  "https://assets.nintendo.com/image/upload/ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_1.5/c_scale,w_400/";
+  "https://assets.nintendo.com/image/upload/ar_16:9,c_fill,g_center/f_auto/q_auto/dpr_1.5/c_scale,w_400/";
 
 function buildCoverArtUrl(hit: AlgoliaHit): string {
   if (hit.productImage) {
@@ -234,6 +245,10 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
   // Normalize known variants (e.g. "Pokémon" → "Pokemon" to match detectFranchise output)
   const franchise = detectedFranchise ? normalizeFranchiseName(detectedFranchise) : null;
 
+  const hasDemo = Array.isArray(hit.generalFilters) && hit.generalFilters.some(
+    (f) => /demo\s*available/i.test(f)
+  );
+
   return {
     nsuid: hit.nsuid || null,
     slug,
@@ -251,5 +266,6 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
     price_history: [{ date: new Date().toISOString().slice(0, 7), price: currentPrice }],
     nintendo_url: hit.url ? `https://www.nintendo.com${hit.url}` : null,
     retro_platform: detectRetroPlatform(title),
+    has_demo: hasDemo,
   };
 }

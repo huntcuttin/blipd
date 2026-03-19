@@ -37,6 +37,7 @@ function mapGame(row: any): Game {
     platform: row.platform ?? null,
     saleEventId: row.sale_event_id ?? null,
     retroPlatform: row.retro_platform ?? null,
+    hasDemo: row.has_demo ?? false,
   };
 }
 
@@ -461,14 +462,23 @@ export async function getAlertsForGame(supabase: Client, gameId: string): Promis
 export async function markAlertRead(supabase: Client, userId: string, alertId: string) {
   const { error } = await supabase
     .from("user_alert_status")
-    .upsert({ user_id: userId, alert_id: alertId, read: true });
+    .upsert({ user_id: userId, alert_id: alertId, read: true }, { onConflict: "user_id,alert_id" });
+  if (error) throw error;
+}
+
+export async function markAllAlertsRead(supabase: Client, userId: string, alertIds: string[]) {
+  if (alertIds.length === 0) return;
+  const rows = alertIds.map((alert_id) => ({ user_id: userId, alert_id, read: true }));
+  const { error } = await supabase
+    .from("user_alert_status")
+    .upsert(rows, { onConflict: "user_id,alert_id" });
   if (error) throw error;
 }
 
 export async function dismissAlert(supabase: Client, userId: string, alertId: string) {
   const { error } = await supabase
     .from("user_alert_status")
-    .upsert({ user_id: userId, alert_id: alertId, read: true, dismissed: true });
+    .upsert({ user_id: userId, alert_id: alertId, read: true, dismissed: true }, { onConflict: "user_id,alert_id" });
   if (error) throw error;
 }
 
@@ -476,7 +486,7 @@ export async function remindAlert(supabase: Client, userId: string, alertId: str
   const remindAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
   const { error } = await supabase
     .from("user_alert_status")
-    .upsert({ user_id: userId, alert_id: alertId, read: true, remind_at: remindAt });
+    .upsert({ user_id: userId, alert_id: alertId, read: true, remind_at: remindAt }, { onConflict: "user_id,alert_id" });
   if (error) throw error;
 }
 

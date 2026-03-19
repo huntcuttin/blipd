@@ -3,7 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
-import { formatPrice, isPlaceholderDate, formatReleaseDate, isYearOnlyDate } from "@/lib/format";
+import { formatPrice, isPlaceholderDate, formatReleaseDate, isYearOnlyDate, isMonthOnlyDate } from "@/lib/format";
 import { isRarelyOnSale } from "@/lib/ranking";
 import { useFollow } from "@/lib/FollowContext";
 import FollowButton from "./FollowButton";
@@ -102,6 +102,11 @@ export default memo(function GameCard({ game }: { game: Game }) {
             {game.switch2Nsuid && !game.isAllTimeLow && !rarelyOnSale && (
               <span className="px-1.5 py-0.5 rounded-md bg-[#00aaff]/15 text-[#00aaff] text-[10px] font-bold">
                 Switch 2
+              </span>
+            )}
+            {game.hasDemo && (
+              <span className="px-1.5 py-0.5 rounded-md bg-[#888888]/15 text-[#888888] text-[10px] font-bold">
+                DEMO
               </span>
             )}
             {saleEndLabel && (
@@ -270,6 +275,10 @@ function getReleaseLabel(game: Game, daysUntil: number): string | null {
     if (daysUntil === 1) return "Out tomorrow";
     if (daysUntil <= 7) return `Out in ${daysUntil} days`;
     if (isYearOnlyDate(game.releaseDate)) return new Date(game.releaseDate + "T12:00:00").getFullYear().toString();
+    if (isMonthOnlyDate(game.releaseDate)) {
+      const d = new Date(game.releaseDate + "T12:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+    }
     const d = new Date(game.releaseDate);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   }

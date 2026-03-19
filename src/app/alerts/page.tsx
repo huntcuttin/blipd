@@ -7,7 +7,7 @@ import AlertCard from "@/components/AlertCard";
 import QueryError from "@/components/QueryError";
 import { useAuth } from "@/lib/AuthContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getAlerts, markAlertRead, remindAlert } from "@/lib/queries";
+import { getAlerts, markAlertRead, markAllAlertsRead, remindAlert } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import type { GameAlert, AlertType } from "@/lib/types";
 
@@ -89,7 +89,7 @@ export default function AlertsPage() {
     if (user) {
       try {
         const supabase = createClient();
-        await Promise.all(unread.map((a) => markAlertRead(supabase, user.id, a.id)));
+        await markAllAlertsRead(supabase, user.id, Array.from(unreadIds));
       } catch {
         setLocalAlerts((prev) =>
           prev.map((a) => (unreadIds.has(a.id) ? { ...a, read: false } : a))

@@ -18,6 +18,7 @@ export default function UpcomingPage() {
   const { data: announcedGames } = useSupabaseQuery(getAnnouncedGames);
   const [subTab, setSubTab] = useState<SubTab>("Coming Soon");
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("all");
+  const [demoOnly, setDemoOnly] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -71,30 +72,33 @@ export default function UpcomingPage() {
   );
 
   const filtered = useMemo(() => {
-    const games = platformFilter === "switch2"
+    let games = platformFilter === "switch2"
       ? rawGames.filter((g) => g.platform === "switch2" || g.switch2Nsuid || /switch\s*2/i.test(g.title))
       : rawGames;
+    if (demoOnly) games = games.filter((g) => g.hasDemo);
     // Sort "Out Now" by quality score so acclaimed games surface above shovelware
     if (subTab === "Out Now") {
       return [...games].sort((a, b) => computeTrendingScore(b) - computeTrendingScore(a));
     }
     return games;
-  }, [rawGames, platformFilter, subTab]);
+  }, [rawGames, platformFilter, subTab, demoOnly]);
 
   const announcedFiltered = useMemo(() => {
-    const all = announcedGames ?? [];
-    return platformFilter === "switch2"
-      ? all.filter((g) => g.platform === "switch2" || g.switch2Nsuid || /switch\s*2/i.test(g.title))
-      : all;
-  }, [announcedGames, platformFilter]);
+    let all = announcedGames ?? [];
+    if (platformFilter === "switch2") {
+      all = all.filter((g) => g.platform === "switch2" || g.switch2Nsuid || /switch\s*2/i.test(g.title));
+    }
+    if (demoOnly) all = all.filter((g) => g.hasDemo);
+    return all;
+  }, [announcedGames, platformFilter, demoOnly]);
 
-  const isFiltered = platformFilter === "switch2";
+  const isFiltered = platformFilter === "switch2" || demoOnly;
 
   return (
     <div ref={containerRef} className="px-4">
       {/* Header */}
       <div className="flex items-center justify-between py-4">
-        <h1 className="text-lg font-bold text-white">Upcoming</h1>
+        <h1 className="text-lg font-bold text-white">Releases</h1>
       </div>
 
       {/* Filters row */}
@@ -117,6 +121,19 @@ export default function UpcomingPage() {
             </button>
           ))}
         </div>
+
+        {/* Demo filter */}
+        <button
+          aria-pressed={demoOnly}
+          onClick={() => setDemoOnly((v) => !v)}
+          className={`px-3 py-2.5 rounded-full text-xs font-medium transition-all ${
+            demoOnly
+              ? "bg-[#00ff88]/15 text-[#00ff88]"
+              : "bg-[#1a1a1a] text-[#666666] hover:text-white"
+          }`}
+        >
+          Demo
+        </button>
 
         {/* Platform toggle */}
         <div className="ml-auto flex gap-1 bg-[#111111] rounded-lg p-0.5 border border-[#222222]">

@@ -25,6 +25,7 @@ export interface Game {
   platform: "switch" | "switch2" | null;
   saleEventId: string | null;
   retroPlatform: string | null;
+  hasDemo: boolean;
 }
 
 export interface NamedSaleEvent {

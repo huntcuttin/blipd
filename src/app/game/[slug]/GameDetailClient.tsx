@@ -11,7 +11,7 @@ import GameCoverImage from "@/components/GameCoverImage";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGameBySlug, getAlertsForGame, getFranchiseByName, getGameFollowerCount } from "@/lib/queries";
-import { formatPrice, formatShortDate, formatLongDate, isPlaceholderDate, isYearOnlyDate } from "@/lib/format";
+import { formatPrice, formatShortDate, formatLongDate, isPlaceholderDate, isYearOnlyDate, isMonthOnlyDate, formatMonthYear } from "@/lib/format";
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailClient({ slug }: { slug: string }) {
@@ -217,6 +217,8 @@ export default function GameDetailClient({ slug }: { slug: string }) {
               ? "Released today"
               : isYearOnlyDate(game.releaseDate)
               ? `Releasing in ${new Date(game.releaseDate + "T12:00:00").getFullYear()}`
+              : isMonthOnlyDate(game.releaseDate)
+              ? `Releasing ${formatMonthYear(game.releaseDate)}`
               : `Releasing ${formatLongDate(game.releaseDate)}`}
           </p>
           {game.releaseStatus === "upcoming" && !placeholderDate && !isYearOnlyDate(game.releaseDate) && (

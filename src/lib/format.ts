@@ -32,10 +32,26 @@ export function isYearOnlyDate(date: string): boolean {
   return date.endsWith("-12-31") && !isPlaceholderDate(date);
 }
 
-/** Smart release date display: "TBA" for unknown, "2027" for year-only, "Mar 7, 2026" otherwise. */
+/** Returns true if a date is month-only precision (last day of month, in the future, not Dec 31). */
+export function isMonthOnlyDate(date: string): boolean {
+  if (!date || isPlaceholderDate(date) || isYearOnlyDate(date)) return false;
+  const d = new Date(date + "T12:00:00");
+  if (isNaN(d.getTime())) return false;
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return d.getDate() === lastDay && d > new Date();
+}
+
+/** Format month-only date as "April 2026". */
+export function formatMonthYear(date: string): string {
+  const d = new Date(date + "T12:00:00");
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** Smart release date display: "TBA" for unknown, "2027" for year-only, "April 2026" for month-only, "Mar 7, 2026" otherwise. */
 export function formatReleaseDate(date: string | null | undefined): string {
   if (!date) return "";
   if (isPlaceholderDate(date)) return "TBA";
   if (isYearOnlyDate(date)) return new Date(date + "T12:00:00").getFullYear().toString();
+  if (isMonthOnlyDate(date)) return formatMonthYear(date);
   return formatShortDate(date);
 }
