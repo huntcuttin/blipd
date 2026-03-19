@@ -43,13 +43,15 @@ async function getDeals(): Promise<DealRow[]> {
   return data ?? [];
 }
 
-function getSaleEndLabel(dateStr: string): string | null {
+function getSaleEndLabel(dateStr: string): { text: string; urgency: "high" | "medium" | "low" } | null {
   const target = new Date(dateStr);
   const now = new Date();
   const days = Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (days <= 0) return "Ends today";
-  if (days === 1) return "Ends tomorrow";
-  if (days <= 14) return `Ends in ${days} days`;
+  if (days <= 0) return { text: "Ends today", urgency: "high" };
+  if (days === 1) return { text: "Ends tomorrow", urgency: "high" };
+  if (days <= 3) return { text: `Ends in ${days} days`, urgency: "high" };
+  if (days <= 7) return { text: `Ends in ${days} days`, urgency: "medium" };
+  if (days <= 14) return { text: `Ends in ${days} days`, urgency: "low" };
   return null;
 }
 
@@ -173,7 +175,7 @@ function DealCard({ deal }: { deal: DealRow }) {
           />
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white text-sm leading-snug line-clamp-1">
+          <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2">
             {deal.title}
           </h3>
           <p className="text-[#555555] text-[11px] mt-0.5 truncate">{deal.publisher}</p>
@@ -195,7 +197,7 @@ function DealCard({ deal }: { deal: DealRow }) {
               </span>
             )}
             {saleLabel && (
-              <span className="text-[#ff6874] text-[10px] font-medium">{saleLabel}</span>
+              <span className={`text-[10px] font-medium ${saleLabel.urgency === "high" ? "text-[#ff4444] font-bold" : saleLabel.urgency === "medium" ? "text-[#ffaa00]" : "text-[#777777]"}`}>{saleLabel.text}</span>
             )}
           </div>
         </div>
