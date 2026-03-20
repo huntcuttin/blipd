@@ -31,6 +31,7 @@ export interface Database {
           igdb_id: number | null;
           igdb_hype: number | null;
           retro_platform: string | null;
+          genres: string[];
           release_date_source: string;
           created_at: string;
           updated_at: string;
@@ -62,6 +63,7 @@ export interface Database {
           igdb_id?: number | null;
           igdb_hype?: number | null;
           retro_platform?: string | null;
+          genres?: string[];
           release_date_source?: string;
           created_at?: string;
           updated_at?: string;

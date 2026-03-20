@@ -36,6 +36,7 @@ function mapGame(row: any): Game {
     saleEventId: row.sale_event_id ?? null,
     retroPlatform: row.retro_platform ?? null,
     hasDemo: row.has_demo ?? false,
+    genres: Array.isArray(row.genres) ? row.genres : [],
   };
 }
 

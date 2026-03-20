@@ -220,6 +220,25 @@ export default function HomePage() {
 
 const PAGE_SIZE = 30;
 
+const GENRE_FILTERS = [
+  "All",
+  "Action",
+  "Adventure",
+  "RPG",
+  "Platformer",
+  "Puzzle",
+  "Simulation",
+  "Strategy",
+  "Sports",
+  "Racing",
+  "Fighting",
+  "Shooter",
+  "Music",
+  "Party",
+  "Arcade",
+] as const;
+type GenreFilter = (typeof GENRE_FILTERS)[number];
+
 function DiscoverTab({
   trendingGames,
   loading,
@@ -232,6 +251,7 @@ function DiscoverTab({
   followedFranchises: Set<string>;
 }) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [genreFilter, setGenreFilter] = useState<GenreFilter>("All");
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const sorted = useMemo(() => {
@@ -243,25 +263,32 @@ function DiscoverTab({
     );
   }, [trendingGames, followedFranchises]);
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [sorted]);
+  const filtered = useMemo(() => {
+    if (genreFilter === "All") return sorted;
+    return sorted.filter((game) =>
+      game.genres.some((g) => g.toLowerCase() === genreFilter.toLowerCase())
+    );
+  }, [sorted, genreFilter]);
 
   useEffect(() => {
-    if (visibleCount >= sorted.length) return;
+    setVisibleCount(PAGE_SIZE);
+  }, [filtered]);
+
+  useEffect(() => {
+    if (visibleCount >= filtered.length) return;
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setVisibleCount((c) => Math.min(c + PAGE_SIZE, sorted.length));
+          setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length));
         }
       },
       { rootMargin: "400px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [sorted.length, visibleCount]);
+  }, [filtered.length, visibleCount]);
 
   if (loading) {
     return (
@@ -271,33 +298,64 @@ function DiscoverTab({
     );
   }
 
-  if (error || sorted.length === 0) {
+  if (error) {
     return (
       <div className="text-center py-16">
-        <p className="text-[#666666] text-sm">
-          {error ? "Failed to load games" : "No games found"}
-        </p>
+        <p className="text-[#666666] text-sm">Failed to load games</p>
       </div>
     );
   }
 
-  const visible = sorted.slice(0, visibleCount);
-  const hasMore = visibleCount < sorted.length;
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
 
   return (
     <div>
-      <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">DISCOVER</h2>
-      <div className="space-y-2">
-        {visible.map((game) => (
-          <GameCard key={game.id} game={game} />
-        ))}
-        <div ref={sentinelRef} className="h-4" />
-        {hasMore && (
-          <div className="flex justify-center py-4">
-            <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
+      {/* Genre filter pills */}
+      <div className="overflow-x-auto -mx-4 px-4 mb-3 scrollbar-hide">
+        <div className="flex gap-2 pb-1">
+          {GENRE_FILTERS.map((genre) => {
+            const isActive = genreFilter === genre;
+            return (
+              <button
+                key={genre}
+                onClick={() => setGenreFilter(genre)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all focus:outline-none ${
+                  isActive
+                    ? "bg-white text-[#0a0a0a]"
+                    : "bg-[#111111] text-[#666666] hover:text-white"
+                }`}
+              >
+                {genre}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="text-[#666666] text-sm">No {genreFilter.toLowerCase()} games found</p>
+          <button
+            onClick={() => setGenreFilter("All")}
+            className="mt-3 text-xs text-[#888888] hover:text-white transition-colors"
+          >
+            Clear filter
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {visible.map((game) => (
+            <GameCard key={game.id} game={game} />
+          ))}
+          <div ref={sentinelRef} className="h-4" />
+          {hasMore && (
+            <div className="flex justify-center py-4">
+              <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

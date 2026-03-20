@@ -26,6 +26,7 @@ export interface Game {
   saleEventId: string | null;
   retroPlatform: string | null;
   hasDemo: boolean;
+  genres: string[];
 }
 
 export interface NamedSaleEvent {
