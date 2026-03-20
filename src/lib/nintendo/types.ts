@@ -22,7 +22,8 @@ export interface AlgoliaHit {
   softwarePublisher: string;
   softwareDeveloper: string;
   franchises: string;
-  genres: string[];
+  genres?: string[];
+  gameGenreLabels?: string[];
   generalFilters: string[];
   availability: string[];
   releaseDateDisplay: string;

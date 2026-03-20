@@ -225,7 +225,6 @@ const GENRE_FILTERS = [
   "Action",
   "Adventure",
   "RPG",
-  "Platformer",
   "Puzzle",
   "Simulation",
   "Strategy",
@@ -233,10 +232,14 @@ const GENRE_FILTERS = [
   "Racing",
   "Fighting",
   "Shooter",
-  "Music",
   "Party",
-  "Arcade",
 ] as const;
+
+// Map our filter labels to Algolia's gameGenreLabels values
+const GENRE_ALIASES: Record<string, string[]> = {
+  rpg: ["role playing"],
+  shooter: ["shooting"],
+};
 type GenreFilter = (typeof GENRE_FILTERS)[number];
 
 function DiscoverTab({
@@ -265,8 +268,10 @@ function DiscoverTab({
 
   const filtered = useMemo(() => {
     if (genreFilter === "All") return sorted;
+    const filterKey = genreFilter.toLowerCase();
+    const matchValues = [filterKey, ...(GENRE_ALIASES[filterKey] ?? [])];
     return sorted.filter((game) =>
-      game.genres.some((g) => g.toLowerCase() === genreFilter.toLowerCase())
+      game.genres.some((g) => matchValues.includes(g.toLowerCase()))
     );
   }, [sorted, genreFilter]);
 

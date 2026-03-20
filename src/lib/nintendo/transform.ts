@@ -267,6 +267,6 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
     nintendo_url: hit.url ? `https://www.nintendo.com${hit.url}` : null,
     retro_platform: detectRetroPlatform(title),
     has_demo: hasDemo,
-    genres: Array.isArray(hit.genres) ? hit.genres : [],
+    genres: Array.isArray(hit.gameGenreLabels) ? hit.gameGenreLabels : (Array.isArray(hit.genres) ? hit.genres : []),
   };
 }
