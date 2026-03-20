@@ -259,33 +259,63 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     const withoutNsuid = batch.filter((r) => !r.nsuid);
 
     if (withNsuid.length > 0) {
-      // For existing games, strip price fields; for new games, include them
-      const upsertRows = withNsuid.map((r) =>
-        existingNsuids.has(r.nsuid!) ? stripPriceFields(r) : r
-      );
-      const { error } = await supabase
-        .from("games")
-        .upsert(upsertRows, { onConflict: "nsuid", ignoreDuplicates: false });
-      if (error) {
-        console.error(`  Batch error (nsuid) at index ${i}:`, error.message);
-        errors++;
-      } else {
-        upserted += withNsuid.length;
+      // Split into new vs existing to keep uniform column shapes per upsert call
+      const newNsuid = withNsuid.filter((r) => !existingNsuids.has(r.nsuid!));
+      const existNsuid = withNsuid.filter((r) => existingNsuids.has(r.nsuid!));
+
+      if (newNsuid.length > 0) {
+        const { error } = await supabase
+          .from("games")
+          .upsert(newNsuid, { onConflict: "nsuid", ignoreDuplicates: false });
+        if (error) {
+          console.error(`  Batch error (nsuid/new) at index ${i}:`, error.message);
+          errors++;
+        } else {
+          upserted += newNsuid.length;
+        }
+      }
+
+      if (existNsuid.length > 0) {
+        const strippedRows = existNsuid.map(stripPriceFields);
+        const { error } = await supabase
+          .from("games")
+          .upsert(strippedRows, { onConflict: "nsuid", ignoreDuplicates: false });
+        if (error) {
+          console.error(`  Batch error (nsuid/existing) at index ${i}:`, error.message);
+          errors++;
+        } else {
+          upserted += existNsuid.length;
+        }
       }
     }
 
     if (withoutNsuid.length > 0) {
-      const upsertRows = withoutNsuid.map((r) =>
-        existingSlugs.has(r.slug) ? stripPriceFields(r) : r
-      );
-      const { error } = await supabase
-        .from("games")
-        .upsert(upsertRows, { onConflict: "slug", ignoreDuplicates: false });
-      if (error) {
-        console.error(`  Batch error (slug) at index ${i}:`, error.message);
-        errors++;
-      } else {
-        upserted += withoutNsuid.length;
+      const newSlug = withoutNsuid.filter((r) => !existingSlugs.has(r.slug));
+      const existSlug = withoutNsuid.filter((r) => existingSlugs.has(r.slug));
+
+      if (newSlug.length > 0) {
+        const { error } = await supabase
+          .from("games")
+          .upsert(newSlug, { onConflict: "slug", ignoreDuplicates: false });
+        if (error) {
+          console.error(`  Batch error (slug/new) at index ${i}:`, error.message);
+          errors++;
+        } else {
+          upserted += newSlug.length;
+        }
+      }
+
+      if (existSlug.length > 0) {
+        const strippedRows = existSlug.map(stripPriceFields);
+        const { error } = await supabase
+          .from("games")
+          .upsert(strippedRows, { onConflict: "slug", ignoreDuplicates: false });
+        if (error) {
+          console.error(`  Batch error (slug/existing) at index ${i}:`, error.message);
+          errors++;
+        } else {
+          upserted += existSlug.length;
+        }
       }
     }
   }
