@@ -241,9 +241,12 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
   // (price update cron handles prices — catalog sync should not overwrite them)
   const PRICE_FIELDS = ["current_price", "original_price", "discount", "is_on_sale", "is_all_time_low", "price_history"];
 
-  function stripPriceFields(row: Record<string, unknown>) {
+  // Fields to preserve from existing DB rows (catalog sync should not overwrite these)
+  const PRESERVE_FIELDS = [...PRICE_FIELDS, "genres"];
+
+  function stripPreservedFields(row: Record<string, unknown>) {
     const stripped = { ...row };
-    for (const field of PRICE_FIELDS) {
+    for (const field of PRESERVE_FIELDS) {
       delete stripped[field];
     }
     return stripped;
@@ -276,7 +279,7 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
       }
 
       if (existNsuid.length > 0) {
-        const strippedRows = existNsuid.map(stripPriceFields);
+        const strippedRows = existNsuid.map(stripPreservedFields);
         const { error } = await supabase
           .from("games")
           .upsert(strippedRows, { onConflict: "nsuid", ignoreDuplicates: false });
@@ -306,7 +309,7 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
       }
 
       if (existSlug.length > 0) {
-        const strippedRows = existSlug.map(stripPriceFields);
+        const strippedRows = existSlug.map(stripPreservedFields);
         const { error } = await supabase
           .from("games")
           .upsert(strippedRows, { onConflict: "slug", ignoreDuplicates: false });
@@ -317,6 +320,20 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
           upserted += existSlug.length;
         }
       }
+    }
+  }
+
+  // Update genres for existing games (separate from main upsert to avoid column shape issues)
+  const genreUpdates = rows.filter(
+    (r) => r.nsuid && Array.isArray(r.genres) && r.genres.length > 0 && existingNsuids.has(r.nsuid)
+  );
+  if (genreUpdates.length > 0) {
+    console.log(`  Updating genres for ${genreUpdates.length} existing games...`);
+    for (const row of genreUpdates) {
+      await supabase
+        .from("games")
+        .update({ genres: row.genres })
+        .eq("nsuid", row.nsuid);
     }
   }
 
