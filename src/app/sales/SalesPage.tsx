@@ -229,7 +229,7 @@ export default function SalesPage() {
               {/* All Time Lows */}
               {allTimeLows.length > 0 && (
                 <section className="mb-6">
-                  <h2 className="text-lg font-bold text-white mb-3">All Time Lows</h2>
+                  <h2 className="text-[10px] font-bold text-[#FFD700] tracking-wider mb-3 uppercase">All Time Lows</h2>
                   <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
                     {allTimeLows.map((game) => (
                       <GameCardCompact key={game.id} game={game} />
