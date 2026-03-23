@@ -317,7 +317,7 @@ function DiscoverTab({
   return (
     <div>
       {/* Genre filter pills */}
-      <div className="overflow-x-auto -mx-4 px-4 mb-3 scrollbar-hide">
+      <div className="overflow-x-auto -mx-4 px-4 mb-3 no-scrollbar">
         <div className="flex gap-2 pb-1">
           {GENRE_FILTERS.map((genre) => {
             const isActive = genreFilter === genre;

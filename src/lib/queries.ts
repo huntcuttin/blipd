@@ -150,7 +150,14 @@ export async function getActiveNamedSaleEvents(supabase: Client): Promise<NamedS
     .order("detected_at", { ascending: false })
     .limit(10);
   if (error) throw error;
-  return (data ?? []).map((row) => ({
+  // Deduplicate by name — keep the most recent (already ordered by detected_at desc)
+  const seen = new Set<string>();
+  const deduped = (data ?? []).filter((row) => {
+    if (seen.has(row.name)) return false;
+    seen.add(row.name);
+    return true;
+  });
+  return deduped.map((row) => ({
     id: row.id,
     name: row.name,
     detectedAt: row.detected_at,
