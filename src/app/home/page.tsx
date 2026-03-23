@@ -18,7 +18,7 @@ import type { Game, Franchise } from "@/lib/types";
 export default function HomePage() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
-  const { user, signOut, consolePreference } = useAuth();
+  const { user, consolePreference } = useAuth();
   const { followedGameIds, followedFranchiseIds, ownedGameIds, toggleOwnGame } = useFollow();
 
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
@@ -71,16 +71,13 @@ export default function HomePage() {
             placeholder="Search games..."
           />
           {user ? (
-            <button
-              onClick={signOut}
-              aria-label="Sign out"
-              className="shrink-0 w-10 h-10 rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center text-[#666666] hover:text-white hover:border-[#333333] transition-all"
-              title="Sign out"
+            <Link
+              href="/profile"
+              aria-label="Profile"
+              className="shrink-0 w-10 h-10 rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center text-white hover:border-[#333333] transition-all"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-              </svg>
-            </button>
+              <span className="text-[13px] font-bold">{user.email?.[0]?.toUpperCase()}</span>
+            </Link>
           ) : (
             <Link
               href="/login"
