@@ -365,6 +365,62 @@ When helping with Blippd, default to:
 - Session persistence: users should never have to re-authenticate unless they explicitly log out.
 - Game catalog coverage matters. If a user's game isn't there, they churn. Prioritize catalog completeness.
 
+## Page Audit (2026-03-22)
+
+### Current Nav Structure
+4 bottom tabs: Home, Deals (Sales), Feed, Alerts
+
+### What Each Page Shows
+
+| Page | Content | Filters/Tabs |
+|------|---------|-------------|
+| **Home** | Two tabs: Discover (trending games + genre filter) and My Games (watchlist split into on-sale/watching/owned + franchises + suggested franchises) | 2 tabs + 12 genre pills + swipe |
+| **Sales** | All games on sale + named sale banners + ATL horizontal scroll | 3 tabs (All/Watchlist/My Franchises) + 4 sort pills |
+| **Feed** | Out Now (horizontal scroll) + Coming Soon (list) + Direct/sale banners | None |
+| **Alerts** | User's notification history grouped by time | 4 filter pills |
+
+### Data Overlap Analysis
+- **Discover tab on Home** ≈ **Sales page** — both show games with prices, both have search. Discover shows ALL games (trending), Sales shows ON SALE games. But a user looking for deals goes to Sales, and a user browsing goes to Discover. These are different intents.
+- **My Games tab on Home** is the ONLY place to see your watchlist and franchises. This is the most important personal data in the app and it's buried as a sub-tab.
+- **Sales page** has Watchlist/My Franchises filters that duplicate My Games tab filtering. Users see "my stuff on sale" in two places.
+- **Feed page** shows Out Now + Coming Soon — this is the "Upcoming" concept from the original nav. It works but "Feed" is a vague name.
+- **Alerts** is clean and standalone. No overlap.
+
+### Core Problems
+1. **Home has two unrelated jobs** — browse/discover AND personal watchlist. These are different user intents crammed into tabs.
+2. **Sales page re-implements Home's personalization** with its own Watchlist/Franchises tabs. Redundant.
+3. **"Feed" is a meaningless name** — it's really "New & Upcoming." Users won't know what to expect.
+4. **Too many filter dimensions** — Sales has 3 filter tabs × 4 sort pills = 12 possible states. That's too much for mobile.
+
+## Proposed Restructure
+
+### Decision: Option A — Home becomes personalized dashboard
+
+**Why:** The app's value prop is "follow games, get alerted." Home should immediately show the user THEIR games — what's on sale in their watchlist, their franchises, price drops they care about. Discovery/browsing is secondary and belongs on Sales (for deals) or the new Upcoming page (for releases).
+
+### New Page Structure
+
+| Nav Tab | New Name | Purpose | Content |
+|---------|----------|---------|---------|
+| **Home** | Home | **Your games at a glance** | Sale alerts on followed games → full watchlist → followed franchises. No tabs. One scrollable personal dashboard. |
+| **Deals** | Deals | **All deals, sorted** | Named sale banners → ATL scroll → all on-sale games with sort pills only (no Watchlist/Franchises tabs). Search. |
+| **Upcoming** | Upcoming | **New & coming soon** | Direct/sale banners at top → Out Now horizontal scroll → Coming Soon list. Replaces "Feed." |
+| **Alerts** | Alerts | **Notification history** | Unchanged. Already clean. |
+
+### What Moves Where
+
+1. **Discover tab (Home)** → DELETE. Trending games concept merged into Deals page (Best Deals sort already does this). Genre filter stays on Deals.
+2. **My Games tab (Home)** → PROMOTED to be the entire Home page. No tab needed — it's the default view.
+3. **Sales Watchlist/Franchises tabs** → DELETE. Home now shows "your stuff on sale" prominently. Sales is just ALL deals.
+4. **Feed** → RENAMED to "Upcoming" in nav. Content stays (Out Now + Coming Soon).
+5. **Genre filter pills** → MOVED from Home to Deals page (replaces the removed Watchlist/My Franchises tabs).
+
+### Why This Is Better
+- **Home instantly answers "what should I care about?"** — your games on sale, your watchlist, your franchises. One scroll, no tabs.
+- **Deals is simpler** — just deals with sort options. No personalization filters that duplicate Home.
+- **"Upcoming" is a clear name** — user knows what to expect before tapping.
+- **Cognitive load drops** — Home goes from 2 tabs + 12 genre pills to 0 tabs. Sales goes from 3 tabs + 4 sorts to 0 tabs + 4 sorts. Total filter controls across the app drops from 23 to ~8.
+
 ## Session Log — 2026-03-18 (Overnight Audit)
 
 ### UI Audit — Green Hierarchy Fix (6 cycles)
