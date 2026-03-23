@@ -29,7 +29,7 @@ interface RSSEntry {
 async function fetchRSSEntries(): Promise<RSSEntry[]> {
   const res = await fetchWithRetry(
     RSS_URL,
-    { headers: { "User-Agent": "Blippd/1.0 (Nintendo eShop price tracker)" } },
+    { headers: { "User-Agent": "Mozilla/5.0 (compatible; Blippd/1.0)" } },
     { retries: 2, timeoutMs: 10000, label: "YouTube RSS (directs)" }
   );
 
