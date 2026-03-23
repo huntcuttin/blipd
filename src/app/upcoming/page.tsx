@@ -7,7 +7,7 @@ export default function UpcomingRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/feed?filter=releases");
+    router.replace("/feed");
   }, [router]);
 
   return (

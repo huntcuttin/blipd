@@ -780,20 +780,6 @@ async function detectAndFireNamedSaleEvent(
   supabase: ReturnType<typeof createAdminClient>,
   newSaleGames: Array<{ id: string; title: string; publisher: string | null }>
 ): Promise<void> {
-  // Avoid duplicate events — check if one was created in the last 2 hours
-  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-  const { data: recentEvents } = await supabase
-    .from("named_sale_events")
-    .select("id")
-    .eq("active", true)
-    .gte("detected_at", twoHoursAgo)
-    .limit(1);
-
-  if (recentEvents && recentEvents.length > 0) {
-    console.log("  Named sale event: recent event exists, skipping");
-    return;
-  }
-
   // Get all currently on-sale games to determine full scope and publisher
   const { data: allSaleGames } = await supabase
     .from("games")
@@ -816,12 +802,37 @@ async function detectAndFireNamedSaleEvent(
     ? Array.from(endDateCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
     : null;
 
-  // Generate a dedup key based on date + sale name to prevent race condition
-  // Two concurrent calls will both try to insert with the same key; one will fail
-  const dedupDate = new Date().toISOString().slice(0, 13); // YYYY-MM-DDTHH (hourly bucket)
+  // Check if there's already an active event with this name — just update games_count
+  const { data: existingEvent } = await supabase
+    .from("named_sale_events")
+    .select("id")
+    .eq("name", saleName)
+    .eq("active", true)
+    .order("detected_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingEvent) {
+    // Update the game count on the existing event
+    await supabase
+      .from("named_sale_events")
+      .update({ games_count: totalGames })
+      .eq("id", existingEvent.id);
+    console.log(`  Named sale event: updated "${saleName}" (${totalGames} games)`);
+
+    // Update game tags and skip notification (already sent)
+    const gameIds = (allSaleGames ?? newSaleGames).map((g) => g.id);
+    for (let i = 0; i < gameIds.length; i += 200) {
+      const batch = gameIds.slice(i, i + 200);
+      await supabase.from("games").update({ sale_event_id: existingEvent.id }).in("id", batch);
+    }
+    return;
+  }
+
+  // Create new event with daily dedup key
+  const dedupDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (daily bucket)
   const dedupKey = `${dedupDate}:${saleName}`;
 
-  // Create the named sale event (use upsert with dedup_key to prevent race condition)
   const { data: event, error: eventError } = await supabase
     .from("named_sale_events")
     .upsert(
@@ -835,7 +846,6 @@ async function detectAndFireNamedSaleEvent(
     console.error("  Failed to create named_sale_event:", eventError?.message);
     return;
   }
-
   console.log(`  Named sale event: "${saleName}" (${totalGames} games on sale, event ${event.id})`);
 
   // Tag all current on-sale games with this event ID
