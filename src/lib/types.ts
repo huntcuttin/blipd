@@ -72,23 +72,6 @@ export type AlertType =
 
 export type ConsolePreference = "switch" | "switch2";
 
-// ── Feed types ────────────────────────────────────────────────
-
-export type FeedItemType = "trailer" | "direct" | "sale_event" | "new_release" | "coming_soon" | "demo";
-
-export interface FeedItem {
-  id: string;
-  type: FeedItemType;
-  timestamp: string;
-  title: string;
-  subtitle: string;
-  imageUrl?: string;
-  videoId?: string;
-  game?: Game;
-  saleEvent?: NamedSaleEvent;
-  franchise?: string;
-}
-
 export interface TrailerDetection {
   id: string;
   videoId: string;

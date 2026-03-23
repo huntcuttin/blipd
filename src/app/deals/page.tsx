@@ -167,6 +167,7 @@ function DealCard({ deal }: { deal: DealRow }) {
     <Link href={`/game/${deal.slug}`} className="block">
       <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors">
         {deal.cover_art && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={deal.cover_art}
             alt={deal.title}

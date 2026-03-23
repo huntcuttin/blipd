@@ -65,6 +65,7 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle: _gam
   useEffect(() => {
     if (!mounted) return;
     setLocalTime(formatInTimezone(launchUTC, selectedZone));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedZone, mounted, releaseDate]);
 
   // Countdown tick
@@ -89,6 +90,7 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle: _gam
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [releaseDate]);
 
   return (

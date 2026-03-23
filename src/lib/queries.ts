@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent, TrailerDetection } from "@/lib/types";
+import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent } from "@/lib/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;
@@ -717,31 +717,6 @@ export async function getRetroFollowers(supabase: Client, consoleName: string): 
 
 // ── Feed queries ──────────────────────────────────────────────
 
-export async function getRecentTrailers(supabase: Client): Promise<TrailerDetection[]> {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await supabase
-    .from("trailer_detections")
-    .select("id, video_id, title, thumbnail_url, matched_game_title, matched_franchise, confidence, status, published_at, detected_at")
-    .in("status", ["auto_published", "approved"])
-    .gte("detected_at", thirtyDaysAgo)
-    .order("published_at", { ascending: false })
-    .limit(30);
-  if (error) throw error;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data ?? []).map((row: any) => ({
-    id: row.id,
-    videoId: row.video_id,
-    title: row.title,
-    thumbnailUrl: row.thumbnail_url,
-    matchedGameTitle: row.matched_game_title,
-    matchedFranchise: row.matched_franchise,
-    confidence: row.confidence,
-    status: row.status,
-    publishedAt: row.published_at,
-    detectedAt: row.detected_at,
-  }));
-}
-
 export async function getActiveDirects(supabase: Client): Promise<{ id: string; videoId: string; title: string; detectedAt: string }[]> {
   const { data, error } = await supabase
     .from("nintendo_directs")
@@ -776,17 +751,5 @@ export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
   return (data ?? []).map(mapGame);
 }
 
-export async function getDemoGames(supabase: Client): Promise<Game[]> {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-  const { data, error } = await supabase
-    .from("games")
-    .select("*")
-    .eq("has_demo", true)
-    .eq("is_suppressed", false)
-    .or(`release_status.eq.upcoming,release_date.gte.${thirtyDaysAgo}`)
-    .order("release_date", { ascending: false })
-    .limit(30);
-  if (error) throw error;
-  return (data ?? []).map(mapGame);
-}
+
 
