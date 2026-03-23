@@ -40,7 +40,7 @@ export default function DirectBanner() {
   const youtubeUrl = `https://www.youtube.com/watch?v=${direct.videoId}`;
 
   return (
-    <div className="mx-4 mb-3 rounded-xl bg-gradient-to-r from-[#e60012]/20 to-[#e60012]/5 border border-[#e60012]/30 p-3">
+    <div className="mb-3 rounded-xl bg-gradient-to-r from-[#e60012]/20 to-[#e60012]/5 border border-[#e60012]/30 p-3">
       <div className="flex items-start gap-3">
         <div className="shrink-0 w-8 h-8 rounded-lg bg-[#e60012]/20 flex items-center justify-center">
           <svg className="w-4 h-4 text-[#e60012]" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
