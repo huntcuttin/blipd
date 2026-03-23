@@ -1,28 +1,16 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import Link from "next/link";
+import { GameCardCompact, GameCardCompactSkeleton } from "@/components/GameCard";
 import GameCard, { GameCardSkeleton } from "@/components/GameCard";
-import FeedCard from "@/components/FeedCard";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import {
-  getRecentTrailers,
   getActiveDirects,
   getActiveNamedSaleEvents,
   getRecentReleases,
   getUpcomingGamesSoon,
-  getDemoGames,
 } from "@/lib/queries";
-import type { FeedItem } from "@/lib/types";
-
-type FeedFilter = "all" | "releases" | "trailers" | "sales";
-
-const FILTERS: { label: string; value: FeedFilter }[] = [
-  { label: "All", value: "all" },
-  { label: "Releases", value: "releases" },
-  { label: "Trailers", value: "trailers" },
-  { label: "Sales", value: "sales" },
-];
 
 export default function FeedPage() {
   return (
@@ -35,251 +23,160 @@ export default function FeedPage() {
 function FeedLoading() {
   return (
     <div className="px-4">
-      <div className="flex items-center justify-between py-4">
+      <div className="py-4">
         <h1 className="text-lg font-bold text-white">Feed</h1>
       </div>
-      <div className="space-y-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <GameCardSkeleton key={i} />
-        ))}
+      {/* Out Now skeleton */}
+      <div className="mb-6">
+        <div className="h-5 bg-[#1a1a1a] rounded w-20 mb-3" />
+        <div className="flex gap-3 overflow-hidden">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <GameCardCompactSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+      {/* Coming Soon skeleton */}
+      <div>
+        <div className="h-5 bg-[#1a1a1a] rounded w-28 mb-3" />
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <GameCardSkeleton key={i} />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
 function FeedContent() {
-  const searchParams = useSearchParams();
-  const initialFilter = (searchParams.get("filter") as FeedFilter) || "all";
-  const [filter, setFilter] = useState<FeedFilter>(initialFilter);
-
-  const { data: trailers } = useSupabaseQuery(getRecentTrailers);
   const { data: directs } = useSupabaseQuery(getActiveDirects);
   const { data: saleEvents } = useSupabaseQuery(getActiveNamedSaleEvents);
   const { data: recentReleases, loading: releasesLoading } = useSupabaseQuery(getRecentReleases);
-  const { data: upcomingGames } = useSupabaseQuery(getUpcomingGamesSoon);
-  const { data: demoGames } = useSupabaseQuery(getDemoGames);
+  const { data: upcomingGames, loading: upcomingLoading } = useSupabaseQuery(getUpcomingGamesSoon);
 
-  const feedItems = useMemo(() => {
-    const items: FeedItem[] = [];
+  // Filter recent releases to ones with cover art and a real price
+  const outNow = (recentReleases ?? []).filter(
+    (g) => g.coverArt && g.originalPrice > 0
+  ).slice(0, 20);
 
-    // Directs
-    for (const d of directs ?? []) {
-      items.push({
-        id: `direct-${d.id}`,
-        type: "direct",
-        timestamp: d.detectedAt,
-        title: d.title || "Nintendo Direct",
-        subtitle: "Watch live on YouTube",
-        videoId: d.videoId,
-      });
-    }
+  const comingSoon = (upcomingGames ?? []).filter(
+    (g) => g.coverArt
+  ).slice(0, 30);
 
-    // Trailers
-    for (const t of trailers ?? []) {
-      items.push({
-        id: `trailer-${t.id}`,
-        type: "trailer",
-        timestamp: t.publishedAt,
-        title: t.title,
-        subtitle: t.matchedGameTitle ? `Game: ${t.matchedGameTitle}` : "",
-        imageUrl: t.thumbnailUrl ?? undefined,
-        videoId: t.videoId,
-        franchise: t.matchedFranchise ?? undefined,
-      });
-    }
-
-    // Sale events
-    for (const se of saleEvents ?? []) {
-      items.push({
-        id: `sale-${se.id}`,
-        type: "sale_event",
-        timestamp: se.detectedAt,
-        title: se.name,
-        subtitle: `${se.gamesCount} games on sale`,
-        saleEvent: se,
-      });
-    }
-
-    // New releases (last 14 days for feed)
-    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-    const recentOnly = (recentReleases ?? []).filter(
-      (g) => new Date(g.releaseDate) >= twoWeeksAgo && g.coverArt && g.originalPrice > 0
-    );
-    for (const g of recentOnly.slice(0, 20)) {
-      items.push({
-        id: `release-${g.id}`,
-        type: "new_release",
-        timestamp: g.releaseDate,
-        title: g.title,
-        subtitle: g.publisher,
-        game: g,
-      });
-    }
-
-    // Coming soon (next 60 days)
-    for (const g of (upcomingGames ?? []).slice(0, 20)) {
-      items.push({
-        id: `upcoming-${g.id}`,
-        type: "coming_soon",
-        timestamp: g.releaseDate,
-        title: g.title,
-        subtitle: g.publisher,
-        game: g,
-      });
-    }
-
-    // Demos
-    const demoIds = new Set(items.filter((i) => i.game).map((i) => i.game!.id));
-    for (const g of (demoGames ?? []).filter((d) => !demoIds.has(d.id)).slice(0, 10)) {
-      items.push({
-        id: `demo-${g.id}`,
-        type: "demo",
-        timestamp: g.releaseDate,
-        title: g.title,
-        subtitle: "Free demo available",
-        game: g,
-      });
-    }
-
-    return items;
-  }, [trailers, directs, saleEvents, recentReleases, upcomingGames, demoGames]);
-
-  const filtered = useMemo(() => {
-    let items = feedItems;
-    switch (filter) {
-      case "releases":
-        items = feedItems.filter((i) => ["new_release", "coming_soon", "demo"].includes(i.type));
-        break;
-      case "trailers":
-        items = feedItems.filter((i) => ["trailer", "direct"].includes(i.type));
-        break;
-      case "sales":
-        items = feedItems.filter((i) => i.type === "sale_event");
-        break;
-    }
-
-    // Sort: directs and sale events first (time-sensitive), then by timestamp desc
-    // For upcoming games, use release date as-is (future dates sort after past dates naturally)
-    return items.sort((a, b) => {
-      // Directs always on top
-      if (a.type === "direct" && b.type !== "direct") return -1;
-      if (b.type === "direct" && a.type !== "direct") return 1;
-
-      const dateA = new Date(a.timestamp).getTime();
-      const dateB = new Date(b.timestamp).getTime();
-      const now = Date.now();
-
-      // Past items: most recent first
-      // Future items: soonest first, after past items
-      const isPastA = dateA <= now;
-      const isPastB = dateB <= now;
-
-      if (isPastA && isPastB) return dateB - dateA;
-      if (isPastA && !isPastB) return -1;
-      if (!isPastA && isPastB) return 1;
-      return dateA - dateB;
-    });
-  }, [feedItems, filter]);
-
-  const loading = releasesLoading;
+  const loading = releasesLoading && upcomingLoading;
 
   return (
     <div className="px-4">
       {/* Header */}
-      <div className="flex items-center justify-between py-4">
+      <div className="py-4">
         <h1 className="text-lg font-bold text-white">Feed</h1>
       </div>
 
-      {/* Filter pills */}
-      <div className="flex gap-2 mb-4" role="tablist">
-        {FILTERS.map((f) => (
-          <button
-            key={f.value}
-            role="tab"
-            aria-selected={filter === f.value}
-            onClick={() => setFilter(f.value)}
-            className={`px-3 py-2.5 rounded-full text-xs font-medium transition-all ${
-              filter === f.value
-                ? "bg-white/10 text-white"
-                : "bg-[#1a1a1a] text-[#666666] hover:text-white"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <GameCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <EmptyFeed filter={filter} />
-      ) : (
-        <div className="space-y-3 pb-4">
-          {filtered.map((item) => (
-            <FeedItemRenderer key={item.id} item={item} />
+      {/* Nintendo Direct banner */}
+      {(directs ?? []).length > 0 && (
+        <div className="mb-4 space-y-2">
+          {directs!.map((d) => (
+            <a
+              key={d.id}
+              href={d.videoId ? `https://www.youtube.com/watch?v=${d.videoId}` : "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 p-3 rounded-xl border border-[#e60012]/30 bg-[#e60012]/10 hover:border-[#e60012]/50 transition-all"
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#e60012]/20 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-[#e60012]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-bold text-white truncate">{d.title || "Nintendo Direct"}</h3>
+                <p className="text-[11px] text-[#e60012]/70 font-medium">Watch now →</p>
+              </div>
+            </a>
           ))}
         </div>
       )}
-    </div>
-  );
-}
 
-function FeedItemRenderer({ item }: { item: FeedItem }) {
-  // Game-based items use GameCard with a badge
-  if (item.game) {
-    return (
-      <div className="relative">
-        <GameCard game={item.game} />
-        <FeedBadge type={item.type} />
-      </div>
-    );
-  }
+      {/* Active sale banners */}
+      {(saleEvents ?? []).length > 0 && (
+        <div className="mb-4 space-y-2">
+          {saleEvents!.slice(0, 2).map((event) => (
+            <Link
+              key={event.id}
+              href={`/sales?event=${event.id}`}
+              className="flex items-center gap-3 p-3 rounded-xl border border-[#ffaa00]/30 bg-[#ffaa00]/10 hover:border-[#ffaa00]/50 transition-all"
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#ffaa00]/20 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-[#ffaa00]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-bold text-white truncate">{event.name}</h3>
+                <p className="text-[11px] text-[#ffaa00] font-medium">{event.gamesCount} games on sale →</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
-  // Non-game items (trailers, directs, sale events) use FeedCard
-  return <FeedCard item={item} />;
-}
+      {loading ? (
+        <>
+          <div className="mb-6">
+            <div className="flex gap-3 overflow-hidden">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <GameCardCompactSkeleton key={i} />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <GameCardSkeleton key={i} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Out Now section */}
+          {outNow.length > 0 && (
+            <section className="mb-6">
+              <h2 className="text-sm font-bold text-white mb-3 tracking-wide uppercase text-[#888888]">Out Now</h2>
+              <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+                <div className="flex gap-3 pb-1">
+                  {outNow.map((game) => (
+                    <GameCardCompact key={game.id} game={game} />
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
 
-function FeedBadge({ type }: { type: FeedItem["type"] }) {
-  const labels: Record<string, string> = {
-    new_release: "NEW",
-    coming_soon: "SOON",
-    demo: "DEMO",
-  };
-  const label = labels[type];
+          {/* Coming Soon section */}
+          {comingSoon.length > 0 && (
+            <section className="pb-4">
+              <h2 className="text-sm font-bold text-white mb-3 tracking-wide uppercase text-[#888888]">Coming Soon</h2>
+              <div className="space-y-2">
+                {comingSoon.map((game) => (
+                  <GameCard key={game.id} game={game} />
+                ))}
+              </div>
+            </section>
+          )}
 
-  if (!label) return null;
-
-  return (
-    <span className="absolute top-[15px] left-[15px] px-2 py-0.5 rounded-md text-[10px] font-bold bg-black/70 text-white backdrop-blur-sm">
-      {label}
-    </span>
-  );
-}
-
-function EmptyFeed({ filter }: { filter: FeedFilter }) {
-  const messages: Record<FeedFilter, { title: string; desc: string }> = {
-    all: { title: "Nothing yet", desc: "Check back soon for news, trailers, and deals" },
-    releases: { title: "No releases", desc: "No recent or upcoming releases to show" },
-    trailers: { title: "No trailers", desc: "No recent game trailers detected" },
-    sales: { title: "No active sales", desc: "No named sale events right now" },
-  };
-
-  const { title, desc } = messages[filter];
-
-  return (
-    <div className="flex flex-col items-center justify-center py-20 px-4">
-      <div className="w-14 h-14 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
-        <svg className="w-7 h-7 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25M16.5 7.5V18a2.25 2.25 0 0 0 2.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 0 0 2.25 2.25h13.5M6 7.5h3v3H6v-3Z" />
-        </svg>
-      </div>
-      <h2 className="text-base font-semibold text-white mb-1">{title}</h2>
-      <p className="text-[#555555] text-sm text-center max-w-[260px]">{desc}</p>
+          {outNow.length === 0 && comingSoon.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 px-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                </svg>
+              </div>
+              <h2 className="text-base font-semibold text-white mb-1">Nothing yet</h2>
+              <p className="text-[#555555] text-sm text-center max-w-[260px]">Check back soon for new releases and upcoming games</p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
