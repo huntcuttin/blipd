@@ -23,7 +23,18 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
+
+  // Signed-in users hitting the landing page should go straight to /home
+  if (session && req.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL("/home", req.url));
+  }
+
+  // Signed-in users hitting /login should go to /home
+  if (session && req.nextUrl.pathname === "/login") {
+    return NextResponse.redirect(new URL("/home", req.url));
+  }
+
   return res;
 }
 
