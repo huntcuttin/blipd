@@ -421,6 +421,33 @@ When helping with Blippd, default to:
 - **"Upcoming" is a clear name** — user knows what to expect before tapping.
 - **Cognitive load drops** — Home goes from 2 tabs + 12 genre pills to 0 tabs. Sales goes from 3 tabs + 4 sorts to 0 tabs + 4 sorts. Total filter controls across the app drops from 23 to ~8.
 
+## Session Log — 2026-03-22 (Page Restructure)
+
+### Final Page Structure Implemented
+
+| Nav Tab | Label | Purpose | Content |
+|---------|-------|---------|---------|
+| Home | Home | Personal dashboard | DirectBanner → On Sale Now (followed games) → Watching for Deals → My Library → My Franchises. No tabs. |
+| Deals | Deals | All current deals | Sale event banners → genre filter pills → ATL horizontal scroll → sorted game list (4 sort options) |
+| Upcoming | Upcoming | New & coming releases | DirectBanner → sale banners → Out Now (horizontal scroll) → Coming Soon (list) |
+| Alerts | Alerts | Notification history | Time-grouped alerts with filter pills. Unchanged. |
+
+### What Changed
+- **Home**: Removed Discover/My Games tabs. Now a single scrollable personal dashboard.
+- **Deals (Sales)**: Removed Watchlist/My Franchises filter tabs. Added genre filter pills (moved from old Discover tab). Sort pills remain.
+- **Feed → Upcoming**: Renamed. Replaced inline banners with shared DirectBanner/NamedSaleBanner components.
+- **Alerts**: Unchanged.
+
+### What Was Removed
+- Discover tab and trending games on Home (discovery happens via Deals + Search)
+- Watchlist/My Franchises filter tabs on Sales
+- Swipe gesture handling on Home (no tabs to swipe between)
+- Inline Direct/sale banners on Upcoming (replaced with shared components)
+
+### Tradeoffs
+- Users can no longer browse "trending games" without going to Deals. Trade: simpler Home, and the Deals page sort-by-Best-Deals serves the same purpose.
+- Deals page no longer shows "your followed games on sale" as a filtered tab. Trade: Home prominently shows this as the first section.
+
 ## Session Log — 2026-03-18 (Overnight Audit)
 
 ### UI Audit — Green Hierarchy Fix (6 cycles)
