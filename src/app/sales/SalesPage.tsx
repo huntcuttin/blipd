@@ -1,31 +1,47 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import GameCard, { GameCardCompact, GameCardSkeleton, GameCardCompactSkeleton } from "@/components/GameCard";
 import NamedSaleBanner from "@/components/NamedSaleBanner";
 
 import QueryError from "@/components/QueryError";
-import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getGamesOnSale, getAllFranchises, searchGames, getActiveNamedSaleEvents } from "@/lib/queries";
+import { getGamesOnSale, searchGames, getActiveNamedSaleEvents } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/AuthContext";
 import { computeTrendingScore, deduplicateGames } from "@/lib/ranking";
 import type { Game } from "@/lib/types";
 
-const FILTERS = ["All", "Watchlist", "My Franchises"] as const;
-type Filter = (typeof FILTERS)[number];
-
 const SORTS = ["Best Deals", "Biggest Discount", "Lowest Price", "Ending Soon"] as const;
 type SortMode = (typeof SORTS)[number];
+
+const GENRE_FILTERS = [
+  "All",
+  "Action",
+  "Adventure",
+  "RPG",
+  "Puzzle",
+  "Simulation",
+  "Strategy",
+  "Sports",
+  "Racing",
+  "Fighting",
+  "Shooter",
+  "Party",
+] as const;
+type GenreFilter = (typeof GENRE_FILTERS)[number];
+
+const GENRE_ALIASES: Record<string, string[]> = {
+  rpg: ["role playing"],
+  shooter: ["shooting"],
+};
 
 function sortGames(games: Game[], mode: SortMode, followedFranchises?: Set<string>): Game[] {
   const sorted = [...games];
   switch (mode) {
     case "Best Deals":
-      // Quality-weighted: Nintendo/reputable + Metacritic + deal depth
       return sorted.sort(
         (a, b) =>
           computeTrendingScore(b, { followedFranchises }) -
@@ -49,13 +65,11 @@ export default function SalesPage() {
   const activeEventId = searchParams.get("event");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
-  const [filter, setFilter] = useState<Filter>("All");
   const [sort, setSort] = useState<SortMode>("Best Deals");
-  const { followedGameIds, followedFranchiseIds } = useFollow();
+  const [genreFilter, setGenreFilter] = useState<GenreFilter>("All");
   const { consolePreference } = useAuth();
 
   const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getGamesOnSale);
-  const { data: franchises } = useSupabaseQuery(getAllFranchises);
   const { data: saleEvents } = useSupabaseQuery(getActiveNamedSaleEvents);
 
   useEffect(() => {
@@ -76,39 +90,32 @@ export default function SalesPage() {
   }, [search, consolePreference]);
 
   const allGames = deduplicateGames(games ?? []);
-  const allFranchises = franchises ?? [];
 
-  const followedFranchiseNames = new Set(
-    allFranchises
-      .filter((f) => followedFranchiseIds.has(f.id))
-      .map((f) => f.name)
-  );
+  const emptyFranchises = useMemo(() => new Set<string>(), []);
 
-  // Games are already filtered to on-sale by the query
+  // Filter by event if active
   const eventFilteredGames = activeEventId
     ? allGames.filter((g) => g.saleEventId === activeEventId)
     : allGames;
 
-  const filteredSales =
-    filter === "Watchlist"
-      ? eventFilteredGames.filter((g) => followedGameIds.has(g.id))
-      : filter === "My Franchises"
-      ? eventFilteredGames.filter((g) => g.franchise && followedFranchiseNames.has(g.franchise))
-      : eventFilteredGames;
+  // Filter by genre
+  const genreFiltered = useMemo(() => {
+    if (genreFilter === "All") return eventFilteredGames;
+    const filterKey = genreFilter.toLowerCase();
+    const matchValues = [filterKey, ...(GENRE_ALIASES[filterKey] ?? [])];
+    return eventFilteredGames.filter((game) =>
+      game.genres.some((g) => matchValues.includes(g.toLowerCase()))
+    );
+  }, [eventFilteredGames, genreFilter]);
 
-  const allTimeLows = filteredSales.filter((g) => g.isAllTimeLow);
-  const sortedSales = sortGames(filteredSales, sort, followedFranchiseNames);
-
-  const watchlistCount = allGames.filter((g) => followedGameIds.has(g.id)).length;
-  const myFranchisesCount = allGames.filter(
-    (g) => g.franchise && followedFranchiseNames.has(g.franchise)
-  ).length;
+  const allTimeLows = genreFiltered.filter((g) => g.isAllTimeLow);
+  const sortedSales = sortGames(genreFiltered, sort, emptyFranchises);
 
   return (
     <div className="px-4">
       {/* Header */}
       <div className="flex items-center justify-between py-4">
-        <h1 className="text-2xl font-bold text-white">Sales</h1>
+        <h1 className="text-2xl font-bold text-white">Deals</h1>
         <SearchBar
           value={search}
           onChange={setSearch}
@@ -172,43 +179,29 @@ export default function SalesPage() {
         </div>
       ) : (
         <>
-          {/* Filter tabs */}
-          <div className="flex gap-1 p-1 bg-[#111111] rounded-xl mb-3">
-            {FILTERS.map((f) => {
-              const isActive = filter === f;
-              const count =
-                f === "Watchlist"
-                  ? watchlistCount
-                  : f === "My Franchises"
-                  ? myFranchisesCount
-                  : 0;
-              return (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  aria-pressed={isActive}
-                  className={`flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all focus:outline-none ${
-                    isActive
-                      ? "bg-[#1a1a1a] text-white"
-                      : "text-[#666666] hover:text-white"
-                  }`}
-                >
-                  {f}
-                  {count > 0 && (
-                    <span
-                      className={`ml-1 ${
-                        isActive ? "text-[#aaaaaa]" : "text-[#555555]"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          {/* Genre filter pills */}
+          <div className="overflow-x-auto -mx-4 px-4 mb-3 no-scrollbar">
+            <div className="flex gap-2 pb-1">
+              {GENRE_FILTERS.map((genre) => {
+                const isActive = genreFilter === genre;
+                return (
+                  <button
+                    key={genre}
+                    onClick={() => setGenreFilter(genre)}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all focus:outline-none ${
+                      isActive
+                        ? "bg-white text-[#0a0a0a]"
+                        : "bg-[#111111] text-[#666666] hover:text-white"
+                    }`}
+                  >
+                    {genre}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {filteredSales.length === 0 ? (
+          {genreFiltered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 px-4">
               <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
                 <svg className="w-8 h-8 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
@@ -217,27 +210,32 @@ export default function SalesPage() {
                 </svg>
               </div>
               <h2 className="text-lg font-semibold text-white mb-2">
-                No sales found
+                {genreFilter === "All" ? "No sales right now" : `No ${genreFilter.toLowerCase()} deals`}
               </h2>
               <p className="text-[#666666] text-sm text-center max-w-[260px]">
-                {filter === "Watchlist"
-                  ? "None of your watchlisted games are on sale right now"
-                  : filter === "My Franchises"
-                  ? "None of your followed franchise games are on sale right now"
-                  : "No games are on sale right now"}
+                {genreFilter !== "All" ? "Try a different genre or check back later" : "Check back later for new deals"}
               </p>
+              {genreFilter !== "All" && (
+                <button
+                  onClick={() => setGenreFilter("All")}
+                  className="mt-3 text-xs text-[#888888] hover:text-white transition-colors"
+                >
+                  Clear filter
+                </button>
+              )}
             </div>
           ) : (
             <>
               {/* All Time Lows */}
               {allTimeLows.length > 0 && (
-                <Section title="All Time Lows">
+                <section className="mb-6">
+                  <h2 className="text-lg font-bold text-white mb-3">All Time Lows</h2>
                   <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
                     {allTimeLows.map((game) => (
                       <GameCardCompact key={game.id} game={game} />
                     ))}
                   </div>
-                </Section>
+                </section>
               )}
 
               {/* Sort pills */}
@@ -269,20 +267,5 @@ export default function SalesPage() {
         </>
       )}
     </div>
-  );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-6">
-      <h2 className="text-lg font-bold text-white mb-3">{title}</h2>
-      {children}
-    </section>
   );
 }

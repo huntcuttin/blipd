@@ -1,63 +1,32 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
 import DirectBanner from "@/components/DirectBanner";
-import GameCard, { GameCardSkeleton } from "@/components/GameCard";
+import GameCard, { GameCardCompact, GameCardSkeleton } from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getTrendingGames, getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
+import { getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
-import { computeTrendingScore, deduplicateGames } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
 
-const TABS = ["Discover", "My Games"] as const;
-type Tab = (typeof TABS)[number];
-
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<Tab>("Discover");
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { user, signOut, consolePreference } = useAuth();
-  const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
-  const { data: trendingData, loading: trendingLoading, error: trendingError } = useSupabaseQuery(getTrendingGames);
+  const { followedGameIds, followedFranchiseIds, ownedGameIds, toggleOwnGame } = useFollow();
+
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
-  const { data: followedGamesData } = useSupabaseQuery(
-    (sb) => getGamesByIds(sb, followedIds),
+  const { data: followedGamesData, loading: followedLoading } = useSupabaseQuery(
+    (sb) => followedIds.length > 0 ? getGamesByIds(sb, followedIds) : Promise.resolve([]),
     [followedIds.join(",")]
   );
   const { data: franchises } = useSupabaseQuery(getAllFranchises);
-
-  // Swipe handling
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  }, []);
-
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      const dx = touchStartX.current - e.changedTouches[0].clientX;
-      const dy = Math.abs(touchStartY.current - e.changedTouches[0].clientY);
-      // Only swipe if horizontal movement > 60px and more horizontal than vertical
-      if (Math.abs(dx) < 60 || dy > Math.abs(dx)) return;
-      const currentIndex = TABS.indexOf(activeTab);
-      if (dx > 0 && currentIndex < TABS.length - 1) {
-        setActiveTab(TABS[currentIndex + 1]);
-      } else if (dx < 0 && currentIndex > 0) {
-        setActiveTab(TABS[currentIndex - 1]);
-      }
-    },
-    [activeTab]
-  );
 
   useEffect(() => {
     if (!search) {
@@ -82,14 +51,13 @@ export default function HomePage() {
   const followedFranchiseList = allFranchises.filter((f) =>
     followedFranchiseIds.has(f.id)
   );
-  const unfollowedFranchises = allFranchises.filter(
-    (f) => !followedFranchiseIds.has(f.id)
-  );
-  const followedFranchiseNames = useMemo(
-    () => new Set(followedFranchiseList.map((f) => f.name)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [followedFranchiseList.length, followedFranchiseIds]
-  );
+
+  // Split followed games into categories
+  const onSale = followedGames.filter((g) => g.isOnSale && !ownedGameIds.has(g.id));
+  const watching = followedGames.filter((g) => !g.isOnSale && !ownedGameIds.has(g.id));
+  const owned = followedGames.filter((g) => ownedGameIds.has(g.id));
+
+  const hasPersonalContent = followedGames.length > 0 || followedFranchiseList.length > 0;
 
   return (
     <div className="px-4">
@@ -149,332 +117,114 @@ export default function HomePage() {
             </div>
           )}
         </div>
-      ) : (
-        <>
-          {/* Tab bar */}
-          <div className="flex gap-1 p-1 bg-[#111111] rounded-xl mb-2">
-            {TABS.map((tab) => {
-              const isActive = activeTab === tab;
-              const count =
-                tab === "My Games"
-                  ? followedGames.length + followedFranchiseList.length
-                  : 0;
-              return (
-                <button
-                  key={tab}
-                  data-tab={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-3 px-2 rounded-lg text-xs font-medium transition-all focus:outline-none ${
-                    isActive
-                      ? "bg-[#1a1a1a] text-white"
-                      : "text-[#666666] hover:text-white"
-                  }`}
-                >
-                  {tab}
-                  {count > 0 && (
-                    <span
-                      className={`ml-1 ${
-                        isActive ? "text-[#aaaaaa]" : "text-[#555555]"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+      ) : !user ? (
+        /* Logged-out state */
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+            </svg>
           </div>
-
-
-          {/* Swipeable content area */}
-          <div
-            ref={containerRef}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            className="min-h-[60vh]"
+          <h2 className="text-lg font-semibold text-white mb-2">Your games, your deals</h2>
+          <p className="text-[#666666] text-sm max-w-[260px] mb-6">
+            Sign in to follow games and get alerted the moment prices drop.
+          </p>
+          <Link
+            href="/login"
+            className="px-6 py-3 rounded-xl bg-[#00ff88] text-[#0a0a0a] text-sm font-semibold hover:shadow-[0_0_16px_#00ff8855] transition-all"
           >
-            {activeTab === "Discover" && (
-              <DiscoverTab
-                trendingGames={trendingData ?? []}
-                loading={trendingLoading}
-                error={trendingError}
-                followedFranchises={followedFranchiseNames}
-              />
-            )}
-            {activeTab === "My Games" && (
-              <MyGamesTab
-                games={followedGames}
-                ownedGameIds={ownedGameIds}
-                followedFranchises={followedFranchiseList}
-                suggestedFranchises={unfollowedFranchises}
-              />
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── Discover Tab ──────────────────────────────────────────────
-
-const PAGE_SIZE = 30;
-
-const GENRE_FILTERS = [
-  "All",
-  "Action",
-  "Adventure",
-  "RPG",
-  "Puzzle",
-  "Simulation",
-  "Strategy",
-  "Sports",
-  "Racing",
-  "Fighting",
-  "Shooter",
-  "Party",
-] as const;
-
-// Map our filter labels to Algolia's gameGenreLabels values
-const GENRE_ALIASES: Record<string, string[]> = {
-  rpg: ["role playing"],
-  shooter: ["shooting"],
-};
-type GenreFilter = (typeof GENRE_FILTERS)[number];
-
-function DiscoverTab({
-  trendingGames,
-  loading,
-  error,
-  followedFranchises,
-}: {
-  trendingGames: Game[];
-  loading: boolean;
-  error: Error | null;
-  followedFranchises: Set<string>;
-}) {
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [genreFilter, setGenreFilter] = useState<GenreFilter>("All");
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  const sorted = useMemo(() => {
-    const deduped = deduplicateGames(trendingGames);
-    return deduped.sort(
-      (a, b) =>
-        computeTrendingScore(b, { followedFranchises }) -
-        computeTrendingScore(a, { followedFranchises })
-    );
-  }, [trendingGames, followedFranchises]);
-
-  const filtered = useMemo(() => {
-    if (genreFilter === "All") return sorted;
-    const filterKey = genreFilter.toLowerCase();
-    const matchValues = [filterKey, ...(GENRE_ALIASES[filterKey] ?? [])];
-    return sorted.filter((game) =>
-      game.genres.some((g) => matchValues.includes(g.toLowerCase()))
-    );
-  }, [sorted, genreFilter]);
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [filtered]);
-
-  useEffect(() => {
-    if (visibleCount >= filtered.length) return;
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length));
-        }
-      },
-      { rootMargin: "400px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [filtered.length, visibleCount]);
-
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 6 }).map((_, i) => <GameCardSkeleton key={i} />)}
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-16">
-        <p className="text-[#666666] text-sm">Failed to load games</p>
-      </div>
-    );
-  }
-
-  const visible = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
-
-  return (
-    <div>
-      {/* Genre filter pills */}
-      <div className="overflow-x-auto -mx-4 px-4 mb-3 no-scrollbar">
-        <div className="flex gap-2 pb-1">
-          {GENRE_FILTERS.map((genre) => {
-            const isActive = genreFilter === genre;
-            return (
-              <button
-                key={genre}
-                onClick={() => setGenreFilter(genre)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all focus:outline-none ${
-                  isActive
-                    ? "bg-white text-[#0a0a0a]"
-                    : "bg-[#111111] text-[#666666] hover:text-white"
-                }`}
-              >
-                {genre}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-[#666666] text-sm">No {genreFilter.toLowerCase()} games found</p>
-          <button
-            onClick={() => setGenreFilter("All")}
+            Sign in to get started
+          </Link>
+          <Link
+            href="/sales"
             className="mt-3 text-xs text-[#888888] hover:text-white transition-colors"
           >
-            Clear filter
-          </button>
+            Browse deals without an account →
+          </Link>
+        </div>
+      ) : followedLoading ? (
+        <div className="space-y-2 pt-2">
+          {Array.from({ length: 4 }).map((_, i) => <GameCardSkeleton key={i} />)}
+        </div>
+      ) : !hasPersonalContent ? (
+        /* Signed in but nothing followed */
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-white mb-2">No games yet</h2>
+          <p className="text-[#666666] text-sm max-w-[260px] mb-4">
+            Follow games to track prices and get alerts when they go on sale.
+          </p>
+          <Link
+            href="/sales"
+            className="px-5 py-2.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] text-sm font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
+          >
+            Browse deals
+          </Link>
         </div>
       ) : (
-        <div className="space-y-2">
-          {visible.map((game) => (
-            <GameCard key={game.id} game={game} />
-          ))}
-          <div ref={sentinelRef} className="h-4" />
-          {hasMore && (
-            <div className="flex justify-center py-4">
-              <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
-            </div>
+        /* Personal dashboard */
+        <div className="space-y-5 pb-4">
+          {/* On Sale Now — most important section */}
+          {onSale.length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2 uppercase">On Sale Now</h2>
+              {onSale.length <= 4 ? (
+                <div className="space-y-2">
+                  {onSale.map((game) => (
+                    <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto -mx-4 px-4 no-scrollbar mb-2">
+                    <div className="flex gap-3 pb-1">
+                      {onSale.map((game) => (
+                        <GameCardCompact key={game.id} game={game} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-[#555555]">{onSale.length} of your games are on sale</p>
+                </>
+              )}
+            </section>
           )}
-        </div>
-      )}
-    </div>
-  );
-}
 
-// ── My Games Tab ──────────────────────────────────────────────
+          {/* Watching for Deals */}
+          {watching.length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2 uppercase">Watching for Deals</h2>
+              <div className="space-y-2">
+                {watching.map((game) => (
+                  <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
+                ))}
+              </div>
+            </section>
+          )}
 
-function MyGamesTab({
-  games,
-  ownedGameIds,
-  followedFranchises,
-  suggestedFranchises,
-}: {
-  games: Game[];
-  ownedGameIds: Set<string>;
-  followedFranchises: Franchise[];
-  suggestedFranchises: Franchise[];
-}) {
-  const { toggleOwnGame } = useFollow();
-  const [showSuggested, setShowSuggested] = useState(false);
-  const watching = games.filter((g) => !ownedGameIds.has(g.id));
-  const owned = games.filter((g) => ownedGameIds.has(g.id));
+          {/* My Library */}
+          {owned.length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-bold text-[#7c3aed]/60 tracking-wider mb-2 uppercase">My Library</h2>
+              <div className="space-y-2">
+                {owned.map((game) => <GameCard key={game.id} game={game} />)}
+              </div>
+            </section>
+          )}
 
-  if (watching.length === 0 && owned.length === 0 && followedFranchises.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-4">
-        <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
-          <svg className="w-8 h-8 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-          </svg>
-        </div>
-        <h2 className="text-lg font-semibold text-white mb-2">No games yet</h2>
-        <p className="text-[#666666] text-sm text-center max-w-[260px] mb-4">
-          Follow games to track prices and get alerts when they go on sale.
-        </p>
-        <button
-          onClick={() => {
-            const tabEl = document.querySelector('[data-tab="Discover"]');
-            if (tabEl) (tabEl as HTMLElement).click();
-          }}
-          className="px-5 py-2.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] text-sm font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
-        >
-          Discover games
-        </button>
-      </div>
-    );
-  }
-
-  const onSale = watching.filter((g) => g.isOnSale);
-  const notOnSale = watching.filter((g) => !g.isOnSale);
-
-  return (
-    <div className="space-y-4 pb-4">
-      <p className="text-[#444444] text-xs px-1">Watching = price alerts · Library = DLC announcements only</p>
-      {onSale.length > 0 && (
-        <div>
-          <h3 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2">ON SALE NOW</h3>
-          <div className="space-y-2">
-            {onSale.map((game) => (
-              <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
-            ))}
-          </div>
-        </div>
-      )}
-      {notOnSale.length > 0 && (
-        <div>
-          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">WATCHING FOR DEALS</h3>
-          <div className="space-y-2">
-            {notOnSale.map((game) => (
-              <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
-            ))}
-          </div>
-        </div>
-      )}
-      {owned.length > 0 && (
-        <div>
-          <h3 className="text-[10px] font-bold text-[#7c3aed]/60 tracking-wider mb-2">MY LIBRARY</h3>
-          <div className="space-y-2">
-            {owned.map((game) => <GameCard key={game.id} game={game} />)}
-          </div>
-        </div>
-      )}
-      {followedFranchises.length > 0 && (
-        <div>
-          <h3 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">MY FRANCHISES</h3>
-          <div className="space-y-2">
-            {followedFranchises.map((franchise) => (
-              <FranchiseRow key={franchise.id} franchise={franchise} />
-            ))}
-          </div>
-        </div>
-      )}
-      {suggestedFranchises.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowSuggested(!showSuggested)}
-            className="flex items-center gap-2 text-[10px] font-bold text-[#666666] tracking-wider mb-2 hover:text-white transition-colors"
-          >
-            SUGGESTED FRANCHISES
-            <svg
-              className={`w-3 h-3 transition-transform ${showSuggested ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-            </svg>
-          </button>
-          {showSuggested && (
-            <div className="space-y-2">
-              {suggestedFranchises.map((franchise) => (
-                <FranchiseRow key={franchise.id} franchise={franchise} />
-              ))}
-            </div>
+          {/* Franchises */}
+          {followedFranchiseList.length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2 uppercase">My Franchises</h2>
+              <div className="space-y-2">
+                {followedFranchiseList.map((franchise) => (
+                  <FranchiseRow key={franchise.id} franchise={franchise} />
+                ))}
+              </div>
+            </section>
           )}
         </div>
       )}
@@ -510,4 +260,3 @@ function FranchiseRow({ franchise }: { franchise: Franchise }) {
     </div>
   );
 }
-

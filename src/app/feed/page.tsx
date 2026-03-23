@@ -12,19 +12,19 @@ import {
   getUpcomingGamesSoon,
 } from "@/lib/queries";
 
-export default function FeedPage() {
+export default function UpcomingPage() {
   return (
-    <Suspense fallback={<FeedLoading />}>
-      <FeedContent />
+    <Suspense fallback={<UpcomingLoading />}>
+      <UpcomingContent />
     </Suspense>
   );
 }
 
-function FeedLoading() {
+function UpcomingLoading() {
   return (
     <div className="px-4">
       <div className="py-4">
-        <h1 className="text-lg font-bold text-white">Feed</h1>
+        <h1 className="text-2xl font-bold text-white">Upcoming</h1>
       </div>
       {/* Out Now skeleton */}
       <div className="mb-6">
@@ -48,7 +48,7 @@ function FeedLoading() {
   );
 }
 
-function FeedContent() {
+function UpcomingContent() {
   const { data: directs } = useSupabaseQuery(getActiveDirects);
   const { data: saleEvents } = useSupabaseQuery(getActiveNamedSaleEvents);
   const { data: recentReleases, loading: releasesLoading } = useSupabaseQuery(getRecentReleases);
@@ -69,7 +69,7 @@ function FeedContent() {
     <div className="px-4">
       {/* Header */}
       <div className="py-4">
-        <h1 className="text-lg font-bold text-white">Feed</h1>
+        <h1 className="text-2xl font-bold text-white">Upcoming</h1>
       </div>
 
       {/* Nintendo Direct banner */}
