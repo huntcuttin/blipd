@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/AuthContext";
 import { FollowProvider } from "@/lib/FollowContext";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import PullToRefresh from "@/components/PullToRefresh";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -69,6 +70,7 @@ export default function RootLayout({
             <ServiceWorkerRegistration />
           </FollowProvider>
         </AuthProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
