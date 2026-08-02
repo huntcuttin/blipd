@@ -514,3 +514,98 @@ When helping with Blippd, default to:
 6. **PWA icons** — generated 180/192/512px PNGs from favicon SVG, added apple-touch-icon + updated manifest.json
 7. **GameCard price row overflow** — added `min-w-0` to publisher, `flex-shrink-0` to discount badge
 8. **Added Syne + DM Mono fonts** — Syne on page headings + game titles, DM Mono on prices/badges. CSS vars via `next/font/google`, Tailwind `font-syne`/`font-mono` utilities
+   - **Note (2026-08-02):** Syne was later removed in commit `fb88067`. App now uses Inter + DM Mono only.
+
+## Audit — 2026-08-02
+
+Cold-read audit after ~4.5 months idle (last commit 2026-03-22). Three parallel code-audit agents + live production checks (cron-job.org API, Supabase REST, Nintendo price API, npm audit). **All findings below verified against code and/or live prod.** Launch readiness: ~60%.
+
+### Live pipeline status (verified 2026-08-02)
+
+| System | Status |
+|---|---|
+| update-prices + dispatch (10-min via cron-job.org) | ✅ Alive — alerts generated + emails sent today |
+| Nintendo price API, YouTube RSS, Resend, site, cron auth | ✅ All healthy |
+| sync-catalog (daily), sync-hype (6h), weekly-digest | ✅ Running on schedule |
+| **sync-release-dates** | ⚠️ Enabled but **timing out every run** (cron-job.org status 5) → 746/2,934 games (25%) stuck with 2099-12-31 placeholder dates |
+| **sync-ratings** | ❌ **Auto-disabled on cron-job.org since ~2026-03-23** (route works when triggered manually: 200 in 29.6s — right at the 30s caller timeout, 40 games/run) |
+| **detect-directs, detect-trailers** | ❌ **Auto-disabled since ~2026-04-21** (detect-directs works when triggered: 200 in 9.6s). `nintendo_directs` table is EMPTY — no Direct ever detected |
+| **Named sale event detection** | ❌ **Has not executed since 2026-03-22.** Two zombie rows still `active=true`: "Nintendo eShop Sale" (count frozen at 284, only 25 games actually tagged) and "Square Enix Sale" (count 89, **0 games tagged**) → stale banners on /sales that filter to an empty list |
+| Web push | ❌ **Never fired once in production** — 0 subscriptions, all 1,007 notification_log rows are email |
+| price_snapshots | ❌ Table never created in prod (migration exists; only writer `poll-prices.ts` has zero callers). Price history = monthly-bucket jsonb only (current month overwritten in place) |
+| Monitoring | ❌ **Nothing watches the pipeline.** 3 jobs dead 4+ months, unnoticed. Root cause of most decay above |
+
+Scale check: 1 user, 18 follows, 0 push subs, 17,492 alerts, 1,007 emails sent. Alert mix last 30d: 510 sale_started / 280 sale_ending / 106 price_drop / 104 ATL / **0 release alerts**.
+
+### Fix list (prioritized)
+
+**🔴 Critical — security & data integrity**
+
+| # | Issue | File | Effort |
+|---|---|---|---|
+| 1 | **ROTATE SUPABASE SERVICE_ROLE KEY.** Live key (exp 2036) hardcoded in 8 Python scripts, still retrievable from git history (`git show 6fcf89e:scripts/assign_franchises.py`) on github.com/huntcuttin/blipd. Deleting the files did not revoke it. Rotate in dashboard, then update Vercel + .env.local | git history, `scripts/*.py` | S |
+| 2 | Named-sale-event lifecycle broken end-to-end: events never deactivated, `games_count` frozen at creation, tags nulled as sales end (`ingest.ts:639`), detection trigger starved — `else if (isNewSale)` at `ingest.ts:689-694` excludes every sale-onset that reads as a price drop from `newSaleGames`, so the ≥5 gate (`:739`) almost never fires. Fix: decouple newSaleGames from alert branching; deactivate events when tagged count hits 0; recompute counts; hide banner when 0 tagged | src/lib/nintendo/ingest.ts:639,684-694,739,779-856 | M |
+| 3 | Cron scheduling split-brain + auto-disabled jobs: re-enable sync-ratings/detect-directs/detect-trailers on cron-job.org, shrink IGDB batches (40→~20) so runs finish <25s, fix sync-release-dates timeout, **delete vercel.json crons** (they double-fire the same endpoints daily at 04:00-09:00 UTC vs cron-job.org's 10-min cadence) | vercel.json, sync-ratings/route.ts:8, sync-release-dates/route.ts:9 | S/M |
+| 4 | No pipeline monitoring — add a health-check cron (email/push if no alert generated in N hours, or any cron-job.org job disabled/failing) + enable cron-job.org failure notifications | new | S |
+| 5 | `is_all_time_low` flaps off on the next run: current-month history entry is overwritten with the new price, then strict `<` compares price against itself | src/lib/nintendo/transform.ts:37-43 + ingest.ts:643-653 | S |
+| 6 | `last_price_check` stamped for all 100 games BEFORE prices validated — an API outage silently skips the whole batch for a full cycle | src/lib/nintendo/ingest.ts:598-612 | S |
+| 7 | IGDB circuit breaker poisons rows: after 3× 429s, the unprocessed remainder is written `metacritic_score=0`/`igdb_hype=0` and never retried (query filters on `IS NULL`) | sync-ratings/route.ts:67-77, sync-hype-scores/route.ts:66-76 | S |
+| 8 | Nintendo price fetch uses raw fetch — no retry, drops 50-game batches silently on error (retry.ts exists but is only used for YouTube RSS) | src/lib/nintendo/client.ts:141-175 | S |
+| 9 | Expired/cross-browser magic links silently bounce to /login with zero explanation (`?error=otp_expired` params never parsed; PKCE verifier loss from email-app in-app browsers unhandled) | src/app/auth/callback/page.tsx:21-55 | S |
+| 10 | Push notification layer never validated + broken: sends not logged to notification_log (no dedup — 15-min window vs 10-min cron = doubles), subscription survives sign-out, endpoint hijack possible via `onConflict: "endpoint"` reassigning user_id | src/lib/notifications/push.ts, api/push/subscribe/route.ts:26-31 | M |
+| 11 | iOS push unreachable: no add-to-home-screen prompt/instructions anywhere, and the Enable button shows "BLOCKED in browser settings" when the real cause is Safari-not-installed-as-PWA | settings/page.tsx:256-262 | M |
+| 12 | DB is unreproducible: no CREATE TABLE baseline for games/alerts/franchises/user_* tables; live-patched objects missing from repo (dedup_key UNIQUE, sale_event_id, has_demo, last_price_check, metacritic_score, notification_log RLS — live RLS verified present); two competing migration dirs (supabase/migrations/ vs migrations/). Run `supabase db dump` as baseline | supabase/migrations/, migrations/ | M |
+
+**🟡 Moderate**
+
+| # | Issue | File | Effort |
+|---|---|---|---|
+| 13 | /sales renders up to 500 GameCards, no virtualization/pagination; `sortGames`+`deduplicateGames` unmemoized (~9k `computeTrendingScore` calls per keystroke); sale events fetched twice; GameCard `memo` defeated by FollowContext object churn | SalesPage.tsx:92,112, FollowContext.tsx:271-295 | M |
+| 14 | Sale-ending scan: unbounded serial loop (~177 games × 2-3 queries each) inside update-prices' 60s budget | ingest.ts:705-736 | M |
+| 15 | No cron overlap guard + alert dedup is SELECT-then-INSERT with no DB unique constraint (TOCTOU dupes); `hasRecentAlert` returns true on query error (silently suppresses alerts) | alerts.ts:12-30 | M |
+| 16 | Loading-state flashes: /home shows "No games yet" before follows load (read `loading` from useFollow like profile does); /alerts flashes empty pre-auth; franchise page same; unread badge never clears until hard reload; pull-to-refresh is a no-op (router.refresh vs client-side queries) AND fights horizontal scroll (global non-passive touchmove) — unused `usePullToRefresh` hook is the ready-made fix | home/page.tsx:22, alerts/page.tsx:40-43, BottomNav.tsx:12-21, PullToRefresh.tsx:30-59 | S–M |
+| 17 | Event-filter dead end on /sales: empty state never mentions the active event filter; "Clear ✕" only renders if a second fetch finds the event | SalesPage.tsx:130-138,204-226 | S |
+| 18 | Middleware: `getSession()` instead of `getUser()` (silent logouts); matcher runs auth on /api/cron/*, sw.js, manifest, icons | src/middleware.ts:26,42 | S |
+| 19 | `onboarding_completed` checked only in auth callback — returning user with live cookie skips onboarding forever | middleware.ts:29-36 | M |
+| 20 | Resend v6 returns errors in `{data, error}` — all 4 send sites ignore it and log status "sent" for failed sends | email.ts:87, send-batch.ts:42,96, weekly-digest:111 | S |
+| 21 | weekly-digest loads ALL follows unpaginated (PostgREST 1k cap will truncate audience at scale) | weekly-digest/route.ts:30-32 | M |
+| 22 | Sitemap covers ~1,230 of ~2,300 eligible games (row cap); /deals has zero inbound links AND missing from sitemap; /upcoming redirect stub is in sitemap instead of /feed | sitemap.ts, deals/page.tsx | S |
+| 23 | No OG image for root/static pages (blank share cards); zero canonical URLs; game OG images 600×375 (below 1200×630) | layout.tsx:37-48 | M |
+| 24 | npm: 16 vulns (12 high — ws, svix chain). `npm audit fix` + resend 6.9.3→6.18.1 | package.json | S |
+| 25 | Dead deps: @supabase/auth-helpers-nextjs (deprecated, zero imports), nintendo-switch-eshop (zero imports) — uninstall both | package.json:15,19 | S |
+| 26 | Stale deps: Next 14.2.35 (→16), React 18 (→19), Tailwind 3 (→4), eslint 8 (EOL), @supabase/ssr 0.9→0.12, @anthropic-ai/sdk 0.78→0.115. Do minor bumps now, majors post-launch | package.json | L |
+| 27 | Sale-end dates stored as date-only text, parsed as UTC midnight — "ends today" copy off by up to a day; /deals and GameCard compute countdowns differently (can disagree by a day) | ingest.ts:638,718, deals/page.tsx:46-56 vs GameCard.tsx:261-283 | S |
+| 28 | Admin auth split: page hardcodes email, API reads ADMIN_EMAIL env — if env unset, page renders but every action 403s | admin/trailers/page.tsx:9 vs api/admin/trailers/[id]/route.ts:10 | S |
+| 29 | detect-trailers feeds unescaped LLM output into `.ilike()` — %/_ wildcards can attach an alert to the wrong game | detect-trailers/route.ts:162-167 | S |
+| 30 | `maxDuration=300` on 3 routes needs Vercel Pro (Hobby clamps to 60s) — verify plan; moot for crons once vercel.json crons are deleted | sync-catalog, weekly-digest, dispatch-notifications | S |
+| 31 | In-app alert feed ignores notify prefs — user_alert_status written for ALL followers regardless of toggles (email/push correctly filter) | alerts.ts:32-45 | S |
+
+**🟢 Minor / hygiene**
+
+| # | Issue | File | Effort |
+|---|---|---|---|
+| 32 | Repo litter: 31MB screenshots-audit2/ committed, 1.json (byte-identical package-lock copy), supabase/.temp/ committed (pooler host+ref), .claude/scheduled_tasks.lock tracked-but-deleted, test-audit2.mjs + audit2-report.json, OVERNIGHT_LOG.md/COST_ESTIMATE.md; .gitignore missing supabase/.temp, .claude/, screenshots*; scripts/ is gitignored but `npm run seed`/`sync` depend on it (broken on fresh clone). Note: CLAUDE.md itself commits the cron-job.org API key | repo root | S |
+| 33 | NaN price guard: malformed raw_value propagates NaN → nulls current_price via JSON.stringify | ingest.ts:590-594 | S |
+| 34 | .env.example missing 7 of 13 required vars (VAPID×3, ANTHROPIC, TWITCH×2, ADMIN_EMAIL); push silently no-ops when VAPID unset | .env.example | S |
+| 35 | Design drift batch: 3 filter-pill sizes, header padding differs per route (py-3/4/6), 3 back-button variants, green outside spec (metacritic chip, section headers, onboarding dots, static "ON" pills in settings — which are hardcoded non-interactive badges), detail-page price not font-mono | see frontend audit | M |
+| 36 | Dead code: /deals page (orphan — either link it from nav/footer or delete), usePullToRefresh.ts, poll-prices.ts (only price_snapshots writer, zero callers), 8 unused queries.ts exports, isQualityGame | various | S |
+| 37 | sw.js: no offline fallback, no skipWaiting/clients.claim (push-fix deploys stall until all tabs close), SVG notification icons (Android wants PNG); dual manifests (manifest.ts SVG-only vs public/manifest.json) — delete manifest.ts | public/sw.js, src/app/manifest.ts | S–M |
+| 38 | Mobile a11y: touch targets <44px (franchise back 32px, genre pills 30px, tz select 26px, Direct dismiss 24px, compact follow 36px); price-history chart unusable at 120 points on 430px | various | S each |
+| 39 | README is still create-next-app boilerplate | README.md | S |
+| 40 | An Expo app scaffold lives in mobile/ (34 tracked files) — excluded from tsconfig but uploaded in every Vercel build context | mobile/ | S |
+
+### Corrections to earlier sections of this doc
+- Syne font was REMOVED in `fb88067` — "Syne on headings" above is stale; app uses Inter + DM Mono.
+- Cron table says 9 jobs; cron-job.org actually has 12 (4 hit update-prices: base + 3 burst windows). 3 are disabled (see status table).
+- "PriceSnapshot table — start accumulating own data now" never happened: table absent in prod, writer never wired. Price history chart rarely renders (needs 3+ points; history is monthly buckets).
+- vercel.json also declares 3 daily crons — redundant double-scheduling against cron-job.org. Delete them.
+- `sale_started`/named-event claims: sale_started alerts DO fire in prod (510 last 30d) — but named-event detection is starved by the else-if branching (see fix #2).
+
+### Suggested execution order for next session
+1. Rotate service_role key (#1) — 10 minutes, do it first
+2. Re-enable + right-size the 3 dead crons, fix release-dates timeout, delete vercel.json crons (#3)
+3. Named-sale lifecycle fix (#2) — kills the zombie banners (the /sales screenshot bug)
+4. ATL flap (#5), last_price_check ordering (#6), IGDB zeroing (#7), price-fetch retry (#8) — one batch, all S
+5. Health-check dead-man's switch (#4)
+6. Magic-link error surfacing (#9) + /home loading flash (#16 first item)
+7. `npm audit fix`, remove 2 dead deps, bump resend (#24, #25)
