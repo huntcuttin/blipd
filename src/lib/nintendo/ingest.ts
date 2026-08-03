@@ -586,9 +586,15 @@ export async function runPriceUpdate(options?: {
   const priceMap = new Map<string, { regular: number; discount: number | null; endDate: string | null }>();
   for (const p of prices) {
     const nsuid = String(p.title_id);
-    const regular = p.regular_price ? parseFloat(p.regular_price.raw_value) : null;
-    const discount = p.discount_price ? parseFloat(p.discount_price.raw_value) : null;
+    const regularRaw = p.regular_price ? parseFloat(p.regular_price.raw_value) : null;
+    const discountRaw = p.discount_price ? parseFloat(p.discount_price.raw_value) : null;
     const endDate = p.discount_price?.end_datetime ?? null;
+    // A malformed raw_value from the API parses to NaN, not null — left
+    // unguarded, NaN would pass the null check below and later silently
+    // become `null` in the DB via JSON.stringify (JSON has no NaN
+    // representation), wiping out a game's price for no visible reason.
+    const regular = regularRaw != null && !isNaN(regularRaw) ? regularRaw : null;
+    const discount = discountRaw != null && !isNaN(discountRaw) ? discountRaw : null;
     if (regular != null) {
       priceMap.set(nsuid, { regular, discount, endDate });
     }
