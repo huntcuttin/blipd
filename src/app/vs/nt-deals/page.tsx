@@ -28,7 +28,6 @@ const features: Feature[] = [
   { name: "Email notifications", blippd: true, ntDeals: true },
   { name: "Push notifications", blippd: true, ntDeals: true },
   { name: "Named sale detection", blippd: true, ntDeals: false, note: "Blippd detects named events like Mar10 Day and groups alerts intelligently" },
-  { name: "Switch 2 catalog", blippd: true, ntDeals: false, note: "NT Deals Switch 2 support has been broken since launch" },
   { name: "Price history", blippd: "Building", ntDeals: "9 years" },
   { name: "Desired price threshold", blippd: "Free", ntDeals: "Premium only" },
   { name: "Follow limit (free)", blippd: "Unlimited", ntDeals: "Unlimited" },
@@ -124,9 +123,9 @@ export default function VsNtDealsPage() {
           <h2 className="text-base font-bold text-white mb-2">Where Blippd wins</h2>
           <ul className="text-[#888888] text-sm leading-relaxed space-y-2">
             <li>
-              <span className="text-white font-medium">Switch 2 support.</span>{" "}
-              NT Deals has had broken Switch 2 catalog support since the console launched.
-              Blippd tracks Switch 2 games from day one.
+              <span className="text-white font-medium">Notifications you don&apos;t have to unlock.</span>{" "}
+              NT Deals reviewers report watchlist notifications gated behind a popup ad you
+              have to watch first. Blippd&apos;s alerts just arrive.
             </li>
             <li>
               <span className="text-white font-medium">No ads, ever.</span>{" "}
