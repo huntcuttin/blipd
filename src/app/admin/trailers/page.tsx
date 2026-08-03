@@ -6,8 +6,6 @@ import TrailersClient from "./TrailersClient";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_EMAIL = "huntcuttin@gmail.com";
-
 export default async function AdminTrailersPage() {
   const cookieStore = cookies();
   const supabase = createServerClient(
@@ -35,7 +33,11 @@ export default async function AdminTrailersPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user || user.email !== ADMIN_EMAIL) {
+  // Same source as the API route's isAdmin() check — a hardcoded literal here
+  // meant the page could render for an admin while every action 403'd if
+  // ADMIN_EMAIL was ever unset or different in a given deploy environment.
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!user || !adminEmail || user.email !== adminEmail) {
     redirect("/home");
   }
 
