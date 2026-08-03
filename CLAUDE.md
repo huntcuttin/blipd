@@ -15,6 +15,16 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 - **Domain:** blippd.app (purchased, pointing to Vercel)
 - **Company:** Westside Software LLC (or similar holding entity, never customer-facing)
 
+## Project Philosophy (Decided 2026-08-02, per Fable)
+
+**Blippd is a proof-of-concept that runs in production, not a growth business.** This was effectively decided by the zero-touch + monthly-check-in constraint (see Zero-Touch Operations below) — a real product means responding to users, alert failures, and Nintendo API changes on their timeline, not yours. Naming it a POC is the filter for every roadmap/audit decision:
+
+- **Kill anything that only pays off over years or requires ongoing curation.** DB migration baseline, major dependency version bumps (Next 14→16, React 18→19, etc.), multi-region/platform expansion — all explicitly deferred indefinitely, not "later." Don't revisit unless retention data (see Marketing Strategy) suggests this is becoming a real product.
+- **Two things stay at product grade, everything else gets pinned and frozen:**
+  1. **Alert correctness** — a false price-drop alert to a real user damages the portfolio value, not just the product experience.
+  2. **Whatever makes the monthly check-in actually effective** — health-check coverage, error alerting, the things that let a once-a-month glance catch real problems.
+- The only path back to "real product" thinking is retention data proving people actually want this — that's a future decision, not something to hedge for now by over-building.
+
 ## Locked Stack
 
 | Layer | Tool |
@@ -24,15 +34,19 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 | Email | Resend — sender: alerts@blippd.app |
 | Hosting | Vercel (free tier) |
 | Cron | cron-job.org (9 jobs configured) |
-| Payments | None (ad-supported, free forever) |
+| Payments | None — no monetization at all (see Monetization below) |
 | iOS (v2) | Expo / React Native |
 | Data | nintendo-switch-eshop npm + ITAD API + IGDB API + Algolia |
 
 ## Monetization
 
-- **Free forever:** Unlimited follows, email alerts, web push notifications — no paywall.
-- **Ads:** Carbon Ads at 5k+ users (light touch, banner only, never interstitials). No Stripe, no subscription tier.
-- Stripe removed from roadmap entirely.
+**None. Killed entirely, not deferred (Decided 2026-08-02, per Fable).**
+
+- **Free forever:** Unlimited follows, email alerts, web push notifications — no paywall, no ads.
+- The prior "Carbon Ads at 5k+ users" plan is dead. At POC scale, Carbon is tens of dollars a month at best, and an ad slot actively works against the actual goal here — a clean, fast, ad-free niche tool reads better to anyone evaluating this as a portfolio piece than a monetized one does.
+- Infra is effectively free at this scale (Vercel/Supabase/Resend free tiers) — there's no cost to cover.
+- If hosting costs ever actually appear, a one-time Ko-fi link is the zero-touch answer (no account setup, no payout threshold, no ad-tag maintenance) — not an ad network.
+- Stripe removed from roadmap entirely (unchanged from before).
 
 ## Database Schema (Core Tables — Supabase public schema)
 
@@ -172,6 +186,19 @@ GET https://api.isthereanydeal.com/games/history/v2
   ?key={API_KEY}&id={game_id}&country=US&since=0
 ```
 
+## Zero-Touch Operations
+
+**Constraint (Decided 2026-08-02): monthly check-in, as close to zero-touch as possible.** "Never touch it" isn't honest — it dies at the first delisted game or mis-tagged franchise. The actual answer is "monthly check-in + a cheap, saved, one-off fix when something predictable breaks" — the goal is making those fixes cheap and non-recurring, not eliminating them entirely.
+
+**What's already built toward this:**
+- `/api/cron/health-check` (every 30 min) — checks cron-job.org job health + price-pipeline freshness, emails on problems.
+- Native cron-job.org `onFailure`/`onDisable` email notifications enabled on all monitored jobs.
+
+**Still to build — a `fixes/` folder (per Fable, ~30 min one-time investment):**
+- Saved SQL/scripts for the predictable, recurring exception categories: mark a game delisted, retag a mis-detected franchise, clear a stale named-sale-event banner (see `scripts/fix_zombie_sale_events.sh`-style pattern already used once this session).
+- Extend `/api/cron/health-check` to surface the *triggers* for these, not just pipeline staleness — e.g. catalog sync hitting a 404/removed listing → "possibly delisted: {game title}" in the alert email.
+- Goal: turn a manual fix from context-reload archaeology into running one saved, documented command. That's zero-touch in spirit — no recurring curation, just a lever for the rare exception.
+
 ## Roadmap
 
 ### Immediate (Unblocking — Do First)
@@ -260,9 +287,19 @@ Page elements: inferred launch time, timezone converter, countdown (release week
 
 Competitor comparison page: `/vs/nt-deals` — honest comparison table, surfaces Switch 2 catalog issue, ad model difference, notification philosophy.
 
+**Per-game launch time prediction (added 2026-08-02):** the catalog sync captures Nintendo's own `editions` field (Digital vs Digital+Physical) alongside publisher, letting `/games/[slug]/release-time` predict a specific rule per game instead of listing all four generically. **Prediction accuracy is a copy concern, not a correctness concern — decided 2026-08-02, per Fable:**
+- Rule-backed predictions (major first-party via publisher match, physical via the editions field) get a specific, confident time ("9:00 AM PT").
+- The fuzzy "some third-party" bucket has no reliable signal, so it folds into the digital-only default with hedged phrasing ("typically around 9:00 AM PT") rather than a flat confident claim.
+- Critically, the actual "out now" alert is ground truth — it fires from the price-poller when the game genuinely appears live, completely decoupled from whatever this page predicted. A wrong prediction is a mismatched expectation on a page, never a missed or wrong alert. Don't revisit this unless a user actually complains about it.
+
 ## Marketing Strategy
 
-Deferred until the app is ready. Focus on product quality first.
+**Users first, zero-touch launch (Decided 2026-08-02, per Fable).** Confirmed: get real users before investing further in content/SEO — a new domain has no crawl authority yet, so SEO payoff is months out regardless of how much content exists. The zero-touch version of "getting users":
+
+- 2-3 one-time launch posts: r/NintendoSwitch's suggestion/self-promo threads (check their rules first, Nintendo subreddits are strict about this), Show HN, a deals-focused Discord.
+- Then stop and measure — no ongoing posting/growth-hacking cadence.
+- Measure at the next monthly check-in. The metrics that matter are **follows-per-signup** and **week-2 return rate**, not raw signup count.
+- This feeds directly into Project Philosophy above: retention data from this is the only signal that would justify treating Blippd as a real product instead of a POC. Users-first isn't just cheaper than SEO — it's the input everything else is waiting on.
 
 ## Competitive Context
 
@@ -610,6 +647,13 @@ Scale check: 1 user, 18 follows, 0 push subs, 17,492 alerts, 1,007 emails sent. 
 6. Magic-link error surfacing (#9) + /home loading flash (#16 first item)
 7. `npm audit fix`, remove 2 dead deps, bump resend (#24, #25)
 
+### POC triage (2026-08-02, per Fable — see Project Philosophy)
+Given the POC-not-product decision, the following items are explicitly **won't-fix / deferred indefinitely**, not "later" — revisit only if retention data (Marketing Strategy) justifies treating this as a real product:
+- **#12** — DB migration baseline (`supabase db dump`). Not worth it for a POC; only matters for long-term reproducibility.
+- **#26** — Major dependency version bumps (Next 14→16, React 18→19, Tailwind 3→4, etc.). Pin current versions and stop tracking major upgrades. Minor/security patches (already done via #24/#25) still fine to keep doing.
+- Post-V2 roadmap items requiring ongoing curation or new infra: multi-region/platform expansion (PlayStation, Xbox, Steam), publisher/developer following.
+Everything else in the fix list — alert correctness (#2, #5-#8, #15, #20, #27, #29, #31), health-check/monitoring effectiveness (#4, already built), and cheap one-time hygiene (#13-#14, #16-#25, #32-#40) — stays in scope, since those are either product-grade-required or cheap enough to just do.
+
 ## Session Log — 2026-08-02 (Fix Batches 1-4)
 
 Worked the audit fix list above in small verified batches (one commit + verification per batch), per [[feedback-batch-and-verify-fixes]]. Items #1-9 and #16 (first item) are now done:
@@ -623,3 +667,17 @@ Worked the audit fix list above in small verified batches (one commit + verifica
 **Still needs a human step:** `CRON_JOB_ORG_API_KEY` (same value as the cron-job.org key above) must be added to Vercel's env vars for the health-check's cron-job.org check to actually run in prod — added locally to `.env.local` only, since Vercel CLI wasn't authenticated in-session. Also registered a Supabase MCP server (`claude mcp add supabase ...`) for future sessions — it'll need a fresh personal access token from supabase.com/dashboard/account/tokens since the keychain-stored management token had expired.
 
 Remaining suggested order: #24/#25 (npm audit fix, remove dead deps, bump resend) next, then the moderate-tier items.
+
+## Session Log — 2026-08-02 (continued: strategic decisions + more fixes)
+
+**Production incident, same day:** Supabase disabled legacy JWT-based API keys (`anon`/`service_role`) at 2026-08-03T00:00:07 UTC as a follow-on from the earlier same-day service_role rotation — the `service_role` key had been migrated to the new `sb_secret_` format, but `NEXT_PUBLIC_SUPABASE_ANON_KEY` was never swapped, so the whole site broke (no auth, no data reads) the moment the grace period ended. Fixed: got the new `sb_publishable_...` key from the user, verified it against Supabase directly, updated `.env.local` and (by the user) Vercel's env vars, redeployed. Confirmed fixed live via browser check on `/sales` — real data, zero console errors. **Lesson: when migrating Supabase keys, swap anon and service_role together — the anon key is just as capable of a hard site-wide outage.**
+
+**More fixes shipped:**
+- **#5, #6 (redo)** — `runReleaseStatusUpdate` compared `release_date` against a UTC calendar day; Nintendo eShop releases are anchored to Pacific/Eastern time, so the "out today" flip (and its alert) could fire up to ~16 hours before the actual US launch. Now uses `America/Los_Angeles`. Also wired the price-confirmed fallback path (games stuck on a placeholder date but already showing a real Nintendo price) to actually send the "out now" alert — it previously flipped status silently with zero notification (`582a363`).
+- **#22** — sitemap was silently capped at 1,000 of ~2,300 eligible games (PostgREST's default row limit, confirmed live via `Content-Range` header) — now paginates with `.range()`. Added `/deals`, which had zero sitemap coverage (`a71d35f`).
+- Moved the owned-games list off Home's main dashboard into a compact cover-art grid ("My Shelf") tucked into Settings — Home should answer "what should I care about," not double as a collection tracker (`fcd909f`).
+- Built the per-game release-time prediction (`editions` field from Algolia → `has_physical_release` column) — **code written and build-verified, held uncommitted** pending a one-time migration (`ALTER TABLE games ADD COLUMN IF NOT EXISTS has_physical_release boolean;`) the user needs to run in the Supabase SQL editor. Pushing before that migration exists would break both the release-time page and the daily catalog sync (unknown-column errors on select/upsert).
+
+**Strategic decisions** (from a parallel Fable thinking session) are folded into Project Philosophy, Monetization, Marketing Strategy, SEO Strategy, Zero-Touch Operations, and the POC triage note above — see those sections for the actual content, not duplicated here.
+
+**Tooling notes:** registered a Supabase MCP server for future sessions (needs a fresh personal access token — the keychain-stored management token is expired, confirmed via direct API calls that also return `Unauthorized` for the Supabase CLI and management API alike). Vercel CLI is also unauthenticated in this environment — env var changes and manual redeploys need the user's own dashboard access.
