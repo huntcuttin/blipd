@@ -1047,7 +1047,17 @@ export async function runReleaseStatusUpdate(): Promise<number> {
     .select("id, title, current_price")
     .in("release_status", ["upcoming", "out_today"])
     .eq("release_date", "2099-12-31")
-    .gt("current_price", 0);
+    .gt("current_price", 0)
+    // Confirmed live 2026-08-03: 405 individual DLC/costume/song items and
+    // 8 upgrade/edition bundles were sitting in this exact trap (placeholder
+    // date, real small price, no alert history yet) — isStandaloneGame()
+    // only stops *new* DLC from entering the catalog, it doesn't retroactively
+    // clean up rows inserted before that fix shipped. All 413 were suppressed
+    // (is_suppressed=true) after confirming eshopDetails.productType via
+    // Algolia. Filtering here makes that protection permanent — any future
+    // is_suppressed game (DLC or otherwise) never re-enters this alert path,
+    // rather than relying on a one-time cleanup staying complete forever.
+    .eq("is_suppressed", false);
 
   if (pricedUpcoming && pricedUpcoming.length > 0) {
     const ids = pricedUpcoming.map((g) => g.id);
