@@ -728,24 +728,34 @@ export async function runPriceUpdate(options?: {
       const now = Date.now();
       const fortyEightHours = 48 * 60 * 60 * 1000;
 
-      for (const game of endingSoon) {
-        if (!game.sale_end_date) continue;
+      const due = endingSoon.filter((game) => {
+        if (!game.sale_end_date) return false;
         const endTime = new Date(game.sale_end_date).getTime();
         const timeLeft = endTime - now;
+        return timeLeft > 0 && timeLeft <= fortyEightHours;
+      });
 
-        // Fire alert if sale ends within 48 hours and hasn't ended yet
-        if (timeLeft > 0 && timeLeft <= fortyEightHours) {
-          const ref = { id: game.id, title: game.title };
-          if (await generateSaleEndingAlert(
-            supabase, ref,
-            Number(game.current_price),
-            Number(game.original_price),
-            game.discount ?? 0,
-            game.sale_end_date
-          )) {
-            alertsCreated++;
-          }
-        }
+      // Fire alerts concurrently (batched) rather than one at a time — a
+      // named sale event can put ~100+ games in this window simultaneously,
+      // and each alert does 2-3 sequential DB round-trips (dedup check,
+      // insert, pref-filtered follower lookup), which added up serially
+      // risked eating into update-prices' 60s function budget.
+      const CONCURRENCY = 20;
+      for (let i = 0; i < due.length; i += CONCURRENCY) {
+        const batch = due.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(
+          batch.map((game) =>
+            generateSaleEndingAlert(
+              supabase,
+              { id: game.id, title: game.title },
+              Number(game.current_price),
+              Number(game.original_price),
+              game.discount ?? 0,
+              game.sale_end_date!
+            )
+          )
+        );
+        alertsCreated += results.filter(Boolean).length;
       }
     }
   }
