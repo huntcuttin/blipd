@@ -117,11 +117,8 @@ export default function OnboardingPage() {
   const toggleGame = useCallback((gameId: string) => {
     setSelectedGameIds((prev) => {
       const next = new Set(prev);
-      if (next.has(gameId)) {
-        next.delete(gameId);
-      } else if (next.size < 5) {
-        next.add(gameId);
-      }
+      if (next.has(gameId)) next.delete(gameId);
+      else next.add(gameId);
       return next;
     });
   }, []);
@@ -363,10 +360,11 @@ function GamePickerStep({
         Games you own
       </h1>
       <p className="text-[#666666] text-sm text-center mb-1 max-w-xs">
-        Tap up to 5 {consoleName} games you already own. This helps us suggest better deals.
+        Tap the {consoleName} games you already own. We recommend starting with
+        5, but add as many as you like.
       </p>
-      <p className="text-[#555555] text-xs mb-6">
-        {selectedIds.size}/5 selected
+      <p className={`text-xs mb-6 ${selectedIds.size > 5 ? "text-[#ffaa00]" : "text-[#555555]"}`}>
+        {selectedIds.size} selected{selectedIds.size > 5 ? " — nice library!" : selectedIds.size < 5 ? ` (${5 - selectedIds.size} more recommended)` : ""}
       </p>
 
       {loading ? (
@@ -386,12 +384,11 @@ function GamePickerStep({
               <button
                 key={game.id}
                 onClick={() => onToggle(game.id)}
-                disabled={!selected && selectedIds.size >= 5}
                 className={`text-left rounded-xl border-2 p-1.5 transition-all active:scale-[0.97] ${
                   selected
-                    ? "border-[#00ff88] bg-[#00ff88]/5"
-                    : selectedIds.size >= 5
-                    ? "border-[#1a1a1a] opacity-40"
+                    ? selectedIds.size > 5
+                      ? "border-[#ffaa00] bg-[#ffaa00]/5"
+                      : "border-[#00ff88] bg-[#00ff88]/5"
                     : "border-[#1a1a1a] hover:border-[#333333]"
                 }`}
               >
@@ -402,7 +399,7 @@ function GamePickerStep({
                     className={`w-full aspect-[16/10] rounded-lg bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
                   />
                   {selected && (
-                    <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#00ff88] flex items-center justify-center">
+                    <div className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center ${selectedIds.size > 5 ? "bg-[#ffaa00]" : "bg-[#00ff88]"}`}>
                       <svg className="w-3 h-3 text-[#0a0a0a]" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                       </svg>
