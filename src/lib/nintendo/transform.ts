@@ -38,8 +38,16 @@ export function isAllTimeLow(
   currentPrice: number,
   priceHistory: { date: string; price: number }[]
 ): boolean {
-  if (priceHistory.length === 0) return false;
-  return priceHistory.every((entry) => currentPrice < entry.price);
+  // A $0 entry is a data artifact, not a genuine price (confirmed live
+  // 2026-08-02: Nintendo's price API can return a well-formed but wrong
+  // $0 for a game that's genuinely still paid). Once such an entry lands
+  // in a *past* month's bucket, a real price can never be "less than 0",
+  // permanently blocking this game from ever being flagged as a genuine
+  // all-time-low again -- exclude non-positive entries rather than treat
+  // them as the record low.
+  const realHistory = priceHistory.filter((entry) => entry.price > 0);
+  if (realHistory.length === 0) return false;
+  return realHistory.every((entry) => currentPrice < entry.price);
 }
 
 export function computeDiscount(currentPrice: number, originalPrice: number): number {
