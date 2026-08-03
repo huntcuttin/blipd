@@ -17,6 +17,27 @@ function getResend(): Resend {
   return resendClient;
 }
 
+async function fetchAllFollows(
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<{ user_id: string; game_id: string }[] | null> {
+  // PostgREST caps unbounded selects at 1000 rows — paginate past it so the
+  // digest doesn't silently drop users/follows once the table grows beyond
+  // that (same cap that bit the sitemap before it was fixed).
+  const PAGE_SIZE = 1000;
+  const rows: { user_id: string; game_id: string }[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("user_game_follows")
+      .select("user_id, game_id")
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) return null;
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
+
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -27,13 +48,11 @@ export async function GET(request: Request) {
     const supabase = createAdminClient();
 
     // Get all users who follow at least one game
-    const { data: follows, error: followsError } = await supabase
-      .from("user_game_follows")
-      .select("user_id, game_id");
+    const follows = await fetchAllFollows(supabase);
 
-    if (followsError || !follows) {
-      console.error("Failed to fetch follows:", followsError?.message);
-      return NextResponse.json({ ok: false, error: followsError?.message }, { status: 500 });
+    if (!follows) {
+      console.error("Failed to fetch follows");
+      return NextResponse.json({ ok: false, error: "Failed to fetch follows" }, { status: 500 });
     }
 
     // Group follows by user
