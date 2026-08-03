@@ -23,15 +23,19 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  // getUser() revalidates against Supabase's auth server rather than just
+  // decoding the session cookie locally — getSession() can act on a stale or
+  // already-revoked session, which shows up as a confusing bounce-then-bounce-
+  // back redirect loop rather than a clean "you're signed out" state.
+  const { data: { user } } = await supabase.auth.getUser();
 
   // Signed-in users hitting the landing page should go straight to /home
-  if (session && req.nextUrl.pathname === "/") {
+  if (user && req.nextUrl.pathname === "/") {
     return NextResponse.redirect(new URL("/home", req.url));
   }
 
   // Signed-in users hitting /login should go to /home
-  if (session && req.nextUrl.pathname === "/login") {
+  if (user && req.nextUrl.pathname === "/login") {
     return NextResponse.redirect(new URL("/home", req.url));
   }
 
@@ -39,5 +43,10 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|images/).*)"],
+  // Cron routes authenticate via their own CRON_SECRET bearer token and static
+  // assets need no auth at all — running Supabase auth on every request to
+  // these was pure overhead with no behavioral purpose.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.svg|favicon\\.ico|icon-.*\\.png|manifest\\.json|sw\\.js|images/|api/).*)",
+  ],
 };
