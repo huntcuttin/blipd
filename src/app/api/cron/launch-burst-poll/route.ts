@@ -2,53 +2,10 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { fetchPrices } from "@/lib/nintendo/client";
 import { generateReleaseAlert } from "@/lib/nintendo/alerts";
+import { predictLaunchInstant, isWithinBurstWindow, isLiveOnEshop } from "@/lib/nintendo/launch-window";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-// Only followed, upcoming games within this window of their predicted
-// launch instant get polled — everything else waits for the normal 10-min
-// update-prices cycle. Keeps this cron cheap even with a tight schedule.
-const WINDOW_MS = 30 * 60 * 1000;
-
-const MAJOR_FIRST_PARTY = ["nintendo", "sega", "capcom"];
-
-// Real, DST-aware Pacific UTC offset for a given date, via the Intl API's
-// timezone database rather than a hardcoded -7/-8 assumption.
-function getPacificUtcOffsetHours(referenceUTC: Date): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
-    timeZoneName: "shortOffset",
-  }).formatToParts(referenceUTC);
-  const offsetPart = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT-8";
-  const match = offsetPart.match(/GMT([+-]\d+)/);
-  return match ? parseInt(match[1], 10) : -8;
-}
-
-// Predicts a launch *instant* (not just a rule label) for a specific game.
-// Partial implementation: only distinguishes "major first-party" (via
-// publisher match) from everything else, since has_physical_release isn't
-// available in the DB yet (migration pending) — once it lands, the
-// "physical + digital" rule (9pm PT night before) can be added here too.
-// Everyone else defaults to 9am PT release day, which per the copy policy
-// already covers the fuzzy "some third-party" bucket with hedged framing
-// on the release-time page — this cron doesn't show that copy, it just
-// needs a reasonable instant to center the polling window on.
-function predictLaunchInstant(releaseDate: string, publisher: string | null): number {
-  const [y, m, d] = releaseDate.split("-").map(Number);
-  const noonUTCOnReleaseDay = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
-  const offsetHours = getPacificUtcOffsetHours(noonUTCOnReleaseDay);
-
-  const pub = (publisher ?? "").toLowerCase();
-  const isMajorFirstParty = MAJOR_FIRST_PARTY.some((p) => pub.includes(p));
-
-  if (isMajorFirstParty) {
-    // Midnight ET == 9pm PT the night before release day.
-    return Date.UTC(y, m - 1, d - 1, 21 - offsetHours, 0, 0);
-  }
-  // 9am PT on release day.
-  return Date.UTC(y, m - 1, d, 9 - offsetHours, 0, 0);
-}
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -74,7 +31,7 @@ export async function GET(request: Request) {
 
   const { data: candidates, error: candidatesError } = await supabase
     .from("games")
-    .select("id, title, nsuid, publisher, release_date")
+    .select("id, title, nsuid, publisher, release_date, has_physical_release")
     .in("id", followedIds)
     .eq("release_status", "upcoming")
     .not("nsuid", "is", null)
@@ -88,11 +45,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, checked: 0, inWindow: 0, released: 0 });
   }
 
-  const now = Date.now();
+  const now = new Date();
   const inWindow = candidates.filter((g) => {
-    if (!g.release_date) return false;
-    const predicted = predictLaunchInstant(g.release_date, g.publisher);
-    return Math.abs(now - predicted) <= WINDOW_MS;
+    const prediction = predictLaunchInstant({
+      releaseDate: g.release_date,
+      publisher: g.publisher,
+      hasPhysicalRelease: g.has_physical_release,
+    });
+    return prediction && isWithinBurstWindow(prediction.at, now);
   });
 
   if (inWindow.length === 0) {
@@ -111,9 +71,8 @@ export async function GET(request: Request) {
     // Ground truth for "is this live", not the prediction — but a preorder
     // listing can carry a real regular_price while Nintendo's own
     // sales_status still reads "unreleased" (confirmed live against the
-    // API), so price presence alone is up to ~30min too early here. Only
-    // sales_status flipping to "onsale" means it actually went live.
-    if (!priceInfo || priceInfo.sales_status !== "onsale" || !priceInfo.regular_price) continue;
+    // API), so price presence alone is up to ~30min too early here.
+    if (!priceInfo || !isLiveOnEshop(priceInfo.sales_status) || !priceInfo.regular_price) continue;
 
     const regular = parseFloat(priceInfo.regular_price.raw_value);
     const discount = priceInfo.discount_price ? parseFloat(priceInfo.discount_price.raw_value) : null;
