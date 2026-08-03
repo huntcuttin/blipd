@@ -463,7 +463,7 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
   console.log("Linking Switch 2 editions and suppressing duplicates...");
   const { data: allDbGames } = await supabase
     .from("games")
-    .select("id, title, nsuid, current_price");
+    .select("id, title, nsuid, current_price, product_type");
 
   if (allDbGames) {
     // Get existing switch2_nsuid values to detect new ones
@@ -514,8 +514,17 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
       if (suppressIds.length > 0) {
         await supabase.from("games").update({ is_suppressed: true }).in("id", suppressIds);
       }
-      // Ensure base is not suppressed
-      await supabase.from("games").update({ is_suppressed: false }).eq("id", base.id);
+      // Un-suppress the base ONLY if it isn't independently junk-classified.
+      // is_suppressed has no reason column (schema change blocked -- see
+      // CLAUDE.md's audit Phase 1 #11 note on DB access), so it means
+      // "duplicate listing" AND "junk" AND "delisted" all at once. This
+      // pass's whole job is fixing duplicate-listing suppression -- blindly
+      // clearing it here would silently resurrect a genuinely-junk row
+      // every single daily sync, the moment it happens to share a
+      // normalized title with a Switch 2/upgrade/regional sibling.
+      if (base.product_type !== "ADD_ON_CONTENT" && base.product_type !== "BUNDLE") {
+        await supabase.from("games").update({ is_suppressed: false }).eq("id", base.id);
+      }
     }
     console.log(`  Processed ${groups.size} title groups`);
   }
