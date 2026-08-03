@@ -531,7 +531,7 @@ GET https://api.isthereanydeal.com/games/history/v2
 - [x] Release-date sync timeout fixed (2026-08-02, fix batch #3)
 - [x] Web push notification layer hardened — dedup logging, success-count bug, sign-out cleanup (2026-08-02, audit #10). **Per Bible Addendum 2: further push investment (iOS install flow, #11) is now gated behind the retention gate — email is the hero channel for MVP, not push.**
 - [x] #20 fixed — Resend send errors now surfaced instead of logged as "sent" (2026-08-02) — promoted to launch-critical per Bible Addendum 2
-- [ ] Bounce visibility for email — not yet built, launch-critical per Bible Addendum 2
+- [ ] Bounce visibility for email — **code done 2026-08-02** (`src/app/api/webhooks/resend/route.ts` + `email_suppressions` table migration), but blocked on two manual steps: (1) run `supabase/migrations/20260802_003_add_email_suppressions.sql` in the Supabase SQL editor — confirmed live 2026-08-02 the table still doesn't exist (`PGRST205`); (2) register the webhook URL (`https://www.blippd.app/api/webhooks/resend`) in the Resend dashboard so bounce/complaint events actually get sent. Launch-critical per Bible Addendum 2.
 - [ ] Placeholder-date cleanup — confirm no regressions from the has_physical_release migration once applied
 
 ### Pre-Launch Polish (Current Focus)
