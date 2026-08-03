@@ -34,7 +34,7 @@ export default function FranchiseFollowButton({
       <button
         onClick={handleClick}
         className={`flex items-center gap-1.5 font-semibold rounded-lg bg-[#1a1a1a] text-white border border-[#333333] transition-all ${
-          isLarge ? "px-6 py-3 text-base w-full justify-center" : "px-3 py-1.5 text-xs"
+          isLarge ? "px-6 py-3 text-base w-full justify-center" : "min-h-[44px] px-3 py-1.5 text-xs"
         }`}
       >
         <CheckIcon className={isLarge ? "w-5 h-5" : "w-3.5 h-3.5"} />
