@@ -3,7 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
-import { formatPrice, isPlaceholderDate, formatReleaseDate, isYearOnlyDate, isMonthOnlyDate } from "@/lib/format";
+import { formatPrice, isPlaceholderDate, formatReleaseDate, isYearOnlyDate, isMonthOnlyDate, getDaysUntil, getSaleEndLabel } from "@/lib/format";
 import { isRarelyOnSale } from "@/lib/ranking";
 import { useFollow } from "@/lib/FollowContext";
 import FollowButton from "./FollowButton";
@@ -256,30 +256,6 @@ function splitTitle(title: string): { base: string; edition: string | null } {
   const base = title.slice(0, sep).replace(/[™®]/g, "").trim();
   const edition = title.slice(sep + 3).trim();
   return { base, edition };
-}
-
-function getDaysUntil(dateStr: string): number {
-  const target = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const targetDay = new Date(
-    target.getFullYear(),
-    target.getMonth(),
-    target.getDate()
-  );
-  return Math.round(
-    (targetDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-}
-
-function getSaleEndLabel(dateStr: string): { text: string; urgency: "high" | "medium" | "low" } | null {
-  const days = getDaysUntil(dateStr);
-  if (days <= 0) return { text: "Ends today", urgency: "high" };
-  if (days === 1) return { text: "Ends tomorrow", urgency: "high" };
-  if (days <= 3) return { text: `Ends in ${days} days`, urgency: "high" };
-  if (days <= 7) return { text: `Ends in ${days} days`, urgency: "medium" };
-  if (days <= 14) return { text: `Ends in ${days} days`, urgency: "low" };
-  return null;
 }
 
 function getReleaseLabel(game: Game, daysUntil: number): string | null {

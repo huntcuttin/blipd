@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
-import { formatPrice } from "@/lib/format";
+import { formatPrice, getSaleEndLabel } from "@/lib/format";
 
 export const revalidate = 300; // 5 min ISR
 
@@ -41,18 +41,6 @@ async function getDeals(): Promise<DealRow[]> {
     .limit(200);
   if (error) throw error;
   return data ?? [];
-}
-
-function getSaleEndLabel(dateStr: string): { text: string; urgency: "high" | "medium" | "low" } | null {
-  const target = new Date(dateStr);
-  const now = new Date();
-  const days = Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (days <= 0) return { text: "Ends today", urgency: "high" };
-  if (days === 1) return { text: "Ends tomorrow", urgency: "high" };
-  if (days <= 3) return { text: `Ends in ${days} days`, urgency: "high" };
-  if (days <= 7) return { text: `Ends in ${days} days`, urgency: "medium" };
-  if (days <= 14) return { text: `Ends in ${days} days`, urgency: "low" };
-  return null;
 }
 
 export default async function DealsPage() {
