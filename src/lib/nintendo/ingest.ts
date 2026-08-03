@@ -937,9 +937,17 @@ async function refreshActiveSaleEventCounts(
   }
 }
 
+// Nintendo eShop US release timing is anchored to Pacific/Eastern time, not
+// UTC. Comparing release_date against a UTC calendar day flips games to
+// "out today" (and fires the release alert) up to ~16 hours before the
+// actual US launch, depending on time of day and DST.
+function getPacificDateStr(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+}
+
 export async function runReleaseStatusUpdate(): Promise<number> {
   const supabase = createAdminClient();
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getPacificDateStr();
   let updated = 0;
 
   // Games releasing today
@@ -982,10 +990,15 @@ export async function runReleaseStatusUpdate(): Promise<number> {
     }
   }
 
-  // Games with a real price but stuck on placeholder date — definitely released
+  // Games with a real price but stuck on placeholder date — definitely released.
+  // This is the only signal here confirmed by Nintendo's own price API rather
+  // than inferred from a date field, so it catches games the date-based checks
+  // above miss entirely — but it previously flipped release_status silently
+  // with no alert, meaning followers of those games never got an "out now"
+  // notification at all.
   const { data: pricedUpcoming } = await supabase
     .from("games")
-    .select("id")
+    .select("id, title, current_price")
     .in("release_status", ["upcoming", "out_today"])
     .eq("release_date", "2099-12-31")
     .gt("current_price", 0);
@@ -999,6 +1012,17 @@ export async function runReleaseStatusUpdate(): Promise<number> {
       .update({ release_status: "released", release_date: todayStr, updated_at: new Date().toISOString() })
       .in("id", ids);
     updated += ids.length;
+
+    for (const game of pricedUpcoming) {
+      const followers = await getFollowers(supabase, game.id);
+      await generateReleaseAlert(
+        supabase,
+        { id: game.id, title: game.title },
+        "out_now",
+        Number(game.current_price),
+        followers
+      );
+    }
   }
 
   if (updated > 0) {
