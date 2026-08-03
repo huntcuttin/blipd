@@ -28,11 +28,20 @@ export async function GET(request: Request) {
   try {
     const supabase = createAdminClient();
 
-    // Get games with placeholder release dates
+    // Get games with placeholder release dates. Confirmed live 2026-08-03:
+    // 683 of 741 placeholder-dated rows are suppressed DLC/cosmetic items
+    // (is_suppressed=true, see the DLC false-alert fix) that IGDB will never
+    // match to a real game -- since this query orders alphabetically and
+    // never advances past a row whose release_date never changes, those 683
+    // permanently occupied every batch, and real games later in the
+    // alphabet (WarioWare and others) never got their turn. Filtering out
+    // suppressed rows here is the same fix already applied to
+    // runReleaseStatusUpdate's pricedUpcoming query for the same reason.
     const { data: games, error } = await supabase
       .from("games")
       .select("id, title, release_date")
       .or("release_date.eq.2099-12-31,release_date.eq.2020-01-01")
+      .eq("is_suppressed", false)
       .order("title")
       .limit(BATCH_SIZE);
 
