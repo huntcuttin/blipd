@@ -108,7 +108,12 @@ export async function GET(request: Request) {
   let released = 0;
   for (const game of inWindow) {
     const priceInfo = priceByNsuid.get(game.nsuid as string);
-    if (!priceInfo?.regular_price) continue; // not live yet — ground truth, not the prediction, decides this
+    // Ground truth for "is this live", not the prediction — but a preorder
+    // listing can carry a real regular_price while Nintendo's own
+    // sales_status still reads "unreleased" (confirmed live against the
+    // API), so price presence alone is up to ~30min too early here. Only
+    // sales_status flipping to "onsale" means it actually went live.
+    if (!priceInfo || priceInfo.sales_status !== "onsale" || !priceInfo.regular_price) continue;
 
     const regular = parseFloat(priceInfo.regular_price.raw_value);
     const discount = priceInfo.discount_price ? parseFloat(priceInfo.discount_price.raw_value) : null;
