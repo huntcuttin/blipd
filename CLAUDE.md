@@ -23,7 +23,72 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 - **Two things stay at product grade, everything else gets pinned and frozen:**
   1. **Alert correctness** — a false price-drop alert to a real user damages the portfolio value, not just the product experience.
   2. **Whatever makes the monthly check-in actually effective** — health-check coverage, error alerting, the things that let a once-a-month glance catch real problems.
-- The only path back to "real product" thinking is retention data proving people actually want this — that's a future decision, not something to hedge for now by over-building.
+- The only path back to "real product" thinking is retention data proving people actually want this — that's a future decision, not something to hedge for now by over-building. **Concrete gate, see Bible Addendum below: 10+ users returning in week 2, OR ≥25% week-2 return rate.**
+
+## Bible Addendum — Decisions from Founder Interview (2026-08-02)
+
+### Launch-minute alerts (the differentiator — build this)
+Sales alerts are a commodity (Deku, NT Deals, NTPrices all have them).
+Launch-minute alerts are what nobody does. This is Blippd's edge.
+
+- **Per-game launch burst polling:** a 1–2 min cron that checks whether any
+  *followed* game is within ±30 min of its predicted launch window (from the
+  editions-field prediction + publisher rules), and polls only those nsuids.
+  No news feeds, no curation — IGDB release dates + hype scores (already
+  syncing every 6h) supply everything. Zero-touch compatible.
+- The "out now" alert stays ground-truth: it fires when the price actually
+  goes live, prediction only tells the poller when to watch closely.
+- This re-sorts the audit priorities: launch-alert reliability (release-date
+  sync timeout, placeholder dates, web push never validated) outranks
+  sale-alert polish. The hero moment requires push working on a random
+  Wednesday, not just Thursday-midnight bursts. (Web push hardening shipped
+  2026-08-02 — see session log; release-date sync timeout and placeholder
+  dates already fixed earlier the same day — see fix batches #3/#5/#6.)
+- **Not yet built:** the launch burst polling cron itself. This is the next
+  real feature, not just a hygiene fix — pending implementation.
+
+### Launch notification links to eShop (decided)
+The "out now" notification deep-links to the game's eShop product page
+(nintendo.com/us/store/products/{nsuid}). Nintendo supports remote purchase
+to console, so this completes the hero moment: buy from your phone,
+downloading at home before you're back. This is NOT a "Buy Now" CTA in the
+commercial sense — no affiliate, no urgency copy, no tracking. It's the
+shortest path from "it's here" to "it's mine." The locked "no Buy Now CTA"
+rule refers to Blippd's own UI pushing purchases, not to linking the alert
+to its subject.
+
+### Positioning: differentiator-first, both-mode delivery (decided)
+Founder's priority (launches > timing > sales) may not match every user's.
+Resolution: don't force the hierarchy on the UI — encode it in positioning.
+- Landing/onboarding leads with the unique thing: "Know the minute it
+  launches" — then "and catch every sale after."
+- The user's follows determine their mode: follow an upcoming game → launch
+  alerts are the experience; follow released games → sales are. No setting,
+  no forced priority, the app adapts.
+- Onboarding first ask: "Which games are you waiting for?" (upcoming +
+  released search, mixed) — not sales-first framing.
+
+### Miss protocol (decided): silence
+If the pipeline is late or misses a launch, do not notify users about the
+miss. No "we were late" notes. The health-check email tells the admin; the
+user just gets the alert when it fires. Rationale: zero-touch, and a miss
+note draws attention to a failure most users would never have noticed.
+
+### Nintendo platform risk (deferred, one line)
+Not worried at POC scale. If a C&D ever arrives: comply immediately, don't
+argue. Don't build anything that increases scraping surface area beyond
+what exists today.
+
+### End-of-life (decided): never auto-shutdown
+The app stays running indefinitely on free tiers regardless of involvement
+level. Low involvement ≠ shutdown. Monthly check-in keeps it alive; there
+is no sunset plan and none is needed.
+
+### Retention gate for POC → product (proposed default, adopt unless overridden)
+**10+ users returning in week 2, OR ≥25% week-2 return rate from the launch
+cohort** — either triggers a genuine reconsideration of the POC framing
+(supporter tier, iOS app, catalog expansion all become discussable). Below
+that: stay POC, stay zero-touch, no re-litigating.
 
 ## Locked Stack
 
@@ -182,7 +247,7 @@ The `/alerts` page doesn't yet have documented bulk-action UX. Established patte
 ## UX Decisions (Locked — Don't Re-litigate)
 
 - Follow a game or franchise = per-category notification preferences (announcements, sales, all-time low, releases). Default all-on, customizable from detail page.
-- No "Buy Now" CTA. Alerts are passive. Purchase happens on console.
+- No "Buy Now" CTA. Alerts are passive. Purchase happens on console. **Clarified 2026-08-02 (Bible Addendum):** this refers to Blippd's own UI pushing purchases — the "out now" notification deep-linking to the game's eShop product page is not a Buy Now CTA (no affiliate, no urgency copy, no tracking), just the shortest path from "it's here" to "it's mine."
 - Alert action wording: "Remind me in a few days" (not "snooze")
 - Unseen alerts dashboard in-app — not a storefront
 - Three-button pattern on game detail: Notify / Add to Wishlist / Own this game
@@ -245,6 +310,13 @@ GET https://api.isthereanydeal.com/games/history/v2
 - [x] IGDB hype score on Upcoming page
 - [x] Critic rating scores on game cards (IGDB aggregated_rating)
 - [x] Weekly digest re-engagement email (cron job 7358907, Sunday)
+
+### Launch-Minute Alerts (New Top Priority — 2026-08-02, see Bible Addendum)
+
+- [ ] Per-game launch burst polling cron: 1-2 min interval, only polls nsuids of *followed* upcoming games within ±30 min of their predicted launch window (editions-field prediction + publisher rules). Not yet built.
+- [x] Release-date sync timeout fixed (2026-08-02, fix batch #3)
+- [x] Web push notification layer hardened — dedup logging, success-count bug, sign-out cleanup (2026-08-02, fix batch, audit #10)
+- [ ] Placeholder-date cleanup — confirm no regressions from the has_physical_release migration once applied
 
 ### Pre-Launch Polish (Current Focus)
 
