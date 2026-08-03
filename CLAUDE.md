@@ -290,10 +290,17 @@ is not a deal — it's noise. A 30% drop on a 95-rated game is signal.
 - Quality filters apply to discovery, not to personal watchlists.
 - Launch catalog = top 500 most-followed Switch titles, pre-filtered by tier.
 
-**Implementation status: not yet built.** The existing `computeTrendingScore`
-(src/lib/ranking.ts) drives current "Best Deals" sort — it doesn't yet
-incorporate a Metacritic/OpenCritic tier system. This is a design decision
-to fold in next time ranking/discovery code is touched, not a standing bug.
+**Implementation status: built 2026-08-02.** `getGameTier()` in
+`src/lib/ranking.ts` classifies every game 1/2/3 per the rules above
+(Nintendo first-party or OC/Metacritic ≥85 = Tier 1; 75-84 = Tier 2;
+unscored or <75 = Tier 3). Wired into `/sales` (the Deals page): Tier 3
+games are filtered out of the algorithmic views (sort list + All-Time-Lows
+scroll) so a deep discount on an unscored/low-rated title doesn't read as
+a deal. Search results and games the user already follows are exempt —
+verified live, e.g. a followed Tier-3 game still shows. Not touched:
+`/home` (personal dashboard — no tier filter, per "quality filters apply
+to discovery, not personal watchlists") and `/upcoming` (Out Now/Coming
+Soon — not currently in scope, revisit if it starts surfacing shovelware).
 
 ## Locked Stack
 
