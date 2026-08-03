@@ -1,7 +1,0 @@
-{
-  "crons": [
-    { "path": "/api/cron/sync-catalog", "schedule": "0 9 * * *" },
-    { "path": "/api/cron/update-prices", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/dispatch-notifications", "schedule": "0 5 * * *" }
-  ]
-}

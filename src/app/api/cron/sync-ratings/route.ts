@@ -5,7 +5,7 @@ import { batchGetRatings } from "@/lib/igdb";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const BATCH_SIZE = 40;
+const BATCH_SIZE = 20;
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
