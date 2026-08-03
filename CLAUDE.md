@@ -609,3 +609,17 @@ Scale check: 1 user, 18 follows, 0 push subs, 17,492 alerts, 1,007 emails sent. 
 5. Health-check dead-man's switch (#4)
 6. Magic-link error surfacing (#9) + /home loading flash (#16 first item)
 7. `npm audit fix`, remove 2 dead deps, bump resend (#24, #25)
+
+## Session Log — 2026-08-02 (Fix Batches 1-4)
+
+Worked the audit fix list above in small verified batches (one commit + verification per batch), per [[feedback-batch-and-verify-fixes]]. Items #1-9 and #16 (first item) are now done:
+
+- **#1** — already done earlier same day (service_role key rotated to `sb_secret_...`, confirmed live)
+- **#3** — shrunk IGDB batch sizes 40/50→20 across sync-release-dates/sync-ratings/sync-hype-scores (sync-release-dates was timing out at ~45-50s against a 60s function limit); re-enabled the 3 auto-disabled cron-job.org jobs; deleted vercel.json (`76296fa`)
+- **#2** — decoupled newSaleGames tracking from the price-drop/sale-started alert branch so sale-onset price drops count toward the named-event threshold; added `refreshActiveSaleEventCounts()` running every price-update cycle to recompute counts and deactivate 0-tagged events; added a client-side defensive filter. Also ran a one-off cleanup against prod: deactivated the "Square Enix Sale" zombie (0 tagged), corrected "Nintendo eShop Sale" from a stale 284→25 (`fb7e71e`)
+- **#5, #6, #7, #8** — fixed ATL flap (excluded current-month history bucket from the comparison), `last_price_check` outage handling (bails before stamping on total fetch failure so the same games retry next tick instead of a full ~5hr rotation), IGDB circuit-breaker no longer permanently zeroes games it never attempted, Nintendo price fetch now uses `fetchWithRetry` (`2687064`)
+- **#4, #9, #16 (first item)** — added `/api/cron/health-check` (checks cron-job.org job health + price-pipeline freshness, emails ADMIN_EMAIL on problems), created cron-job.org job 8205210 (every 30 min) and enabled native `onFailure`/`onDisable` notifications on all 12 monitored jobs; `/auth/callback` now parses `?error=`/`#error=` and redirects to `/login?error=<code>` with a specific message instead of silently bouncing; `/home` now gates its loading skeleton on FollowContext's own `loading` flag too (`2387c09`)
+
+**Still needs a human step:** `CRON_JOB_ORG_API_KEY` (same value as the cron-job.org key above) must be added to Vercel's env vars for the health-check's cron-job.org check to actually run in prod — added locally to `.env.local` only, since Vercel CLI wasn't authenticated in-session. Also registered a Supabase MCP server (`claude mcp add supabase ...`) for future sessions — it'll need a fresh personal access token from supabase.com/dashboard/account/tokens since the keychain-stored management token had expired.
+
+Remaining suggested order: #24/#25 (npm audit fix, remove dead deps, bump resend) next, then the moderate-tier items.
