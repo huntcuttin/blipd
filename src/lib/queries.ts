@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent } from "@/lib/types";
+import { getGameTier } from "@/lib/ranking";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;
@@ -156,9 +157,18 @@ export async function getPopularGames(supabase: Client): Promise<Game[]> {
     .gt("original_price", 0)
     .not("metacritic_score", "is", null)
     .order("metacritic_score", { ascending: false })
-    .limit(30);
+    .limit(60);
   if (error) throw error;
-  return (data ?? []).map(mapGame);
+  const games = (data ?? []).map(mapGame);
+  // Nintendo first-party (and other Tier 1 titles) surface first per the
+  // Game Quality & Catalog Ranking spec — a 95-rated third-party game
+  // shouldn't outrank Mario just because its score is a few points higher.
+  games.sort((a, b) => {
+    const tierDiff = getGameTier(a) - getGameTier(b);
+    if (tierDiff !== 0) return tierDiff;
+    return (b.metacriticScore ?? 0) - (a.metacriticScore ?? 0);
+  });
+  return games.slice(0, 30);
 }
 
 export async function getGameBySlug(supabase: Client, slug: string): Promise<Game | null> {
@@ -185,7 +195,7 @@ function isAddon(title: string): boolean {
 export async function searchGames(
   supabase: Client,
   query: string,
-  consolePreference?: "switch" | "switch2" | null
+  consolePreference?: ConsolePreference | null
 ): Promise<Game[]> {
   // Try Algolia first for relevance-ranked results, fall back to ILIKE
   try {

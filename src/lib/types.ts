@@ -70,7 +70,7 @@ export type AlertType =
   | "switch2_edition_announced"
   | "retro_game_added";
 
-export type ConsolePreference = "switch" | "switch2";
+export type ConsolePreference = "switch" | "switch2" | "both";
 
 export interface TrailerDetection {
   id: string;

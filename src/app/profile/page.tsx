@@ -74,7 +74,8 @@ export default function ProfilePage() {
 
   const consoleName =
     consolePreference === "switch2" ? "Nintendo Switch 2" :
-    consolePreference === "switch" ? "Nintendo Switch" : null;
+    consolePreference === "switch" ? "Nintendo Switch" :
+    consolePreference === "both" ? "Switch & Switch 2" : null;
 
   return (
     <div className="px-4 py-6 pb-8 space-y-4">

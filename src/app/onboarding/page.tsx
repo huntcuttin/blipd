@@ -172,8 +172,26 @@ export default function OnboardingPage() {
 
   const stepIndex = step === "console" ? 0 : step === "retro" ? 1 : step === "games" ? 2 : 3;
 
+  function handleBack() {
+    if (saving) return;
+    if (step === "retro") setStep("console");
+    else if (step === "games") setStep("retro");
+  }
+
   return (
-    <div className="flex flex-col items-center min-h-[80vh] px-6 pt-12 pb-24">
+    <div className="flex flex-col items-center min-h-[80vh] px-6 pt-12 pb-24 relative">
+      {(step === "retro" || step === "games") && (
+        <button
+          onClick={handleBack}
+          aria-label="Back"
+          className="absolute top-4 left-4 w-11 h-11 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#333333] transition-all"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+      )}
+
       {/* Progress dots */}
       <div className="flex items-center gap-2 mb-8">
         {[0, 1, 2, 3].map((i) => (
@@ -209,7 +227,7 @@ export default function OnboardingPage() {
           onFinish={handleFinish}
           onSkip={handleSkip}
           saving={saving}
-          consoleName={selectedConsole === "switch2" ? "Switch 2" : "Switch"}
+          consoleName={selectedConsole === "switch2" ? "Switch 2" : selectedConsole === "both" ? "Switch/Switch 2" : "Switch"}
         />
       )}
 
@@ -261,6 +279,23 @@ function ConsoleStep({ saving, onSelect }: { saving: boolean; onSelect: (p: Cons
           <div className="text-left">
             <h2 className="text-white font-semibold text-lg">Nintendo Switch 2</h2>
             <p className="text-[#666666] text-xs mt-0.5">Next-gen console</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onSelect("both")}
+          disabled={saving}
+          className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#444444] transition-all active:scale-[0.98]"
+        >
+          <div className="w-12 h-12 rounded-xl bg-[#888888]/15 flex items-center justify-center shrink-0">
+            <svg className="w-7 h-7 text-[#888888]" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.5 2C5.01 2 3 4.01 3 6.5v11C3 19.99 5.01 22 7.5 22H11V2H7.5zM7 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+              <path d="M16.5 2H13v20h3.5c2.49 0 4.5-2.01 4.5-4.5v-11C21 4.01 18.99 2 16.5 2zM17 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+            </svg>
+          </div>
+          <div className="text-left">
+            <h2 className="text-white font-semibold text-lg">Both</h2>
+            <p className="text-[#666666] text-xs mt-0.5">I own a Switch and a Switch 2</p>
           </div>
         </button>
       </div>

@@ -165,6 +165,25 @@ export default function SettingsPage() {
                   <p className={`text-sm font-semibold ${consolePref === "switch2" ? "text-white" : "text-[#888888]"}`}>Switch 2</p>
                 </div>
               </button>
+              <button
+                onClick={() => handleConsoleChange("both")}
+                disabled={consoleSaving}
+                className={`flex-1 flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all active:scale-[0.98] ${
+                  consolePref === "both"
+                    ? "border-[#888888]/40 bg-[#888888]/5"
+                    : "border-[#222222] hover:border-[#333333]"
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${consolePref === "both" ? "bg-[#888888]/15" : "bg-[#1a1a1a]"}`}>
+                  <svg className={`w-5 h-5 ${consolePref === "both" ? "text-[#888888]" : "text-[#555555]"}`} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.5 2C5.01 2 3 4.01 3 6.5v11C3 19.99 5.01 22 7.5 22H11V2H7.5zM7 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                    <path d="M16.5 2H13v20h3.5c2.49 0 4.5-2.01 4.5-4.5v-11C21 4.01 18.99 2 16.5 2zM17 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className={`text-sm font-semibold ${consolePref === "both" ? "text-white" : "text-[#888888]"}`}>Both</p>
+                </div>
+              </button>
             </div>
           </div>
 
