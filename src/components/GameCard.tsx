@@ -3,7 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import type { Game } from "@/lib/types";
-import { formatPrice, isPlaceholderDate, formatReleaseDate, isYearOnlyDate, isMonthOnlyDate, getDaysUntil, getSaleEndLabel } from "@/lib/format";
+import { formatPrice, isPlaceholderDate, formatReleaseDate, getDaysUntil, getSaleEndLabel } from "@/lib/format";
 import { isRarelyOnSale } from "@/lib/ranking";
 import { useFollow } from "@/lib/FollowContext";
 import FollowButton from "./FollowButton";
@@ -272,13 +272,11 @@ function getReleaseLabel(game: Game, daysUntil: number): string | null {
     if (daysUntil === 0) return "Releases today";
     if (daysUntil === 1) return "Out tomorrow";
     if (daysUntil <= 7) return `Out in ${daysUntil} days`;
-    if (isYearOnlyDate(game.releaseDate)) return new Date(game.releaseDate + "T12:00:00").getFullYear().toString();
-    if (isMonthOnlyDate(game.releaseDate)) {
-      const d = new Date(game.releaseDate + "T12:00:00");
-      return d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
-    }
-    const d = new Date(game.releaseDate);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    // Beyond the near-term window, show just the year rather than a specific
+    // month/day -- release-date precision this far out is often no more
+    // reliable than a placeholder guess anyway (see CLAUDE.md session log
+    // 2026-08-03), so a confident "Sep 17" reads as more certain than it is.
+    return new Date(game.releaseDate + "T12:00:00").getFullYear().toString();
   }
   return null;
 }
