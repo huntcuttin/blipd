@@ -44,3 +44,6 @@ next-env.d.ts
 # ad-hoc audit/debug screenshots (regenerated per session, not project assets)
 audit-screenshots/
 screenshots-*/
+
+# local Claude Code runtime state/config (machine-specific, not a project asset)
+/.claude/
