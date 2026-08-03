@@ -22,7 +22,7 @@ import {
   generateRetroGameAlert,
 } from "./alerts";
 import type { AlgoliaHit } from "./types";
-import { isYearOnlyDate, isMonthOnlyDate } from "@/lib/format";
+import { isYearOnlyDate, isMonthOnlyDate, getPacificDateStr } from "@/lib/format";
 
 // Shared PostgREST OR-clause fragment: "not junk", null-lenient.
 // product_type.not.in excludes NULL under standard SQL three-valued logic
@@ -1007,14 +1007,6 @@ async function refreshActiveSaleEventCounts(
         .eq("id", event.id);
     }
   }
-}
-
-// Nintendo eShop US release timing is anchored to Pacific/Eastern time, not
-// UTC. Comparing release_date against a UTC calendar day flips games to
-// "out today" (and fires the release alert) up to ~16 hours before the
-// actual US launch, depending on time of day and DST.
-function getPacificDateStr(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
 }
 
 export async function runReleaseStatusUpdate(): Promise<number> {

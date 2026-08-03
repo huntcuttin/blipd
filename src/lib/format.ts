@@ -20,6 +20,18 @@ export function formatLongDate(date: string | null | undefined): string {
   return formatDate(date, "long");
 }
 
+/**
+ * Nintendo eShop US release timing is anchored to Pacific/Eastern time, not
+ * UTC. Comparing a release date against a UTC calendar day can flip a game
+ * to "out today" (or skip its launch-day alert) up to ~16 hours off from
+ * the actual US launch, depending on time of day and DST. This is the single
+ * source for "what calendar day is it, eShop-time" — every release-status
+ * comparison must go through this, not `new Date().toISOString()`.
+ */
+export function getPacificDateStr(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+}
+
 /** Dates used as placeholders for unknown release dates. */
 export const PLACEHOLDER_DATES = ["2099-12-31", "2020-01-01"] as const;
 

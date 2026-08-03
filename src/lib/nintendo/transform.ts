@@ -1,4 +1,5 @@
 import type { AlgoliaHit } from "./types";
+import { getPacificDateStr } from "@/lib/format";
 
 const LANGUAGE_PREFIX = /^\((English|French|Spanish|German|Italian|Dutch|Japanese|Korean|Chinese|Portuguese|Russian)\)\s/i;
 
@@ -37,8 +38,16 @@ export function generateSlug(title: string): string {
 }
 
 export function computeReleaseStatus(releaseDate: string): "released" | "upcoming" | "out_today" {
-  const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  // Pacific, not UTC -- see getPacificDateStr's own comment. Using UTC here
+  // let this and runReleaseStatusUpdate (which already used Pacific) disagree
+  // for several hours a day: from ~4-5pm PT, UTC's "today" is already
+  // tomorrow, so this function would stamp a release-day game "out_today" a
+  // day early. runReleaseStatusUpdate's releasingToday query only fires the
+  // launch alert for status='upcoming' + release_date=today -- a game this
+  // function had already (wrongly) flipped to out_today no longer matches
+  // "upcoming", so the alert is silently skipped. A launch-day alert MISS,
+  // not a false positive -- the worse of the two failure modes here.
+  const todayStr = getPacificDateStr();
   const release = releaseDate.split("T")[0];
 
   if (release === todayStr) return "out_today";
