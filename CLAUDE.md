@@ -449,9 +449,11 @@ Digest sent a few hours after sale drops. Lists all followed games on sale with 
 
 **Reliability architecture validation:** the same research calls a hybrid of event-driven detection + reconciliation jobs "the documented sweet spot" for this category — Blippd's actual architecture (10-min polling cron + the health-check reconciliation job) already matches this pattern. CamelCamelCamel's own Jan 2025 incident (a bug that re-created price watches for ~158,000 users, generating duplicate alerts) is the concrete cautionary tale for exactly the kind of idempotency gap the alerts-dedup fix (#15 in the audit list) closes — see Zero-Touch Operations and the 2026-08-02 session log.
 
-## Bulk Dismissal / Alert Feed UX (not yet built — 2026-08-02, per Fable research)
+## Bulk Dismissal / Alert Feed UX (built 2026-08-02 overnight session)
 
-The `/alerts` page doesn't yet have documented bulk-action UX. Established patterns worth following when this gets built:
+Shipped per the spec below: `dismissAlerts()` (queries.ts) upserts `user_alert_status.dismissed=true` for one or many alert IDs (column already existed, `getAlerts()` already filtered on it — only the write path and UI were missing). `AlertCard` gained swipe-to-dismiss (touch drag, threshold 80px, red X reveal) plus an inline `×` button for non-touch; both call the same `onDismiss`. `/alerts` page adds a header "Clear all" next to "Mark all read" (disabled — hidden, really — when the feed is empty) and a 5s `UndoToast`: dismissal is optimistic in the UI immediately, but the actual DB write is delayed until the undo window closes, so "Undo" is just cancelling a pending timeout rather than a real un-dismiss round-trip. Tap-to-open still only marks the single tapped item read (unchanged). One deliberate deviation from the original spec below: "Clear all" disables on an empty feed, not on zero-unread — a read-but-undismissed backlog is exactly what Clear all exists to clear, so gating it on unread would make it useless for that case.
+
+Original spec (2026-08-02, per Fable research) the above was built against:
 - Header-level "Clear all" (matches the safe-default pattern used by Teams' Activity → overflow menu), plus per-notification inline actions (mark read, dismiss).
 - Swipe-to-dismiss per item, tap-to-open marks that single item read.
 - A persistent read/unread dot — never let one tap silently mark the *entire* list read (a repeatedly-reported bug elsewhere).
