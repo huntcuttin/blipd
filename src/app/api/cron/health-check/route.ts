@@ -74,6 +74,47 @@ async function checkPricePipelineFreshness(): Promise<string[]> {
   return [];
 }
 
+// Confirmed live 2026-08-02: Nintendo's price API can return a well-formed
+// but wrong $0 regular_price for a game that's genuinely still paid — found
+// via a real production incident (Monster Hunter Stories, Monster Hunter
+// Rise Deluxe Kit, Capcom Fighting Collection all showed current_price=0
+// despite Nintendo's API confirming real live prices when re-queried
+// directly). ingest.ts now guards against writing a *new* 0 over an
+// existing real price, but this doesn't un-stick rows already corrupted, and
+// won't catch a game whose very first price check returns a bad 0. This is
+// a periodic detection signal, not a fix.
+//
+// Some $0 current prices are entirely legitimate (Fortnite, Warframe are
+// genuinely free-to-play, confirmed live and via web search) -- their price
+// history still shows real prices from before they converted, so they will
+// always match this same query. THRESHOLD below is a deliberate buffer
+// above that known baseline (2, as of this writing) so routine health
+// checks don't fire on legitimate free games -- if the real baseline grows
+// (more games legitimately go free-to-play), raise this number rather than
+// treating every hit as a real problem.
+const SUSPICIOUS_ZERO_PRICE_THRESHOLD = 4;
+
+async function checkSuspiciousZeroPrices(): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("find_suspicious_zero_priced_games");
+
+  if (error) {
+    // This RPC is a nice-to-have monitoring signal, not core pipeline
+    // health -- don't let its own failure (e.g. a missing function) mask
+    // or crash the rest of the health check.
+    console.error("Suspicious-zero-price check failed:", error.message);
+    return [];
+  }
+
+  const rows = (data ?? []) as { title: string }[];
+  if (rows.length <= SUSPICIOUS_ZERO_PRICE_THRESHOLD) return [];
+
+  const examples = rows.slice(0, 5).map((r) => r.title).join(", ");
+  return [
+    `${rows.length} games show $0 current price despite real historical pricing (may include legitimate free-to-play conversions like Fortnite/Warframe -- spot check the rest). Examples: ${examples}`,
+  ];
+}
+
 async function sendAlertEmail(problems: string[]): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -98,12 +139,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [cronProblems, freshnessProblems] = await Promise.all([
+  const [cronProblems, freshnessProblems, zeroPriceProblems] = await Promise.all([
     checkCronJobOrg(),
     checkPricePipelineFreshness(),
+    checkSuspiciousZeroPrices(),
   ]);
 
-  const problems = [...cronProblems, ...freshnessProblems];
+  const problems = [...cronProblems, ...freshnessProblems, ...zeroPriceProblems];
 
   if (problems.length > 0) {
     console.error("Health check found problems:", problems);

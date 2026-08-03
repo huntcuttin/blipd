@@ -635,6 +635,23 @@ export async function runPriceUpdate(options?: {
 
     const isFirstPriceCheck = game.current_price == null;
     const oldPrice = Number(game.current_price);
+
+    // Confirmed live 2026-08-02: Nintendo's price API can return a
+    // well-formed but implausible regular_price of "0.00" for a game that
+    // was priced normally moments before and after (verified by re-querying
+    // the same nsuid minutes later — real price, no code change involved).
+    // This passes the NaN guard above (0 isn't NaN) and would otherwise
+    // write through as a real price, which is worse than the NaN case: it
+    // wouldn't just null out the price, it would read as a genuine
+    // 100%-off drop AND a false all-time-low ("$0.00 — ALL TIME LOW!") for
+    // any game with real price history. Skip a suspicious 0 for a game
+    // that already has a real, positive price on record; let it retry
+    // next cycle the same way a totally-missing price already does above.
+    if (priceInfo.regular <= 0 && !isFirstPriceCheck && oldPrice > 0) {
+      console.warn(`  Suspicious $0 regular price for "${game.title}" (nsuid ${game.nsuid}) — skipping this cycle, keeping last known price`);
+      continue;
+    }
+
     const newPrice = priceInfo.discount ?? priceInfo.regular;
     const originalPrice = priceInfo.regular;
     const isOnSale = priceInfo.discount != null && priceInfo.discount < priceInfo.regular;
