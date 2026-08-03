@@ -84,15 +84,16 @@ async function checkPricePipelineFreshness(): Promise<string[]> {
 // won't catch a game whose very first price check returns a bad 0. This is
 // a periodic detection signal, not a fix.
 //
-// Some $0 current prices are entirely legitimate (Fortnite, Warframe are
-// genuinely free-to-play, confirmed live and via web search) -- their price
-// history still shows real prices from before they converted, so they will
-// always match this same query. THRESHOLD below is a deliberate buffer
-// above that known baseline (2, as of this writing) so routine health
-// checks don't fire on legitimate free games -- if the real baseline grows
-// (more games legitimately go free-to-play), raise this number rather than
-// treating every hit as a real problem.
-const SUSPICIOUS_ZERO_PRICE_THRESHOLD = 4;
+// Confirmed live 2026-08-03: the RPC's original price_history-based filter
+// (see migration 20260803_003) had a massive blind spot -- 89 of 92 real
+// corrupted rows were invisible to it, including 8 of the founder's own 18
+// followed games. Fixed by migration 20260803_004: the RPC now excludes an
+// explicit nsuid allowlist of confirmed-legitimate $0 titles instead of the
+// unreliable history heuristic, so any real corruption is caught regardless
+// of price_history contents. With that allowlist doing the exclusion work,
+// the threshold's only job is absorbing a brand-new F2P title or a transient
+// blip before the allowlist is updated -- keep it small.
+const SUSPICIOUS_ZERO_PRICE_THRESHOLD = 2;
 
 async function checkSuspiciousZeroPrices(): Promise<string[]> {
   const supabase = createAdminClient();
