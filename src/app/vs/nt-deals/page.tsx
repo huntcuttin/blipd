@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: "Blippd vs NT Deals — Nintendo eShop Price Alerts Compared",
   description:
     "Honest comparison of Blippd and NT Deals for Nintendo Switch price alerts. See how features, pricing, and reliability stack up.",
+  alternates: { canonical: "/vs/nt-deals" },
   openGraph: {
     title: "Blippd vs NT Deals — Nintendo eShop Price Alerts Compared",
     description:

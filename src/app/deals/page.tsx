@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Nintendo Switch Deals Today | Blippd",
   description:
     "Every Nintendo Switch game on sale right now. See the biggest discounts, all-time low prices, and deals ending soon on the eShop.",
+  alternates: { canonical: "/deals" },
   openGraph: {
     title: "Nintendo Switch Deals Today | Blippd",
     description:

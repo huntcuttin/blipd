@@ -34,12 +34,14 @@ export const metadata: Metadata = {
     icon: "/favicon.svg",
     apple: "/icon-180.png",
   },
+  alternates: { canonical: "/" },
   openGraph: {
     title: "blippd — Never miss a Nintendo drop.",
     description: "Track Nintendo eShop prices, get alerts when they drop. Follow games, get instant price drop alerts, and never miss a sale.",
     url: "https://www.blippd.app",
     siteName: "blippd",
     type: "website",
+    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "Blippd" }],
   },
   twitter: {
     card: "summary",
