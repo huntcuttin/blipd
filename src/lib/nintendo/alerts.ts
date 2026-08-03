@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatPrice, formatShortDate } from "@/lib/format";
 import { withRetry } from "@/lib/retry";
+import { getPrefColumn } from "@/lib/notifications/dispatch";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AdminClient = SupabaseClient<any>;
@@ -45,21 +46,6 @@ async function hasRecentAlert(
   }
 }
 
-export async function getFollowers(
-  supabase: AdminClient,
-  gameId: string
-): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("user_game_follows")
-    .select("user_id")
-    .eq("game_id", gameId);
-  if (error) {
-    console.error(`getFollowers query failed for ${gameId}:`, error.message);
-    return [];
-  }
-  return (data ?? []).map((r: { user_id: string }) => r.user_id);
-}
-
 interface AlertData {
   headline: string;
   subtext: string;
@@ -93,9 +79,35 @@ async function insertAndDispatch(
     return false;
   }
 
-  const users = followers ?? await getFollowers(supabase, game.id);
-  if (users.length > 0) {
-    const rows = users.map((uid) => ({ user_id: uid, alert_id: data.id, read: false }));
+  // The in-app feed must respect the same per-game notify_* toggles that
+  // email/push already do — previously this wrote a status row for every
+  // follower regardless of preference, so a user who turned off (say) sale
+  // alerts for a game still saw them in their in-app feed. Callers that pass
+  // an explicit followers list (e.g. retro game discovery, whose audience
+  // comes from user_franchise_follows + user_retro_follows rather than any
+  // prior per-game follow) are trusted as-is; everyone else is looked up
+  // fresh, filtered to whoever has this alert type's preference enabled.
+  let recipientIds: string[];
+  if (followers) {
+    recipientIds = followers;
+  } else {
+    const prefColumn = getPrefColumn(type);
+    const { data: prefRows, error: prefError } = await supabase
+      .from("user_game_follows")
+      .select(`user_id, ${prefColumn}`)
+      .eq("game_id", game.id)
+      .eq(prefColumn, true);
+
+    if (prefError) {
+      console.error(`Failed to fetch notify prefs for alert ${data.id}:`, prefError.message);
+      recipientIds = [];
+    } else {
+      recipientIds = (prefRows ?? []).map((r) => (r as { user_id: string }).user_id);
+    }
+  }
+
+  if (recipientIds.length > 0) {
+    const rows = recipientIds.map((uid) => ({ user_id: uid, alert_id: data.id, read: false }));
     const { error: statusError } = await supabase.from("user_alert_status").insert(rows);
     if (statusError) {
       console.error(`createAlertForUsers failed for alert ${data.id}:`, statusError.message);
@@ -110,7 +122,6 @@ export async function generatePriceDropAlert(
   oldPrice: number,
   newPrice: number,
   discount: number,
-  followers?: string[],
   saleEndDate?: string | null
 ): Promise<boolean> {
   const savings = formatPrice(oldPrice - newPrice, "");
@@ -122,20 +133,19 @@ export async function generatePriceDropAlert(
     old_price: oldPrice,
     discount,
     sale_end_date: saleEndDate ?? null,
-  }, followers);
+  });
 }
 
 export async function generateAllTimeLowAlert(
   supabase: AdminClient,
   game: GameRef,
-  price: number,
-  followers?: string[]
+  price: number
 ): Promise<boolean> {
   return insertAndDispatch(supabase, game, "all_time_low", {
     headline: `${game.title} — ALL TIME LOW`,
     subtext: `${formatPrice(price, "")} · Lowest price ever recorded`,
     new_price: price,
-  }, followers);
+  });
 }
 
 export async function generateSaleStartedAlert(
@@ -143,8 +153,7 @@ export async function generateSaleStartedAlert(
   game: GameRef,
   discount: number,
   salePrice: number,
-  saleEndDate: string | null,
-  followers?: string[]
+  saleEndDate: string | null
 ): Promise<boolean> {
   const endStr = saleEndDate
     ? ` · Ends ${formatShortDate(saleEndDate)}`
@@ -155,18 +164,17 @@ export async function generateSaleStartedAlert(
     new_price: salePrice,
     discount,
     sale_end_date: saleEndDate,
-  }, followers);
+  });
 }
 
 export async function generateSwitch2EditionAlert(
   supabase: AdminClient,
-  game: GameRef,
-  followers?: string[]
+  game: GameRef
 ): Promise<boolean> {
   return insertAndDispatch(supabase, game, "switch2_edition_announced", {
     headline: `${game.title} — Switch 2 Edition announced`,
     subtext: "A Nintendo Switch 2 version is now available",
-  }, followers);
+  });
 }
 
 export async function generateSaleEndingAlert(
@@ -175,8 +183,7 @@ export async function generateSaleEndingAlert(
   currentPrice: number,
   originalPrice: number,
   discount: number,
-  saleEndDate: string,
-  followers?: string[]
+  saleEndDate: string
 ): Promise<boolean> {
   const daysLeft = Math.ceil(
     (new Date(saleEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
@@ -189,7 +196,7 @@ export async function generateSaleEndingAlert(
     old_price: originalPrice,
     discount,
     sale_end_date: saleEndDate,
-  }, followers);
+  });
 }
 
 const RETRO_CONSOLE_LABELS: Record<string, string> = {
@@ -220,8 +227,7 @@ export async function generateReleaseAlert(
   supabase: AdminClient,
   game: GameRef,
   type: "release_today" | "out_now",
-  price: number,
-  followers?: string[]
+  price: number
 ): Promise<boolean> {
   const headline = type === "out_now"
     ? `${game.title} is available now`
@@ -230,5 +236,5 @@ export async function generateReleaseAlert(
     headline,
     subtext: `${formatPrice(price, "")} on Nintendo eShop`,
     new_price: price,
-  }, followers);
+  });
 }

@@ -12,7 +12,6 @@ import {
   isRegionalVariant,
 } from "./transform";
 import {
-  getFollowers,
   generatePriceDropAlert,
   generateAllTimeLowAlert,
   generateSaleStartedAlert,
@@ -696,12 +695,11 @@ export async function runPriceUpdate(options?: {
         const isNewSale = isOnSale && !game.is_on_sale;
         if (isPriceDrop || allTimeLow || isNewSale) {
           const ref = { id: game.id, title: game.title };
-          const followers = await getFollowers(supabase, game.id);
 
           if (isPriceDrop) {
-            if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers, isOnSale ? endDate : null)) alertsCreated++;
+            if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, isOnSale ? endDate : null)) alertsCreated++;
           } else if (isNewSale) {
-            if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, endDate, followers)) alertsCreated++;
+            if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, endDate)) alertsCreated++;
           }
           // Track sale onset independently of which branch above fired an alert —
           // a sale-start that also reads as a price drop must still count toward
@@ -710,7 +708,7 @@ export async function runPriceUpdate(options?: {
             newSaleGames.push({ id: game.id, title: game.title, publisher: (game as typeof game & { publisher?: string }).publisher ?? null });
           }
           if (allTimeLow) {
-            if (await generateAllTimeLowAlert(supabase, ref, newPrice, followers)) alertsCreated++;
+            if (await generateAllTimeLowAlert(supabase, ref, newPrice)) alertsCreated++;
           }
         }
       }
@@ -1014,13 +1012,11 @@ export async function runReleaseStatusUpdate(): Promise<number> {
     updated += ids.length;
 
     for (const game of pricedUpcoming) {
-      const followers = await getFollowers(supabase, game.id);
       await generateReleaseAlert(
         supabase,
         { id: game.id, title: game.title },
         "out_now",
-        Number(game.current_price),
-        followers
+        Number(game.current_price)
       );
     }
   }

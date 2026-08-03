@@ -4,7 +4,7 @@ import { sendBatchedDigest } from "./send-batch";
 import type { AlertPayload } from "./types";
 import type { BatchAlertGame } from "./batch-template";
 
-type PrefColumn = "notify_sales" | "notify_all_time_low" | "notify_releases" | "notify_announcements";
+export type PrefColumn = "notify_sales" | "notify_all_time_low" | "notify_releases" | "notify_announcements";
 
 interface FollowRow {
   user_id: string;
@@ -28,7 +28,7 @@ const BATCHABLE_TYPES = new Set(["price_drop", "all_time_low", "sale_started", "
 const BATCH_THRESHOLD = 5;
 
 // Map alert types to the notification preference column that controls them
-function getPrefColumn(alertType: string): PrefColumn {
+export function getPrefColumn(alertType: string): PrefColumn {
   switch (alertType) {
     case "price_drop":
     case "sale_started":
