@@ -149,17 +149,22 @@ async function findGameInDB(
   supabase: any,
   gameTitle: string
 ): Promise<{ id: string; slug: string; title: string } | null> {
+  // gameTitle comes from Claude's LLM output — unescaped %/_ would be treated
+  // as ILIKE wildcards rather than literal characters, letting an unlucky
+  // title fragment match (and auto-publish an alert to) the wrong game.
+  const escaped = gameTitle.replace(/[%_]/g, "\\$&");
+
   // Try exact match first, then fuzzy
   const { data } = await supabase
     .from("games")
     .select("id, slug, title")
-    .ilike("title", gameTitle)
+    .ilike("title", escaped)
     .limit(1);
 
   if (data && data.length > 0) return data[0];
 
   // Try partial match (handles subtitle variations)
-  const baseTitle = gameTitle.split(":")[0].trim();
+  const baseTitle = escaped.split(":")[0].trim();
   const { data: partial } = await supabase
     .from("games")
     .select("id, slug, title")
