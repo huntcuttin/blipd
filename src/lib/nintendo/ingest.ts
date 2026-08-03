@@ -1086,17 +1086,25 @@ export async function runReleaseStatusUpdate(): Promise<number> {
       );
     }
 
-    // Set release_date to today as best approximation — at minimum it makes them
-    // visible in New Releases rather than staying stuck behind the 2099 exclusion
-    // filter. Tagging the source lets Catalog Sync's trusted-date restore step
-    // (ingest.ts, near the top of runFullCatalogSync) protect this correction
-    // the same way it already protects IGDB-sourced dates — otherwise a game
-    // whose own Algolia record has a null release date (confirmed live for at
-    // least one real title) gets silently demoted back to "upcoming" on the
-    // very next daily sync.
+    // Confirmed live 2026-08-03: guessing release_date=today here was actively
+    // harmful, not just imprecise — it stamped "released today" on dozens of
+    // Nintendo's most iconic, years-old titles (Breath of the Wild, Tears of
+    // the Kingdom, Smash Ultimate, and more), all of which had simply never
+    // been reached by sync-release-dates (broken for ~5 months, fixed earlier
+    // tonight). Worse, tagging the guess "price-confirmed" made it a *trusted*
+    // source that Catalog Sync protects from being overwritten, and since the
+    // row no longer matches sync-release-dates' own placeholder-date query
+    // once it's "today" instead of 2099-12-31, the wrong guess could never be
+    // corrected by anything afterward. Now that sync-release-dates actually
+    // works, the right fix is to leave release_date alone — it stays on the
+    // placeholder (games/game-detail pages already render that as "TBA" via
+    // isPlaceholderDate) until sync-release-dates resolves it for real via
+    // IGDB. Only release_status flips here, and only to get the row out of
+    // this fallback's own upcoming/out_today query so it isn't reprocessed
+    // every cycle.
     await supabase
       .from("games")
-      .update({ release_status: "released", release_date: todayStr, release_date_source: "price-confirmed", updated_at: new Date().toISOString() })
+      .update({ release_status: "released", updated_at: new Date().toISOString() })
       .in("id", ids);
     updated += ids.length;
 
