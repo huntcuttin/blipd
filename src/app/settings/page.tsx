@@ -342,6 +342,15 @@ export default function SettingsPage() {
         </h2>
         <div className="space-y-2">
           <Link
+            href="/deals"
+            className="flex items-center justify-between py-2 text-sm text-white hover:text-[#aaaaaa] transition-colors"
+          >
+            <span>Browse public deals page</span>
+            <svg className="w-4 h-4 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+          </Link>
+          <Link
             href="/vs/nt-deals"
             className="flex items-center justify-between py-2 text-sm text-white hover:text-[#aaaaaa] transition-colors"
           >

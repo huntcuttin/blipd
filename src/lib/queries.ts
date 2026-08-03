@@ -91,45 +91,6 @@ function formatTimestamp(createdAt: string): string {
 
 // ── Game queries ──────────────────────────────────────────────
 
-export async function getAllGames(supabase: Client): Promise<Game[]> {
-  const { data, error } = await supabase.from("games").select("*").order("title").limit(2500);
-  if (error) throw error;
-  return (data ?? []).map(mapGame);
-}
-
-export async function getTrendingGames(supabase: Client): Promise<Game[]> {
-  // Fetch a wide pool — client-side ranking handles ordering
-  // Two passes: on-sale games first (full set), then rest of catalog
-  const [saleRes, fullRes] = await Promise.all([
-    supabase
-      .from("games")
-      .select("*")
-      .eq("release_status", "released")
-      .eq("is_suppressed", false)
-      .eq("is_on_sale", true)
-      .gt("current_price", 0)
-      .order("discount", { ascending: false })
-      .limit(300),
-    supabase
-      .from("games")
-      .select("*")
-      .eq("release_status", "released")
-      .eq("is_suppressed", false)
-      .eq("is_on_sale", false)
-      .gt("current_price", 0)
-      .order("metacritic_score", { ascending: false, nullsFirst: false })
-      .limit(300),
-  ]);
-  if (saleRes.error) throw saleRes.error;
-  if (fullRes.error) throw fullRes.error;
-  const seen = new Set<string>();
-  const combined: typeof saleRes.data = [];
-  for (const g of [...(saleRes.data ?? []), ...(fullRes.data ?? [])]) {
-    if (!seen.has(g.id)) { seen.add(g.id); combined.push(g); }
-  }
-  return combined.map(mapGame);
-}
-
 export async function getGamesOnSale(supabase: Client): Promise<Game[]> {
   const { data, error } = await supabase
     .from("games")
@@ -180,50 +141,6 @@ export async function getRecentReleases(supabase: Client): Promise<Game[]> {
     .neq("release_date", "2020-01-01")
     .gt("original_price", 0)
     .order("release_date", { ascending: false })
-    .limit(100);
-  if (error) throw error;
-  return (data ?? []).map(mapGame);
-}
-
-export async function getFollowerCountsBatch(supabase: Client, gameIds: string[]): Promise<Map<string, number>> {
-  const result = new Map<string, number>();
-  if (gameIds.length === 0) return result;
-  const { data, error } = await supabase
-    .from("user_game_follows")
-    .select("game_id")
-    .in("game_id", gameIds);
-  if (error || !data) return result;
-  for (const row of data) {
-    result.set(row.game_id, (result.get(row.game_id) ?? 0) + 1);
-  }
-  return result;
-}
-
-export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
-  const today = new Date().toISOString().split("T")[0];
-  const { data, error } = await supabase
-    .from("games")
-    .select("*")
-    .in("release_status", ["upcoming", "out_today"])
-    .neq("is_suppressed", true)
-    .gte("release_date", today)
-    .neq("release_date", "2099-12-31")
-    .neq("release_date", "2020-01-01")
-    .order("igdb_hype", { ascending: false, nullsFirst: false })
-    .order("release_date", { ascending: true })
-    .limit(100);
-  if (error) throw error;
-  return (data ?? []).map(mapGame);
-}
-
-export async function getAnnouncedGames(supabase: Client): Promise<Game[]> {
-  const { data, error } = await supabase
-    .from("games")
-    .select("*")
-    .eq("release_status", "upcoming")
-    .neq("is_suppressed", true)
-    .eq("release_date", "2099-12-31")
-    .order("igdb_hype", { ascending: false })
     .limit(100);
   if (error) throw error;
   return (data ?? []).map(mapGame);
@@ -483,13 +400,6 @@ export async function markAllAlertsRead(supabase: Client, userId: string, alertI
   if (error) throw error;
 }
 
-export async function dismissAlert(supabase: Client, userId: string, alertId: string) {
-  const { error } = await supabase
-    .from("user_alert_status")
-    .upsert({ user_id: userId, alert_id: alertId, read: true, dismissed: true }, { onConflict: "user_id,alert_id" });
-  if (error) throw error;
-}
-
 export async function remindAlert(supabase: Client, userId: string, alertId: string) {
   const remindAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
   const { error } = await supabase
@@ -708,33 +618,7 @@ export async function setRetroFollows(supabase: Client, userId: string, consoles
   }
 }
 
-export async function getRetroFollowers(supabase: Client, consoleName: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("user_retro_follows")
-    .select("user_id")
-    .eq("console", consoleName);
-  if (error) return [];
-  return (data ?? []).map((r: { user_id: string }) => r.user_id);
-}
-
 // ── Feed queries ──────────────────────────────────────────────
-
-export async function getActiveDirects(supabase: Client): Promise<{ id: string; videoId: string; title: string; detectedAt: string }[]> {
-  const { data, error } = await supabase
-    .from("nintendo_directs")
-    .select("id, video_id, title, detected_at")
-    .eq("active", true)
-    .order("detected_at", { ascending: false })
-    .limit(5);
-  if (error) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data ?? []).map((row: any) => ({
-    id: row.id,
-    videoId: row.video_id,
-    title: row.title,
-    detectedAt: row.detected_at,
-  }));
-}
 
 export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
   const today = new Date().toISOString().split("T")[0];
