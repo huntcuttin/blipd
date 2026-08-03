@@ -22,6 +22,7 @@ import {
   generateRetroGameAlert,
 } from "./alerts";
 import type { AlgoliaHit } from "./types";
+import { isYearOnlyDate, isMonthOnlyDate } from "@/lib/format";
 
 const QUALITY_PUBLISHERS = new Set([
   "Nintendo",
@@ -572,11 +573,33 @@ export async function runPriceUpdate(options?: {
 
   console.log("Starting price update...");
 
+  // Suppressed/junk (DLC, bundle re-listings) games stay in the polling
+  // rotation unless we exempt them -- confirmed live 2026-08-03: with no
+  // filter here, ~950+ suppressed rows burned poll slots and could still
+  // fire price_drop/sale_started/all_time_low alerts that fan out to
+  // FRANCHISE followers (dispatch had no game-level re-check either, fixed
+  // separately). A directly-followed game must still poll regardless of
+  // suppression (Product Bible: a followed game always alerts), so fetch
+  // that exemption set first -- cheap, follows are a small bounded set.
+  const { data: followedRows } = await supabase.from("user_game_follows").select("game_id");
+  const followedGameIds = Array.from(new Set((followedRows ?? []).map((f) => f.game_id as string)));
+  const followedIdList = followedGameIds.length > 0 ? followedGameIds.map((id) => `"${id}"`).join(",") : "";
+
   // Get games that need price checking, ordered by stalest first
-  const { data: games, error } = await supabase
+  let pollQuery = supabase
     .from("games")
     .select("id, title, nsuid, current_price, original_price, is_on_sale, price_history, publisher")
-    .not("nsuid", "is", null)
+    .not("nsuid", "is", null);
+  // product_type.not.in excludes NULL under standard SQL three-valued logic
+  // (confirmed live earlier this session), so the "not junk" clause must
+  // stay null-lenient even though the 2026-08-03 backfill cleared all
+  // existing NULLs -- a fresh ingest bug could otherwise silently drop a
+  // real, unclassified game out of the polling rotation entirely.
+  const notJunk = "product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)";
+  pollQuery = followedIdList
+    ? pollQuery.or(`and(is_suppressed.eq.false,or(${notJunk})),id.in.(${followedIdList})`)
+    : pollQuery.or(`and(is_suppressed.eq.false,or(${notJunk}))`);
+  const { data: games, error } = await pollQuery
     .order("last_price_check", { ascending: true, nullsFirst: true })
     .limit(100);
 
@@ -996,25 +1019,53 @@ export async function runReleaseStatusUpdate(): Promise<number> {
   const todayStr = getPacificDateStr();
   let updated = 0;
 
-  // Games releasing today
-  const { data: releasingToday } = await supabase
+  // Games releasing today. Confirmed live 2026-08-03: this had NO
+  // is_suppressed/product_type filter at all, and no protection against
+  // sentinel-encoded imprecise dates -- IGDB year-only dates are stored as
+  // Dec 31 (isYearOnlyDate) and month-only dates as the last day of the
+  // month (isMonthOnlyDate), so on those specific calendar days EVERY
+  // vaguely-dated upcoming game would numerically match todayStr and fire
+  // a false "releases today" alert, fanning out to franchise followers.
+  // Dec 31 specifically is a scheduled incident waiting to happen.
+  const { data: releasingTodayRaw } = await supabase
     .from("games")
-    .select("id, title, current_price")
+    .select("id, title, current_price, release_date, is_suppressed, product_type")
     .eq("release_status", "upcoming")
     .eq("release_date", todayStr);
 
-  if (releasingToday) {
-    for (const game of releasingToday) {
+  const followedIdsForRelease = new Set(
+    ((await supabase.from("user_game_follows").select("game_id")).data ?? []).map(
+      (f) => f.game_id as string
+    )
+  );
+  const isJunkOrSuppressed = (g: { is_suppressed: boolean; product_type: string | null }) =>
+    g.is_suppressed || g.product_type === "ADD_ON_CONTENT" || g.product_type === "BUNDLE";
+
+  if (releasingTodayRaw) {
+    for (const game of releasingTodayRaw) {
+      const followed = followedIdsForRelease.has(game.id);
+      const isImprecise = isYearOnlyDate(game.release_date) || isMonthOnlyDate(game.release_date);
+      const suppress = (isJunkOrSuppressed(game) && !followed) || isImprecise;
+
       await supabase
         .from("games")
-        .update({ release_status: "out_today", updated_at: new Date().toISOString() })
+        // An imprecise date isn't genuinely "today" -- flip straight to
+        // released (not out_today) rather than asserting a launch-day
+        // status the data doesn't actually support.
+        .update({
+          release_status: isImprecise ? "released" : "out_today",
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", game.id);
-      await generateReleaseAlert(
-        supabase,
-        { id: game.id, title: game.title },
-        "release_today",
-        Number(game.current_price)
-      );
+
+      if (!suppress) {
+        await generateReleaseAlert(
+          supabase,
+          { id: game.id, title: game.title },
+          "release_today",
+          Number(game.current_price)
+        );
+      }
       updated++;
     }
   }
