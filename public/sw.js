@@ -1,5 +1,17 @@
 // Blippd Service Worker — handles web push notifications
 
+// Without these, a new service worker version stays "waiting" until every
+// open tab is closed before it activates — a push-notification bugfix
+// deploy wouldn't actually take effect for a user who never fully quits
+// their browser.
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(clients.claim());
+});
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
   const data = event.data.json();
@@ -7,8 +19,11 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/favicon.svg",
-      badge: "/favicon.svg",
+      // SVG notification icons render inconsistently on Android Chrome —
+      // PNG is the safe choice here even though favicon.svg is used
+      // elsewhere in the app.
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
       data: { url: data.url || "/" },
       tag: data.tag || "blippd-alert",
       renotify: true,
