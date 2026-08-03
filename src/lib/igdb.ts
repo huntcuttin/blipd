@@ -36,6 +36,40 @@ function stripTrademarks(name: string): string {
   return name.replace(/[™®©]/g, "").trim();
 }
 
+// Nintendo's own catalog and IGDB disagree on punctuation for the same
+// game — curly vs straight apostrophes ("Fortune's" vs "Fortune's"), and
+// "Title: Subtitle" vs "Title - Subtitle" separators. An exact-string
+// match after only stripping trademark symbols misses these real matches
+// entirely, which is how a legitimately-listed IGDB game (with a real
+// release date) stayed stuck on a placeholder date indefinitely — this
+// went undetected until a live check on one specific title surfaced it.
+function normalizeForMatch(name: string): string {
+  return stripTrademarks(name)
+    .replace(/[‘’`´]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s*[-–—:]\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+}
+
+// Picks the best candidate from an IGDB search result set: exact match on
+// the normalized name first, then a prefix match either direction (handles
+// edition suffixes like "- Dagdan Collection" one side has and the other
+// doesn't), then falls back to the only candidate if there's just one.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pickBestMatch(games: any[], searchName: string): any {
+  const normalizedSearch = normalizeForMatch(searchName);
+  const exact = games.find((g) => normalizeForMatch(g.name) === normalizedSearch);
+  if (exact) return exact;
+  const prefix = games.find((g) => {
+    const n = normalizeForMatch(g.name);
+    return n.startsWith(normalizedSearch) || normalizedSearch.startsWith(n);
+  });
+  if (prefix) return prefix;
+  return games.length === 1 ? games[0] : undefined;
+}
+
 // IGDB platform ID for Nintendo Switch
 const SWITCH_PLATFORM_ID = 130;
 
@@ -101,17 +135,7 @@ async function searchIGDB(
   const games = await searchRes.json();
   if (!games || games.length === 0) return null;
 
-  // Find best match
-  const normalizedSearch = searchName.toLowerCase().trim();
-  let bestMatch = games.find(
-    (g: { name: string }) => g.name.toLowerCase().trim() === normalizedSearch
-  );
-
-  // If no exact match but only one result, use it
-  if (!bestMatch && games.length === 1) {
-    bestMatch = games[0];
-  }
-
+  const bestMatch = pickBestMatch(games, searchName);
   if (!bestMatch) return null;
 
   // Get release date for Switch platform
@@ -181,11 +205,7 @@ export async function getIGDBHype(
     const games = await searchRes.json();
     if (!games || games.length === 0) return null;
 
-    const normalizedSearch = gameName.toLowerCase().trim();
-    const bestMatch =
-      games.find((g: { name: string }) => g.name.toLowerCase().trim() === normalizedSearch) ??
-      (games.length === 1 ? games[0] : null);
-
+    const bestMatch = pickBestMatch(games, gameName);
     if (!bestMatch) return null;
 
     return {
@@ -319,11 +339,7 @@ export async function getIGDBRating(
   const games = await searchRes.json();
   if (!games || games.length === 0) return null;
 
-  const normalizedSearch = gameName.toLowerCase().trim();
-  const bestMatch =
-    games.find((g: { name: string }) => g.name.toLowerCase().trim() === normalizedSearch) ??
-    (games.length === 1 ? games[0] : null);
-
+  const bestMatch = pickBestMatch(games, gameName);
   if (!bestMatch?.aggregated_rating) return null;
 
   return {
