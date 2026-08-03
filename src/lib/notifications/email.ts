@@ -84,12 +84,17 @@ export async function sendEmailAlert(
 
   try {
     const resend = getResend();
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: email,
       subject,
       html,
     });
+    if (error) {
+      console.error(`Failed to send email to ${email}:`, error.message);
+      await logNotification(userId, payload.alertId, "email", "failed", error.message);
+      return false;
+    }
     await logNotification(userId, payload.alertId, "email", "sent");
     return true;
   } catch (e) {

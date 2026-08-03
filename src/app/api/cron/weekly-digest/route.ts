@@ -108,12 +108,13 @@ export async function GET(request: Request) {
           });
 
           try {
-            await resend.emails.send({
+            const { error } = await resend.emails.send({
               from: FROM_ADDRESS,
               to: email,
               subject,
               html,
             });
+            if (error) throw new Error(error.message);
             sent++;
           } catch (err) {
             console.error(`Failed to send digest to ${email}:`, err);

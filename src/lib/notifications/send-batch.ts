@@ -39,7 +39,8 @@ export async function sendBatchedDigest(
 
   try {
     const resend = getResend();
-    await resend.emails.send({ from: FROM_ADDRESS, to: email, subject, html });
+    const { error } = await resend.emails.send({ from: FROM_ADDRESS, to: email, subject, html });
+    if (error) throw new Error(error.message);
 
     // Log notification for each alert so dedup prevents re-sends
     const logRows = alertIds.map((alertId) => ({
@@ -93,7 +94,8 @@ export async function sendNamedSaleEventEmail(
         if (!email) return;
         try {
           const resend = getResend();
-          await resend.emails.send({ from: FROM_ADDRESS, to: email, subject, html });
+          const { error } = await resend.emails.send({ from: FROM_ADDRESS, to: email, subject, html });
+          if (error) throw new Error(error.message);
           sent++;
         } catch (e) {
           console.error(`Failed to send named sale email to ${email}:`, e instanceof Error ? e.message : e);
