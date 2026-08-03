@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { sendAlertToUsers } from "./send";
 import { sendBatchedDigest, sendLaunchDigest } from "./send-batch";
 import { planUserDispatch } from "./batching";
+import { isRateLimited, resetRateLimitFlag } from "./rate-limit";
 import type { AlertPayload } from "./types";
 import type { BatchAlertGame } from "./batch-template";
 import type { LaunchDigestGame } from "./launch-digest-template";
@@ -80,17 +81,33 @@ interface PendingAlert {
 export async function dispatchRecentAlerts(since: string): Promise<number> {
   const supabase = createAdminClient();
   let dispatched = 0;
+  resetRateLimitFlag();
 
-  // Get alerts created since the given timestamp
-  const { data: alerts, error } = await supabase
-    .from("alerts")
-    .select("id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, nintendo_url, franchise, is_suppressed, product_type )")
-    .gte("created_at", since)
-    .order("created_at", { ascending: true });
-
-  if (error || !alerts) {
-    console.error("Failed to fetch recent alerts for dispatch:", error?.message);
-    return 0;
+  // Get alerts created since the given timestamp. Paginated -- PostgREST
+  // caps an unbounded select at 1,000 rows, which this select had no
+  // .range() to get past, silently truncating on a busy enough window.
+  const ALERT_PAGE_SIZE = 1000;
+  const ALERT_SELECT = "id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, nintendo_url, franchise, is_suppressed, product_type )";
+  type AlertRow = {
+    id: string; game_id: string; type: string; headline: string; subtext: string;
+    new_price: number | null; old_price: number | null; discount: number | null; sale_end_date: string | null;
+    games: unknown;
+  };
+  const alerts: AlertRow[] = [];
+  for (let from = 0; ; from += ALERT_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("alerts")
+      .select(ALERT_SELECT)
+      .gte("created_at", since)
+      .order("created_at", { ascending: true })
+      .range(from, from + ALERT_PAGE_SIZE - 1);
+    if (error) {
+      console.error("Failed to fetch recent alerts for dispatch:", error.message);
+      return 0;
+    }
+    if (!data || data.length === 0) break;
+    alerts.push(...(data as unknown as AlertRow[]));
+    if (data.length < ALERT_PAGE_SIZE) break;
   }
 
   console.log(`  Found ${alerts.length} alerts to dispatch since ${since}`);
@@ -271,7 +288,16 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   dispatched = 0; // Reset — count actual sends
 
   // ── Phase 3: Individual sends ──
+  // Rate-limit-aware: once any send this run hits Resend's rate_limit_exceeded,
+  // stop making further calls rather than hammering an already-limited API
+  // through the rest of a potentially large batch. Nothing is lost — the
+  // remaining alerts stay inside the (now 3h, not 15min) lookback window and
+  // get retried whole on the next cron tick, once the limit has reset.
   for (const { payload, userIds } of Array.from(individualByAlert.values())) {
+    if (isRateLimited()) {
+      console.warn("  Resend rate limit hit — stopping this run, remainder retries next tick");
+      break;
+    }
     console.log(`  Dispatching "${payload.alertType}" for "${payload.gameTitle}" to ${userIds.length} users`);
     const sent = await sendAlertToUsers(userIds, payload);
     dispatched += sent;
@@ -282,6 +308,10 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
 
   // ── Phase 4: Grouped digests — one email per user per group ──
   for (const job of digestJobs) {
+    if (isRateLimited()) {
+      console.warn("  Resend rate limit hit — stopping this run, remainder retries next tick");
+      break;
+    }
     const alertIds = job.items.map((pa) => pa.payload.alertId);
     const shortId = job.userId.slice(0, 8);
     console.log(`  Batching ${job.items.length} ${job.group} alerts for user ${shortId}...`);

@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { getTemplate } from "./templates";
+import { markRateLimited, isResendRateLimitError } from "./rate-limit";
 import type { AlertPayload } from "./types";
 
 const FROM_ADDRESS = "Blippd <alerts@blippd.app>";
@@ -124,6 +125,7 @@ export async function sendEmailAlert(
     if (error) {
       console.error(`Failed to send email to ${email}:`, error.message);
       await logNotification(userId, payload.alertId, "email", "failed", error.message);
+      if (isResendRateLimitError(error)) markRateLimited();
       return false;
     }
     await logNotification(userId, payload.alertId, "email", "sent");

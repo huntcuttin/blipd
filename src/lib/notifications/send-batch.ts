@@ -4,6 +4,7 @@ import { batchedAlerts } from "./batch-template";
 import { launchDigest } from "./launch-digest-template";
 import { namedSaleEvent } from "./templates";
 import { isEmailSuppressed } from "./email";
+import { markRateLimited, isResendRateLimitError } from "./rate-limit";
 import type { BatchAlertGame } from "./batch-template";
 import type { LaunchDigestGame } from "./launch-digest-template";
 
@@ -61,7 +62,10 @@ async function sendDigest(
       subject: rendered.subject,
       html: rendered.html,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (isResendRateLimitError(error)) markRateLimited();
+      throw new Error(error.message);
+    }
 
     await supabase.from("notification_log").insert(logRows("sent", null));
     return true;
@@ -126,7 +130,10 @@ export async function sendNamedSaleEventEmail(
         try {
           const resend = getResend();
           const { error } = await resend.emails.send({ from: FROM_ADDRESS, to: email, subject, html });
-          if (error) throw new Error(error.message);
+          if (error) {
+            if (isResendRateLimitError(error)) markRateLimited();
+            throw new Error(error.message);
+          }
           sent++;
         } catch (e) {
           console.error(`Failed to send named sale email to ${email}:`, e instanceof Error ? e.message : e);
