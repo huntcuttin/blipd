@@ -126,15 +126,19 @@ export default function SalesPage() {
       {/* Named sale event banners */}
       {!search && <NamedSaleBanner />}
 
-      {/* Active event filter indicator */}
+      {/* Active event filter indicator — shown whenever the filter is applied,
+          even if the event's display name can't be found (e.g. it's since
+          been deactivated), since eventFilteredGames below still filters
+          unconditionally and the user otherwise has no way to tell why or
+          how to clear it. */}
       {activeEventId && !search && (() => {
         const event = (saleEvents ?? []).find((e) => e.id === activeEventId);
-        return event ? (
+        return (
           <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-[#ffaa00]/10 border border-[#ffaa00]/30">
-            <span className="text-xs text-[#ffaa00] font-medium flex-1">Showing: {event.name}</span>
+            <span className="text-xs text-[#ffaa00] font-medium flex-1">Showing: {event ? event.name : "filtered results"}</span>
             <a href="/sales" className="text-[10px] text-[#ffaa00]/60 hover:text-[#ffaa00]">Clear ✕</a>
           </div>
-        ) : null;
+        );
       })()}
 
       {/* Search results */}
@@ -210,12 +214,20 @@ export default function SalesPage() {
                 </svg>
               </div>
               <h2 className="text-lg font-semibold text-white mb-2">
-                {genreFilter === "All" ? "No sales right now" : `No ${genreFilter.toLowerCase()} deals`}
+                {activeEventId
+                  ? "No games in this sale"
+                  : genreFilter === "All" ? "No sales right now" : `No ${genreFilter.toLowerCase()} deals`}
               </h2>
               <p className="text-[#666666] text-sm text-center max-w-[260px]">
-                {genreFilter !== "All" ? "Try a different genre or check back later" : "Check back later for new deals"}
+                {activeEventId
+                  ? "This sale may have ended — clear the filter to see all deals."
+                  : genreFilter !== "All" ? "Try a different genre or check back later" : "Check back later for new deals"}
               </p>
-              {genreFilter !== "All" && (
+              {activeEventId ? (
+                <a href="/sales" className="mt-3 text-xs text-[#888888] hover:text-white transition-colors">
+                  Clear filter
+                </a>
+              ) : genreFilter !== "All" && (
                 <button
                   onClick={() => setGenreFilter("All")}
                   className="mt-3 text-xs text-[#888888] hover:text-white transition-colors"
