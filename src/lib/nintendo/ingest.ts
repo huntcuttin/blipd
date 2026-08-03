@@ -23,6 +23,7 @@ import {
 } from "./alerts";
 import type { AlgoliaHit } from "./types";
 import { isYearOnlyDate, isMonthOnlyDate, getPacificDateStr } from "@/lib/format";
+import { sendAdminAlert } from "@/lib/notifications/admin-alert";
 
 // Shared PostgREST OR-clause fragment: "not junk", null-lenient.
 // product_type.not.in excludes NULL under standard SQL three-valued logic
@@ -32,6 +33,36 @@ import { isYearOnlyDate, isMonthOnlyDate, getPacificDateStr } from "@/lib/format
 // that uses this. Used by both runPriceUpdate's poll query and
 // runReleaseStatusUpdate's pricedUpcoming fallback.
 const NOT_JUNK_OR = "product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)";
+
+// Event-creation breaker (audit §E, layers 2-3). Every historical junk-alert
+// incident this project has had (the 92-game zero-price recovery, the DLC
+// backlog, the 123-alert deploy-race batch) produced an unusually large
+// out_now batch in a single run -- these thresholds catch the *shape* of an
+// incident (a burst, not a trickle) as defense in depth on top of the
+// per-row filters already applied to the query that builds this candidate
+// list. No real day has ever come close to either number.
+const OUT_NOW_BREAKER_THRESHOLD = 20; // re-verify inline against live Nintendo data above this
+const OUT_NOW_CEILING = 100; // hold + alarm above this many *verified* candidates
+
+/**
+ * Re-checks a candidate against Nintendo's live price API rather than
+ * trusting the DB snapshot -- this is the check that would have caught the
+ * $0-price-recovery false alerts (a DB row said "real price, never
+ * alerted" at the exact moment a corrupted reading was mid-recovery; the
+ * live API is ground truth at the moment of alerting, the DB snapshot
+ * isn't). Only called above OUT_NOW_BREAKER_THRESHOLD -- a live API round
+ * trip per candidate isn't worth paying on every normal, small run.
+ */
+async function verifyStillOnSale(nsuid: string | null): Promise<boolean> {
+  if (!nsuid) return true; // nothing to re-check against -- trust the DB snapshot
+  try {
+    const prices = await fetchPrices([nsuid]);
+    const info = prices.find((p) => String(p.title_id) === nsuid);
+    return info?.sales_status === "onsale";
+  } catch {
+    return true; // API hiccup -- don't let a transient error suppress a real launch
+  }
+}
 
 const QUALITY_PUBLISHERS = new Set([
   "Nintendo",
@@ -1090,7 +1121,7 @@ export async function runReleaseStatusUpdate(): Promise<number> {
   // notification at all.
   let pricedUpcomingQuery = supabase
     .from("games")
-    .select("id, title, current_price")
+    .select("id, title, current_price, nsuid")
     .in("release_status", ["upcoming", "out_today"])
     .eq("release_date", "2099-12-31")
     .gt("current_price", 0);
@@ -1146,6 +1177,40 @@ export async function runReleaseStatusUpdate(): Promise<number> {
       );
     }
 
+    // Event-creation breaker (audit §E layers 2-3). Above the threshold,
+    // re-verify each candidate against Nintendo's live price API rather
+    // than trusting this query's DB snapshot -- see verifyStillOnSale's
+    // comment. Below the threshold, a normal small batch skips the extra
+    // API round trips entirely.
+    let verified = genuinelyNew;
+    let rejectedByVerification: typeof genuinelyNew = [];
+    if (genuinelyNew.length > OUT_NOW_BREAKER_THRESHOLD) {
+      const checks = await Promise.all(
+        genuinelyNew.map((g) => verifyStillOnSale(g.nsuid as string | null))
+      );
+      verified = genuinelyNew.filter((_, i) => checks[i]);
+      rejectedByVerification = genuinelyNew.filter((_, i) => !checks[i]);
+      if (rejectedByVerification.length > 0) {
+        const msg = `Event-creation breaker: ${genuinelyNew.length} out_now candidates in one run (>${OUT_NOW_BREAKER_THRESHOLD}) -- ${rejectedByVerification.length} failed live re-verification and were held (not alerted, not flipped to released -- they'll be re-checked next run): ${rejectedByVerification.map((g) => g.title).join(", ")}`;
+        console.warn(msg);
+        await sendAdminAlert("Blippd: out_now event-creation breaker tripped", msg);
+      }
+    }
+
+    // Absolute ceiling: no real day has ever produced this many genuine
+    // launches in one run. Hold the ENTIRE verified batch rather than
+    // trusting a burst this size -- release_status is deliberately left
+    // untouched for held games so they remain in this same query's
+    // candidate pool and get re-verified fresh on the next run (~10 min
+    // later) instead of being silently dropped forever.
+    let toRelease = verified;
+    if (verified.length > OUT_NOW_CEILING) {
+      const msg = `Event-creation breaker: ${verified.length} verified out_now candidates in one run exceeds the absolute ceiling of ${OUT_NOW_CEILING} -- holding the entire batch this run, will re-verify next poll. Examples: ${verified.slice(0, 10).map((g) => g.title).join(", ")}`;
+      console.warn(msg);
+      await sendAdminAlert("Blippd: out_now absolute ceiling tripped", msg);
+      toRelease = [];
+    }
+
     // Confirmed live 2026-08-03: guessing release_date=today here was actively
     // harmful, not just imprecise — it stamped "released today" on dozens of
     // Nintendo's most iconic, years-old titles (Breath of the Wild, Tears of
@@ -1159,16 +1224,19 @@ export async function runReleaseStatusUpdate(): Promise<number> {
     // works, the right fix is to leave release_date alone — it stays on the
     // placeholder (games/game-detail pages already render that as "TBA" via
     // isPlaceholderDate) until sync-release-dates resolves it for real via
-    // IGDB. Only release_status flips here, and only to get the row out of
-    // this fallback's own upcoming/out_today query so it isn't reprocessed
-    // every cycle.
-    await supabase
-      .from("games")
-      .update({ release_status: "released", updated_at: new Date().toISOString() })
-      .in("id", ids);
-    updated += ids.length;
+    // IGDB. Only release_status flips here, and only for rows actually being
+    // released this run -- held/rejected candidates keep their current
+    // status so they stay queryable next run instead of being silently lost.
+    const releaseIds = [...falseFlagged.map((g) => g.id), ...toRelease.map((g) => g.id)];
+    if (releaseIds.length > 0) {
+      await supabase
+        .from("games")
+        .update({ release_status: "released", updated_at: new Date().toISOString() })
+        .in("id", releaseIds);
+      updated += releaseIds.length;
+    }
 
-    for (const game of genuinelyNew) {
+    for (const game of toRelease) {
       await generateReleaseAlert(
         supabase,
         { id: game.id, title: game.title },
