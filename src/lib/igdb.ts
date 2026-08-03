@@ -70,8 +70,15 @@ function pickBestMatch(games: any[], searchName: string): any {
   return games.length === 1 ? games[0] : undefined;
 }
 
-// IGDB platform ID for Nintendo Switch
-const SWITCH_PLATFORM_ID = 130;
+// IGDB platform IDs for Nintendo Switch and Switch 2. Confirmed live
+// 2026-08-03: IGDB tags Switch 2-native titles (e.g. "Fire Emblem:
+// Fortune's Weave - Dagdan Collection") under a *separate* platform id
+// (508) rather than the original Switch's (130) -- filtering on 130 alone
+// silently excludes every such game from all three IGDB syncs (release
+// dates, hype scores, ratings), regardless of how good the title matching
+// is, since the game never even appears in the search results to match
+// against.
+const SWITCH_PLATFORM_IDS = "130,508";
 
 interface IGDBReleaseDateResult {
   releaseDate: string; // ISO date string YYYY-MM-DD
@@ -119,7 +126,7 @@ async function searchIGDB(
       Authorization: `Bearer ${token}`,
       "Content-Type": "text/plain",
     },
-    body: `search "${searchName.replace(/"/g, '\\"')}"; fields name,id; where platforms = (${SWITCH_PLATFORM_ID}); limit 5;`,
+    body: `search "${searchName.replace(/"/g, '\\"')}"; fields name,id; where platforms = (${SWITCH_PLATFORM_IDS}); limit 5;`,
   });
 
   if (!searchRes.ok) {
@@ -146,7 +153,7 @@ async function searchIGDB(
       Authorization: `Bearer ${token}`,
       "Content-Type": "text/plain",
     },
-    body: `fields date,platform,human; where game = ${bestMatch.id} & platform = ${SWITCH_PLATFORM_ID}; limit 1;`,
+    body: `fields date,platform,human; where game = ${bestMatch.id} & platform = (${SWITCH_PLATFORM_IDS}); limit 1;`,
   });
 
   if (!rdRes.ok) return null;
@@ -191,7 +198,7 @@ export async function getIGDBHype(
         Authorization: `Bearer ${token}`,
         "Content-Type": "text/plain",
       },
-      body: `search "${gameName.replace(/"/g, '\\"')}"; fields name,id,hypes; where platforms = (${SWITCH_PLATFORM_ID}); limit 5;`,
+      body: `search "${gameName.replace(/"/g, '\\"')}"; fields name,id,hypes; where platforms = (${SWITCH_PLATFORM_IDS}); limit 5;`,
     });
 
     if (!searchRes.ok) {
@@ -328,7 +335,7 @@ export async function getIGDBRating(
       Authorization: `Bearer ${token}`,
       "Content-Type": "text/plain",
     },
-    body: `search "${gameName.replace(/"/g, '\\"')}"; fields name,id,aggregated_rating,aggregated_rating_count; where platforms = (${SWITCH_PLATFORM_ID}) & aggregated_rating != null; limit 5;`,
+    body: `search "${gameName.replace(/"/g, '\\"')}"; fields name,id,aggregated_rating,aggregated_rating_count; where platforms = (${SWITCH_PLATFORM_IDS}) & aggregated_rating != null; limit 5;`,
   });
 
   if (!searchRes.ok) {
