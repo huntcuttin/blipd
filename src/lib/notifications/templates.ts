@@ -225,6 +225,15 @@ export function getTemplate(alertType: string): ((payload: AlertPayload) => { su
     case "out_now": return releaseToday;
     case "switch2_edition_announced": return switch2Edition;
     case "announced": return announced;
+    // retro_game_added is deliberately email-exempt, not a silent gap: it
+    // fans out to explicit franchise/retro-console followers via
+    // insertAndDispatch's own follower list for the in-app feed, but
+    // dispatch.ts's email resolution only knows user_game_follows/
+    // user_franchise_follows -- it has no user_retro_follows path at all,
+    // so a real email template here would need a new fanout mechanism to
+    // ever actually reach anyone via retro-console-only follows. Not worth
+    // that build for a feature this secondary (audit Phase 1 #19).
+    case "retro_game_added": return null;
     default: return null;
   }
 }
