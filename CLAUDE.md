@@ -205,8 +205,8 @@ compatible by definition.
 ### Launch readiness (recommendation, not a gate — founder launches when founder wants)
 Blippd is launch-ready when these are green:
 1. Launch-minute burst polling built and verified on one real release — **not yet built, awaiting go-ahead to start**
-2. #20 fixed (Resend errors surfaced, not logged as "sent") + bounce visibility — **#20 fixed 2026-08-02; bounce visibility not yet built**
-3. Magic link verified working live (#9 shipped, needs a real-device check including email-app in-app browsers) — **#9's code fixed 2026-08-02; live real-device verification not yet done**
+2. #20 fixed (Resend errors surfaced, not logged as "sent") + bounce visibility — **#20 fixed 2026-08-02; bounce visibility infra in progress 2026-08-02 (see Infrastructure Limits below for the webhook spec)**
+3. Magic link verified working live (#9 shipped, needs a real-device check including email-app in-app browsers) — **#9's code fixed 2026-08-02; live real-device verification not yet done. ⚠️ New, more urgent finding (2026-08-02, per Fable): verify custom SMTP is actually configured for Supabase Auth before anything else on this list — see Infrastructure Limits.**
 4. Zombie sale banners verified gone in prod (#2 shipped, needs a look) — **verified 2026-08-02: only one active named_sale_event remains, with a correct tagged-game count**
 5. One end-to-end dress rehearsal: follow a game, trigger a real alert, receive the email, click through — the full loop, on a phone — **not yet done**
 
@@ -214,21 +214,57 @@ Everything else in the audit is post-launch. When these five are green,
 the three launch posts (r/NintendoSwitch thread, Show HN, one Discord) are
 the next action.
 
-### Notification voice (direction set, final copy pending)
+### Notification voice (direction set, options drafted 2026-08-02, decision pending)
 Warmth over pure utility — the alert should feel like "it's here," not a
-receipt. Direction only: final template copy is a founder decision. **Any
-session writing or editing notification/email templates must prompt the
-founder with concrete copy options before shipping.** Same applies to the
-sender identity question (human name vs anonymous alerts@blippd.app) —
-unresolved, ask when email templates are touched.
+receipt. **Any session writing or editing notification/email templates must
+still prompt the founder before shipping — options below are drafted, not
+decided.**
+
+Fable drafted 3 copy variants per alert type (full text in session log, not
+duplicated here to avoid this doc going stale if the founder picks a mix):
+- **"Out now":** A) Excited friend (high energy, shortest) — B) Quiet
+  concierge (calm, restrained, ages best at high alert volume) — C) Insider's
+  nod (intimate, references the relationship, most distinctive but risks
+  feeling precious).
+- **"Price drop":** A) Leads with the number (scannable, deal-forward) —
+  B) Leads with the feeling (better open-curiosity, worse scanability) —
+  C) The scout's report ("we watch so you don't have to" — reinforces the
+  retention story directly).
+
+**Sender identity — recommendation, not yet decided:** keep alerts on
+`alerts@blippd.app` (a bot pretending to be a named founder inverts warmth
+into fakeness the moment a user notices), but set `reply-to` to an address
+the founder actually reads, and reserve genuine founder-voice sends (welcome
+email, occasional "what should Blippd watch next") for the few real
+low-frequency human touchpoints.
+
+**Urgency-line policy (recommendation):** eShop games never sell out, so
+"before it's gone" is always false and violates the no-manufactured-urgency
+rule. Real sale end dates are fine to state — as a date in the body
+("sale runs through March 3"), never as an imperative in the subject, and
+only when the pipeline actually has a real end date. No date → say nothing,
+never fall back to generic "limited time" language.
 
 ## Research Queue (2026-08-02, per Fable strategy pass)
 
 In priority order — these keep the project moving between check-ins:
-1. **Resend free-tier limits + bounce webhook setup** — launch-critical given email-is-the-product. Daily send cap, bounce webhook availability on free tier, upgrade cost if launch day exceeds limits. Also check Supabase auth rate limits and cron-job.org limits — "what breaks at 500 users" before Show HN, not after.
+1. ~~**Resend free-tier limits + bounce webhook setup**~~ — **answered 2026-08-02, see Infrastructure Limits below.**
 2. **Calibrate launch-time predictions against reality** — for the next 3-5 notable releases, log predicted vs actual eShop go-live time in this doc. Turns the four documented rules into a validated system. Zero-touch: just check timestamps after each release.
 3. **Draft the launch posts before launch day** — the pitch is the differentiator ("emails you the minute a game goes live on eShop"), not "another price tracker." Check r/NintendoSwitch + r/NintendoSwitch2 self-promo rules at time of posting — they change, and a launch-day ban is a real outcome.
 4. **NTPrices trajectory check at each monthly check-in** — the one competitor worth watching. If they add launch alerts, the differentiator window narrows.
+
+## Infrastructure Limits (2026-08-02, per Fable research — verified against primary docs)
+
+**Resend free tier:** 100 emails/day, 3,000/month — a hard 429 block (`daily_quota_exceeded`/`monthly_quota_exceeded`), not a queue or silent drop. Bounce rate must stay under 4% and spam rate under 0.08% across all tiers or sending gets temporarily paused entirely — this is why bounce visibility matters more than the quota itself. **Bounce/complaint webhooks are free-tier, not paid-gated.** Events: `email.bounced` (with `bounce.type`: Permanent=hard/never-deliverable, Transient=soft/may-retry, Undetermined=unclear), `email.delivery_delayed` (temporary, Resend auto-retries before falling back to bounced), `email.complained` (spam report → suppress immediately). Must verify webhook signatures. As of early 2026, Resend emits one event per recipient, not per email. Suggested policy (matches Resend's own reference): hard bounce → suppress immediately; soft bounce → counter, suppress at 3; complaint → suppress immediately. Cheapest upgrade: Pro, $20/mo, 50k emails, no daily cap, pay-as-you-go overage capped at 5x quota — the unlock is removing the daily cap, not new bounce tooling (that's already on free).
+
+**⚠️ Supabase auth email — the real risk, more urgent than Resend's cap:** Supabase's *default* auth mailer (used for magic links unless custom SMTP is configured) is capped at 2 messages/hour, restricted to the project's own team addresses, and explicitly non-production. **If custom SMTP isn't wired up, magic links to real users don't work at all — this needs verifying before anything else on the Launch Readiness list.** Once custom SMTP (presumably Resend) is configured: default rate limit becomes 30/hour (adjustable in Authentication → Rate Limits), 1 request/60s per user, links expire in 1 hour (both configurable). If Supabase auth emails route through the same Resend account as alert emails, they share the same 100/day pool.
+
+**cron-job.org free tier:** no job-count limit (fair-use), execution frequency down to 1/min, 30s execution timeout, 64KB max response, last 50 executions with 2-day response retention. Expect 4-40s of scheduling jitter, no punctuality guarantee. Paid tier bumps timeout to 5 min, response cap to 256KB.
+
+**What breaks first at ~500 users, in order:**
+1. Resend's 100/day cap — breaks on the *best* day, not a random one: a big Nintendo sale alerting 20-25% of 500 users in one cron run blows past 100 immediately, compounding with launch-post signup emails on the same pool. Upgrade to Pro before the public launch post, not after.
+2. Supabase's 30/hour auth cap (once SMTP is configured) — a launch post driving 30+ signups/hour silently fails magic links: the client call succeeds, the email never arrives, and the user's first impression is "this is broken." Raise it in the dashboard before launch.
+3. cron-job.org holds fine at this scale as long as the endpoint acks fast — the risk is the 30s timeout on the poll-and-dispatch job as it grows; return 200 immediately and process async if that ever becomes tight.
 
 ## Game Quality & Catalog Ranking (2026-08-02, per Fable)
 
