@@ -34,6 +34,7 @@ export interface AlgoliaHit {
   objectID: string;
   topLevelCategoryCode: string;
   eshopDetails?: unknown;
+  editions?: string[];
 }
 
 export interface AlgoliaSearchResponse {

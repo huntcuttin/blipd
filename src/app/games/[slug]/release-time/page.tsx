@@ -13,13 +13,32 @@ async function getGameForReleasePage(slug: string) {
     const supabase = createAdminClient();
     const { data } = await supabase
       .from("games")
-      .select("id, slug, title, publisher, cover_art, release_date, release_status")
+      .select("id, slug, title, publisher, cover_art, release_date, release_status, has_physical_release")
       .eq("slug", slug)
       .single();
     return data;
   } catch {
     return null;
   }
+}
+
+const MAJOR_FIRST_PARTY_PUBLISHERS = ["nintendo", "sega", "capcom"];
+
+// Predicts which of the four documented launch-time patterns applies to a
+// specific game, using Nintendo's own catalog data (publisher + whether the
+// listing has a physical edition) rather than showing all four generically.
+function predictLaunchRule(
+  publisher: string | null,
+  hasPhysicalRelease: boolean | null
+): LaunchTimeRule {
+  const pub = (publisher ?? "").toLowerCase();
+  if (MAJOR_FIRST_PARTY_PUBLISHERS.some((p) => pub.includes(p))) {
+    return LAUNCH_RULES[2]; // Major first-party — midnight ET
+  }
+  if (hasPhysicalRelease) {
+    return LAUNCH_RULES[1]; // Physical + digital — 9pm PT night before
+  }
+  return LAUNCH_RULES[0]; // Digital-only — 9am PT
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -36,6 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    alternates: { canonical: `/games/${slug}/release-time` },
     openGraph: {
       title,
       description,
@@ -98,6 +118,7 @@ export default async function ReleaseTimePage({ params }: Props) {
   const hasDate = game.release_date && !isPlaceholderDate(game.release_date);
   const isReleased = game.release_status === "released";
   const releaseDate = hasDate ? new Date(game.release_date + "T00:00:00Z") : null;
+  const predictedRule = predictLaunchRule(game.publisher, game.has_physical_release);
 
   return (
     <div className="px-4 pb-28 max-w-2xl mx-auto">
@@ -151,6 +172,10 @@ export default async function ReleaseTimePage({ params }: Props) {
               })}
             </p>
             <ReleaseTimeClient releaseDate={game.release_date} gameId={game.id} gameTitle={game.title} />
+            <div className="mt-4 pt-4 border-t border-[#222222] flex items-center justify-between">
+              <span className="text-[#888888] text-sm">Predicted launch time</span>
+              <span className="text-[#00ff88] text-sm font-bold">{predictedRule.time}</span>
+            </div>
           </>
         ) : (
           <>
@@ -163,26 +188,22 @@ export default async function ReleaseTimePage({ params }: Props) {
         )}
       </div>
 
-      {/* Launch time rules — only show for unreleased games */}
-      {!isReleased && (
+      {/* Predicted launch time — only shown for unreleased games with a real date */}
+      {!isReleased && hasDate && (
         <div className="mb-6">
           <h2 className="text-base font-bold text-white mb-3">
-            Nintendo eShop Launch Time Rules
+            How we predict this
           </h2>
-          <p className="text-[#888888] text-sm mb-4 leading-relaxed">
-            Nintendo doesn&apos;t publish exact launch times. Based on historical patterns,
-            here&apos;s when games typically go live on the US eShop:
+          <p className="text-[#888888] text-sm mb-3 leading-relaxed">
+            Nintendo doesn&apos;t publish exact launch times, so this is our best
+            estimate based on historical patterns — not officially confirmed.
           </p>
-          <div className="space-y-3">
-            {LAUNCH_RULES.map((rule) => (
-              <div key={rule.label} className="bg-[#111111] rounded-xl border border-[#222222] p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-white text-sm font-medium">{rule.label}</span>
-                  <span className="text-[#00ff88] text-sm font-bold">{rule.time}</span>
-                </div>
-                <p className="text-[#666666] text-xs leading-relaxed">{rule.description}</p>
-              </div>
-            ))}
+          <div className="bg-[#111111] rounded-xl border border-[#222222] p-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-white text-sm font-medium">{predictedRule.label}</span>
+              <span className="text-[#00ff88] text-sm font-bold">{predictedRule.time}</span>
+            </div>
+            <p className="text-[#666666] text-xs leading-relaxed">{predictedRule.description}</p>
           </div>
         </div>
       )}

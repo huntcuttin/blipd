@@ -249,6 +249,10 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
     (f) => /demo\s*available/i.test(f)
   );
 
+  // Nintendo's catalog tags each listing's editions (Digital vs Digital+Physical) —
+  // used to predict a game-specific release time instead of showing generic rules.
+  const hasPhysicalRelease = Array.isArray(hit.editions) && hit.editions.includes("Physical");
+
   return {
     nsuid: hit.nsuid || null,
     slug,
@@ -268,5 +272,6 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
     retro_platform: detectRetroPlatform(title),
     has_demo: hasDemo,
     genres: Array.isArray(hit.gameGenreLabels) ? hit.gameGenreLabels : (Array.isArray(hit.genres) ? hit.genres : []),
+    has_physical_release: hasPhysicalRelease,
   };
 }
