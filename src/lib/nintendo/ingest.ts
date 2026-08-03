@@ -22,7 +22,7 @@ import {
   generateRetroGameAlert,
 } from "./alerts";
 import type { AlgoliaHit } from "./types";
-import { isYearOnlyDate, isMonthOnlyDate, getPacificDateStr } from "@/lib/format";
+import { isYearOnlyDate, isMonthOnlyDate, getPacificDateStr, PLACEHOLDER_DATES } from "@/lib/format";
 import { sendAdminAlert } from "@/lib/notifications/admin-alert";
 
 // Shared PostgREST OR-clause fragment: "not junk", null-lenient.
@@ -1123,7 +1123,15 @@ export async function runReleaseStatusUpdate(): Promise<number> {
     .from("games")
     .select("id, title, current_price, nsuid")
     .in("release_status", ["upcoming", "out_today"])
-    .eq("release_date", "2099-12-31")
+    // Both placeholder conventions -- PLACEHOLDER_DATES is the single
+    // source (format.ts). Checking only "2099-12-31" left a real gap: a
+    // game stuck at "2020-01-01" with a real price and no .gte(today)
+    // filter here to catch it implicitly (unlike getUpcomingGamesSoon,
+    // which excludes it for free via its own gte(today) clause) would
+    // never be reached by this fallback at all. 0 rows match today, but
+    // this closes the gap structurally rather than relying on that staying
+    // true.
+    .in("release_date", PLACEHOLDER_DATES)
     .gt("current_price", 0);
   // Confirmed live 2026-08-03: 405 individual DLC/costume/song items and
   // 8 upgrade/edition bundles were sitting in this exact trap (placeholder

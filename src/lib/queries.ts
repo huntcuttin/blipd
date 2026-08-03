@@ -695,7 +695,7 @@ export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
     .from("games")
     .select("*")
     .in("release_status", ["upcoming", "out_today"])
-    .neq("is_suppressed", true)
+    .eq("is_suppressed", false)
     // Same DLC/bundle exclusion as getRecentReleases -- see its comment.
     .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
     .gte("release_date", today)
