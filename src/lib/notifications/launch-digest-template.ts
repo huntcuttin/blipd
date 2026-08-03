@@ -1,7 +1,11 @@
 import { formatPrice } from "@/lib/format";
 import { escapeHtml, eshopUrl, renderDigestShell } from "./email-shell";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.blippd.app";
+// .trim() guards against a trailing newline in the env var's stored value
+// (observed live: emailed links rendered as "blippd.app\r\n/game/..." --
+// most browsers silently strip the whitespace per the URL spec, but it's
+// not guaranteed across every mail client, so don't rely on that leniency.
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://www.blippd.app").trim();
 
 /** Cap on rows rendered before the email collapses into a "+ N more" note. */
 export const MAX_LAUNCH_ROWS = 15;
