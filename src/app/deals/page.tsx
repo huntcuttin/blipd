@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { formatPrice, getSaleEndLabel } from "@/lib/format";
+import GameCoverImage from "@/components/GameCoverImage";
 
 export const revalidate = 300; // 5 min ISR
 
@@ -155,15 +156,11 @@ function DealCard({ deal }: { deal: DealRow }) {
   return (
     <Link href={`/game/${deal.slug}`} className="block">
       <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors">
-        {deal.cover_art && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={deal.cover_art}
-            alt={deal.title}
-            className="w-[80px] aspect-[16/10] rounded-lg bg-[#1a1a1a] object-cover shrink-0"
-            loading="lazy"
-          />
-        )}
+        <GameCoverImage
+          src={deal.cover_art}
+          alt={deal.title}
+          className="w-[80px] aspect-[16/10] rounded-lg bg-[#1a1a1a] object-cover shrink-0"
+        />
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2">
             {deal.title}

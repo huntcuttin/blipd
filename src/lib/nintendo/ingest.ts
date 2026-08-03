@@ -24,6 +24,15 @@ import {
 import type { AlgoliaHit } from "./types";
 import { isYearOnlyDate, isMonthOnlyDate } from "@/lib/format";
 
+// Shared PostgREST OR-clause fragment: "not junk", null-lenient.
+// product_type.not.in excludes NULL under standard SQL three-valued logic
+// (confirmed live 2026-08-03), so this must stay null-lenient even though
+// the 2026-08-03 backfill cleared all existing NULLs -- a fresh ingest bug
+// could otherwise silently drop a real, unclassified game from a query
+// that uses this. Used by both runPriceUpdate's poll query and
+// runReleaseStatusUpdate's pricedUpcoming fallback.
+const NOT_JUNK_OR = "product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)";
+
 const QUALITY_PUBLISHERS = new Set([
   "Nintendo",
   "CAPCOM",
@@ -590,15 +599,9 @@ export async function runPriceUpdate(options?: {
     .from("games")
     .select("id, title, nsuid, current_price, original_price, is_on_sale, price_history, publisher")
     .not("nsuid", "is", null);
-  // product_type.not.in excludes NULL under standard SQL three-valued logic
-  // (confirmed live earlier this session), so the "not junk" clause must
-  // stay null-lenient even though the 2026-08-03 backfill cleared all
-  // existing NULLs -- a fresh ingest bug could otherwise silently drop a
-  // real, unclassified game out of the polling rotation entirely.
-  const notJunk = "product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)";
   pollQuery = followedIdList
-    ? pollQuery.or(`and(is_suppressed.eq.false,or(${notJunk})),id.in.(${followedIdList})`)
-    : pollQuery.or(`and(is_suppressed.eq.false,or(${notJunk}))`);
+    ? pollQuery.or(`and(is_suppressed.eq.false,or(${NOT_JUNK_OR})),id.in.(${followedIdList})`)
+    : pollQuery.or(`and(is_suppressed.eq.false,or(${NOT_JUNK_OR}))`);
   const { data: games, error } = await pollQuery
     .order("last_price_check", { ascending: true, nullsFirst: true })
     .limit(100);
@@ -1093,22 +1096,36 @@ export async function runReleaseStatusUpdate(): Promise<number> {
   // above miss entirely — but it previously flipped release_status silently
   // with no alert, meaning followers of those games never got an "out now"
   // notification at all.
-  const { data: pricedUpcoming } = await supabase
+  let pricedUpcomingQuery = supabase
     .from("games")
     .select("id, title, current_price")
     .in("release_status", ["upcoming", "out_today"])
     .eq("release_date", "2099-12-31")
-    .gt("current_price", 0)
-    // Confirmed live 2026-08-03: 405 individual DLC/costume/song items and
-    // 8 upgrade/edition bundles were sitting in this exact trap (placeholder
-    // date, real small price, no alert history yet) — isStandaloneGame()
-    // only stops *new* DLC from entering the catalog, it doesn't retroactively
-    // clean up rows inserted before that fix shipped. All 413 were suppressed
-    // (is_suppressed=true) after confirming eshopDetails.productType via
-    // Algolia. Filtering here makes that protection permanent — any future
-    // is_suppressed game (DLC or otherwise) never re-enters this alert path,
-    // rather than relying on a one-time cleanup staying complete forever.
-    .eq("is_suppressed", false);
+    .gt("current_price", 0);
+  // Confirmed live 2026-08-03: 405 individual DLC/costume/song items and
+  // 8 upgrade/edition bundles were sitting in this exact trap (placeholder
+  // date, real small price, no alert history yet) — isStandaloneGame()
+  // only stops *new* DLC from entering the catalog, it doesn't retroactively
+  // clean up rows inserted before that fix shipped. All 413 were suppressed
+  // (is_suppressed=true) after confirming eshopDetails.productType via
+  // Algolia. Filtering here makes that protection permanent — any future
+  // is_suppressed/junk game never re-enters this alert path, rather than
+  // relying on a one-time cleanup staying complete forever. product_type
+  // added alongside is_suppressed (2026-08-03 audit): is_suppressed alone
+  // missed rows classified junk by the backfill but never manually
+  // suppressed. A directly-followed game is exempt from both (Product
+  // Bible: a followed game always alerts) — reuses the same follow-id set
+  // computed above for releasingToday.
+  const pricedUpcomingFollowedIds =
+    followedIdsForRelease.size > 0
+      ? Array.from(followedIdsForRelease).map((id) => `"${id}"`).join(",")
+      : "";
+  pricedUpcomingQuery = pricedUpcomingFollowedIds
+    ? pricedUpcomingQuery.or(
+        `and(is_suppressed.eq.false,or(${NOT_JUNK_OR})),id.in.(${pricedUpcomingFollowedIds})`
+      )
+    : pricedUpcomingQuery.or(`and(is_suppressed.eq.false,or(${NOT_JUNK_OR}))`);
+  const { data: pricedUpcoming } = await pricedUpcomingQuery;
 
   if (pricedUpcoming && pricedUpcoming.length > 0) {
     const ids = pricedUpcoming.map((g) => g.id);
