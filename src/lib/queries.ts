@@ -144,7 +144,17 @@ export async function getRecentReleases(supabase: Client): Promise<Game[]> {
     .order("release_date", { ascending: false })
     .limit(100);
   if (error) throw error;
-  return (data ?? []).map(mapGame);
+  const games = (data ?? []).map(mapGame);
+  // Nintendo first-party leads regardless of exact release date -- pure
+  // recency sort buries Nintendo's own (comparatively infrequent) releases
+  // under the much higher daily volume of third-party/indie launches.
+  // Release date still breaks ties within each group, same pattern as
+  // getUpcomingGamesSoon and getPopularGames.
+  return games.sort((a, b) => {
+    const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
+    if (nintendoDiff !== 0) return nintendoDiff;
+    return b.releaseDate.localeCompare(a.releaseDate);
+  });
 }
 
 /** Top ~30 well-known released games for the onboarding "games you own" picker. */
@@ -645,16 +655,23 @@ export async function setRetroFollows(supabase: Client, userId: string, consoles
 export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
   const today = new Date().toISOString().split("T")[0];
   const sixtyDaysOut = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  // No upper date bound at the query level -- Nintendo announces some of its
+  // biggest titles many months out with a firm date attached (unlike most
+  // third-party listings), and a flat 60-day cutoff silently hid every one
+  // of those, so "Coming Soon" could show a single Nintendo game (whichever
+  // happened to land inside the window) even when others were confirmed for
+  // later this year. The real-dated upcoming pool is small (~60 games
+  // catalog-wide as of writing), so fetching all of it and applying the
+  // window in JS only for non-Nintendo titles is cheap.
   const { data, error } = await supabase
     .from("games")
     .select("*")
     .in("release_status", ["upcoming", "out_today"])
     .neq("is_suppressed", true)
     .gte("release_date", today)
-    .lte("release_date", sixtyDaysOut)
     .neq("release_date", "2099-12-31")
     .order("release_date", { ascending: true })
-    .limit(100);
+    .limit(200);
   if (error) throw error;
   const games = (data ?? []).map(mapGame);
   // Unlike /sales, getGameTier()'s score-based filter doesn't apply here —
@@ -664,6 +681,7 @@ export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
   // still lead (same reasoning as the games-you-own picker), release date
   // still governs the rest so the page stays "what's coming, soonest first."
   return games
+    .filter((g) => isNintendoFirstParty(g) || g.releaseDate <= sixtyDaysOut)
     .sort((a, b) => {
       const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
       if (nintendoDiff !== 0) return nintendoDiff;
