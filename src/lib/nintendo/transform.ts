@@ -22,6 +22,13 @@ export function isStandaloneGame(hit: AlgoliaHit): boolean {
   // real release date synced and permanently match the placeholder-date +
   // real-price fallback in runReleaseStatusUpdate.
   if (hit.eshopDetails?.productType === "ADD_ON_CONTENT") return false;
+  // BUNDLE (deluxe editions, character/upgrade packs sold as their own SKU)
+  // carries the exact same false-launch-alert risk as ADD_ON_CONTENT, and
+  // title regex alone misses it -- "PGA TOUR 2K25 Legend Edition Year 2"
+  // (a real BUNDLE hit, confirmed live 2026-08-03) contains none of the
+  // NON_GAME_PATTERNS keywords below, so it fell straight through and
+  // re-entered the catalog as a followable "game."
+  if (hit.eshopDetails?.productType === "BUNDLE") return false;
   // Filter out free utilities ($0 items that aren't real games)
   if (hit.msrp <= 0 && FREE_UTILITY.test(hit.title)) return false;
   // Filter out DLC, season passes, bundles, demos, etc. — kept as a

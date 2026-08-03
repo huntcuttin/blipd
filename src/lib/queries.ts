@@ -98,6 +98,9 @@ export async function getGamesOnSale(supabase: Client): Promise<Game[]> {
     .select("*")
     .eq("is_on_sale", true)
     .eq("is_suppressed", false)
+    // Junk carries the deepest "discounts" (a $0.99 costume piece reading as
+    // 90% off) -- same null-lenient OR as getRecentReleases, see its comment.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
     .order("discount", { ascending: false })
     .limit(500);
   if (error) throw error;
@@ -237,10 +240,20 @@ export async function searchGames(
       filters: `topLevelCategoryCode:GAMES AND ${platformFilter}`,
     });
 
-    // Only keep hits where the title actually contains the query (avoids fuzzy false positives)
+    // Only keep hits where the title actually contains the query (avoids fuzzy false positives).
+    // eshopDetails.productType is Nintendo's own authoritative signal (see
+    // isStandaloneGame's comment) -- isAddon's title regex alone missed real
+    // junk like "PGA TOUR 2K25 Legend Edition Year 2" (a BUNDLE with no
+    // addon-pattern keyword in its title), and search is the one place a
+    // user can still follow junk directly, sidestepping every catalog-level
+    // filter. Null-lenient: only exclude an exact ADD_ON_CONTENT/BUNDLE match.
     const queryLower = query.toLowerCase();
     const nsuids = result.hits
       .filter((h) => !isAddon(h.title ?? ""))
+      .filter((h) => {
+        const pt = h.eshopDetails?.productType;
+        return pt !== "ADD_ON_CONTENT" && pt !== "BUNDLE";
+      })
       .filter((h) => (h.title ?? "").toLowerCase().includes(queryLower))
       .map((h) => h.nsuid)
       .filter(Boolean) as string[];
@@ -249,13 +262,14 @@ export async function searchGames(
     const escaped = query.replace(/[%_]/g, "\\$&");
     const [eshopResult, announcedResult] = await Promise.all([
       nsuids.length > 0
-        ? supabase.from("games").select("*").in("nsuid", nsuids).limit(20)
+        ? supabase.from("games").select("*").in("nsuid", nsuids).eq("is_suppressed", false).limit(20)
         : Promise.resolve({ data: [], error: null }),
       supabase
         .from("games")
         .select("*")
         .is("nsuid", null)
         .eq("release_status", "upcoming")
+        .eq("is_suppressed", false)
         .ilike("title", `%${escaped}%`)
         .limit(10),
     ]);
@@ -281,6 +295,7 @@ export async function searchGames(
     const { data, error } = await supabase
       .from("games")
       .select("*")
+      .eq("is_suppressed", false)
       .ilike("title", `%${escaped}%`)
       .order("title")
       .limit(20);

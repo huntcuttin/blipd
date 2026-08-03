@@ -39,6 +39,11 @@ async function getDeals(): Promise<DealRow[]> {
     .select("slug, title, publisher, cover_art, current_price, original_price, discount, is_all_time_low, sale_end_date")
     .eq("is_on_sale", true)
     .eq("is_suppressed", false)
+    // Same null-lenient junk filter as getGamesOnSale/getRecentReleases --
+    // this page also emits schema.org ItemList/Offer markup into Google, so
+    // junk here isn't just a UX issue, it's structured data the search
+    // engine reads as a real product listing.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
     .order("discount", { ascending: false })
     .limit(200);
   if (error) throw error;
