@@ -47,6 +47,7 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 - Infra is effectively free at this scale (Vercel/Supabase/Resend free tiers) — there's no cost to cover.
 - If hosting costs ever actually appear, a one-time Ko-fi link is the zero-touch answer (no account setup, no payout threshold, no ad-tag maintenance) — not an ad network.
 - Stripe removed from roadmap entirely (unchanged from before).
+- **Confirming evidence (2026-08-02, per Fable research):** Deku Deals — a multi-year incumbent with strong brand loyalty — earns an estimated ~$471/month from Patreon (~245 paid of 571 total members). Carbon-style ads need 5k+ engaged users to pay meaningfully at all; voluntary tip jars top out around 2-3% of active users paying ~$2/month even for an established brand. Neither is worth planning around at POC scale — this doesn't change the decision above, it just confirms it was the right call. (NT Deals' paywalled-feature model — desired-price threshold + multi-region — is the only pattern in this space that generates real revenue, but it requires exactly the kind of user-hostile feature-gating Blippd is explicitly trying not to do.)
 
 ## Database Schema (Core Tables — Supabase public schema)
 
@@ -275,7 +276,9 @@ GET https://api.isthereanydeal.com/games/history/v2
 
 Per-game release time pages: `/games/[slug]/release-time`
 
-Nobody owns per-game launch time answers. Low competition, high intent.
+~~Nobody owns per-game launch time answers. Low competition, high intent.~~ — **needs a correction (2026-08-02, per Fable research):** true that no deal-tracking competitor (NT Deals, Deku, NTPrices) has release-time pages, but those SERPs are actually owned by gaming press (IGN, Nintendo Life, Polygon), Nintendo's own pages, and Wikipedia — all near-DA100. A new domain won't crack that ranking regardless of technical SEO quality; keep these pages for their genuine UX value (the launch-time prediction helps users directly), not as a near-term traffic play.
+
+**The actually-viable programmatic SEO angle, per the same research: per-game price-history/current-sale-status pages** ("[game] price," "[game] Nintendo eShop sale") — this is what Deku Deals and NTPrices both rank for. Worth considering as a future SEO investment if/when that becomes a priority; not something to build now given the users-first sequencing below.
 
 Nintendo eShop US launch time rules:
 - Digital-only -> 9:00 AM PT on release day
@@ -313,11 +316,12 @@ Competitor comparison page: `/vs/nt-deals` — honest comparison table, surfaces
 - "Millions of users" (self-reported) — realistic US MAU: 50k-150k
 
 Their exploitable weaknesses:
-- Switch 2 catalog broken since June 2025 launch (9+ months)
-- Ads are aggressive — triggered by search, forces subscription to escape
-- Dead support — no email response, account restore broken
+- ~~Switch 2 catalog broken since June 2025 launch~~ — **stale as of 2026-08-02, per Fable research: fixed.** Switch 2 games now list with current prices and sale end dates across multiple categories. No longer a differentiator — drop this from any comparison copy (`/vs/nt-deals` included).
+- **New (2026-08-02): login-required-for-existing-lists friction.** A recent App Store review describes the app newly gating access to existing watchlists behind a forced login — the reviewer deleted the app over it and recommended Deku Deals instead.
+- **New (2026-08-02): notifications gated behind popup ads.** Same review: watchlist notifications reportedly require watching a popup ad to receive.
+- **New (2026-08-02): reload/search failures during high-traffic periods.** A separate review (Jan 2026) confirms the app failed to reload, making it impossible to see or search new sales — exactly when users need it most.
+- Dead support — no email response, account restore broken (confirmed still true)
 - Notification spam model — no named sale event awareness
-- Founder's attention is on Dubai real estate, not the product
 
 What they do well (don't underestimate):
 - Push notifications that fire reliably
@@ -328,9 +332,16 @@ What they do well (don't underestimate):
 ### Deku Deals
 
 - Incumbent, multi-platform (Switch + PS + Xbox + Steam)
-- Email alerts, no push notifications
-- 76% direct traffic — strong brand loyalty but weak mobile
+- ~~Email alerts, no push notifications~~ — **stale as of 2026-08-02: Deku now has an iOS + Android app with push notifications.** The Android app has been on Google Play since December 2023 (over a year old, likely already adopted by their existing base). "Email-only" is no longer an accurate differentiator for Blippd to lean on.
+- **New (2026-08-02): quietly monetizing via Patreon.** Homepage now advertises "Deku Supporters browse ad-free and get deal alerts first" — a paid-perk model, not the pure free-tier it used to be. Concrete numbers: ~$471/month from ~245 paid members out of 571 total Patreon members (source: PatreonStats). Useful monetization comparable — see Monetization section.
+- 76% direct traffic — strong brand loyalty but weak mobile (still true, though the mobile gap narrowed with the app launch)
 - Runs tasteful banner ads
+
+### New entrants (2026-08-02, per Fable research)
+
+- **NTPrices.com — the most credible new competitor.** A Nintendo Switch/Switch 2 eShop price tracker launched by the PlatPrices team (an established, trusted brand in PlayStation deal-tracking) as a sister site, reusing their proven price-tracking engine. Checks 50+ regional storefronts, full price history, free email alerts, no account required to browse. Starts with real brand equity and an existing cross-promotable user base — worth monitoring closely, potentially worth a direct mention on `/vs/nt-deals` or a new comparison page if it gains traction.
+- **eShop Collection: Deals (Android)** — gained real traction: 1,810+ reviews at 4.7 stars as of mid-2026, added custom price alerts + an in-app notification inbox in a July 2025 update. Android-first, not US-specific — worth monitoring, not urgent.
+- PageCrawl.io — a generic DIY URL price-tracker now targeting the Switch niche, not a games-catalog/follows-based tracker. Different audience, not a direct competitor.
 
 ## Future Ideas Backlog (Don't Build Yet)
 
@@ -392,6 +403,15 @@ When helping with Blippd, default to:
 - Paywalling core features. Desired price threshold behind NT Deals premium = resentment. Keep the free tier generous.
 - No way to filter unreleased games from watchlist. Small but frequently mentioned.
 - Price charts that are hard to tap on mobile. Interactive charts need large touch targets.
+
+**Concrete failure-mode examples (2026-08-02, per Fable research — across the broader deal-alert space, not just NT/Deku):**
+- **"Sold out by the time I got the alert."** A Slickdeals user on a Switch stock drop: alert arrived 27 minutes after the deal posted — already sold out. This is exactly the scenario Blippd's 10-min cron cadence exists to prevent; a slower pipeline than this is worse than no alert at all.
+- **Silent bounce = silent alert death.** Users went weeks/months without alerts because one bounced email silently disabled all future sends, with zero indication to the user that anything had stopped. Confirmed via Slickdeals support's own admission. This is a real risk for Blippd's Resend-based email alerts too — worth checking whether a bounce silently suppresses future sends for that user with no visibility.
+- **Stale subscriptions.** Users report getting alerts for items they already removed from their list — a dedup/cleanup gap, not a delivery gap.
+- **Ad-gated notifications (NT Deals specific).** A reviewer says watchlist notifications require watching a popup ad first. Users who don't tolerate that simply never see their alert.
+- **Spam trains users to ignore.** Alerts that don't match a user's actual subscriptions get flooded, and users adapt by ignoring notifications from the app entirely — the batching/dedup discipline already built into Blippd (5+ price alerts = one digest) directly guards against this.
+
+The through-line: across this whole space, the trust failure is almost always "I didn't get it" or "I got it too late," essentially never "I got too many." Blippd's passive alert model (follow → alert fires → buy on console, no ad-gating, no login-wall surprises) already sidesteps most of what's actively breaking trust for NT Deals right now.
 
 ### Blippd design principles derived from this
 - Notifications must fire fast. If an alert is delayed more than a few minutes, it feels broken.
