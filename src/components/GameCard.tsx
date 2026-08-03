@@ -9,7 +9,7 @@ import { useFollow } from "@/lib/FollowContext";
 import FollowButton from "./FollowButton";
 import GameCoverImage from "./GameCoverImage";
 
-export default memo(function GameCard({ game, ownAction }: { game: Game; ownAction?: () => void }) {
+export default memo(function GameCard({ game, ownAction, justOwned }: { game: Game; ownAction?: () => void; justOwned?: boolean }) {
   const { getTargetPrice } = useFollow();
   const targetPrice = getTargetPrice(game.id);
   const daysUntilRelease = getDaysUntil(game.releaseDate);
@@ -151,13 +151,18 @@ export default memo(function GameCard({ game, ownAction }: { game: Game; ownActi
           <FollowButton gameId={game.id} />
           {ownAction && (
             <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); ownAction(); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#7c3aed]/15 text-[#a78bfa] text-[10px] font-medium border border-[#7c3aed]/20 hover:bg-[#7c3aed]/25 transition-colors"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!justOwned) ownAction(); }}
+              disabled={justOwned}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-colors ${
+                justOwned
+                  ? "bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30"
+                  : "bg-[#7c3aed]/15 text-[#a78bfa] border-[#7c3aed]/20 hover:bg-[#7c3aed]/25"
+              }`}
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
-              I own this
+              {justOwned ? "Added!" : "I own this"}
             </button>
           )}
         </div>

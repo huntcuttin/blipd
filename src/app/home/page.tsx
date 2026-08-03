@@ -14,7 +14,13 @@ import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGamesByIds, getAllFranchises, searchGames, getUserProfile } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
+import { getGameTier } from "@/lib/ranking";
 import type { Game, Franchise } from "@/lib/types";
+
+// How long a game stays visible (with an "Added!" confirmation) after marking
+// it owned, before actually dropping off its list — an instant vanish reads
+// as the tap not having registered.
+const OWN_CONFIRMATION_MS = 1400;
 
 export default function HomePage() {
   const router = useRouter();
@@ -22,6 +28,19 @@ export default function HomePage() {
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { user, consolePreference } = useAuth();
   const { followedGameIds, followedFranchiseIds, ownedGameIds, toggleOwnGame, loading: followContextLoading } = useFollow();
+  const [justOwnedIds, setJustOwnedIds] = useState<Set<string>>(new Set());
+
+  const handleOwn = (gameId: string) => {
+    setJustOwnedIds((prev) => new Set(prev).add(gameId));
+    toggleOwnGame(gameId);
+    setTimeout(() => {
+      setJustOwnedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(gameId);
+        return next;
+      });
+    }, OWN_CONFIRMATION_MS);
+  };
 
   // onboarding_completed is otherwise only checked once, in the auth callback
   // right after login — a user who abandons onboarding mid-flow keeps a live
@@ -70,8 +89,25 @@ export default function HomePage() {
 
   // Split followed games into categories. Owned games are intentionally excluded
   // from Home entirely — that collection lives tucked away in Settings instead.
-  const onSale = followedGames.filter((g) => g.isOnSale && !ownedGameIds.has(g.id));
-  const watching = followedGames.filter((g) => !g.isOnSale && !ownedGameIds.has(g.id));
+  // A just-marked-owned game stays visible (with confirmation styling) for
+  // OWN_CONFIRMATION_MS rather than vanishing the instant it's toggled.
+  const isVisible = (g: Game) => !ownedGameIds.has(g.id) || justOwnedIds.has(g.id);
+  const onSale = followedGames.filter((g) => g.isOnSale && isVisible(g));
+  // Nintendo first-party (or otherwise Tier 1) upcoming releases surface as
+  // their own section — the launch-minute differentiator is the headline
+  // feature, so an upcoming game you follow deserves more prominence on Home
+  // than a released game you're just watching for a price drop.
+  const comingSoon = followedGames
+    .filter((g) => g.releaseStatus !== "released" && isVisible(g))
+    .sort((a, b) => {
+      const tierDiff = getGameTier(a) - getGameTier(b);
+      if (tierDiff !== 0) return tierDiff;
+      return a.releaseDate.localeCompare(b.releaseDate);
+    });
+  const comingSoonIds = new Set(comingSoon.map((g) => g.id));
+  const watching = followedGames.filter(
+    (g) => !g.isOnSale && isVisible(g) && !comingSoonIds.has(g.id)
+  );
 
   const hasPersonalContent = followedGames.length > 0 || followedFranchiseList.length > 0;
 
@@ -188,7 +224,12 @@ export default function HomePage() {
               {onSale.length <= 4 ? (
                 <div className="space-y-2">
                   {onSale.map((game) => (
-                    <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                      ownAction={() => handleOwn(game.id)}
+                      justOwned={justOwnedIds.has(game.id)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -206,13 +247,39 @@ export default function HomePage() {
             </section>
           )}
 
+          {/* Coming Soon — followed upcoming games, Nintendo first-party and
+              other Tier 1 titles surfaced first. The launch-minute alert is
+              the product's headline differentiator, so an upcoming game you
+              follow earns more prominence here than one you're just
+              watching for a price drop. */}
+          {comingSoon.length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-bold text-[#00aaff] tracking-wider mb-2 uppercase">Coming Soon</h2>
+              <div className="space-y-2">
+                {comingSoon.map((game) => (
+                  <GameCard
+                    key={game.id}
+                    game={game}
+                    ownAction={() => handleOwn(game.id)}
+                    justOwned={justOwnedIds.has(game.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Watching for Deals */}
           {watching.length > 0 && (
             <section>
               <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2 uppercase">Watching for Deals</h2>
               <div className="space-y-2">
                 {watching.map((game) => (
-                  <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
+                  <GameCard
+                    key={game.id}
+                    game={game}
+                    ownAction={() => handleOwn(game.id)}
+                    justOwned={justOwnedIds.has(game.id)}
+                  />
                 ))}
               </div>
             </section>
