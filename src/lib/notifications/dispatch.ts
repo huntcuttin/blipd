@@ -23,6 +23,20 @@ interface AlertGame {
   nsuid: string | null;
   nintendo_url: string | null;
   franchise: string | null;
+  is_suppressed: boolean;
+  product_type: string | null;
+}
+
+// A game is junk/suppressed for FRANCHISE-fanout purposes only -- direct
+// game follows are exempt everywhere (Product Bible: "a followed game
+// always alerts regardless of tier; the user opted in"). Every documented
+// false-alert incident this project has had reached a real inbox via
+// franchise fanout, never via a direct follow, so this is the one place a
+// junk/DLC/bundle item must never reach a user who didn't specifically
+// follow it.
+function isJunkForFanout(game: AlertGame): boolean {
+  if (game.is_suppressed) return true;
+  return game.product_type === "ADD_ON_CONTENT" || game.product_type === "BUNDLE";
 }
 
 // Which alert types group together, and how many it takes to collapse into one
@@ -70,7 +84,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   // Get alerts created since the given timestamp
   const { data: alerts, error } = await supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, nintendo_url, franchise )")
+    .select("id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, nintendo_url, franchise, is_suppressed, product_type )")
     .gte("created_at", since)
     .order("created_at", { ascending: true });
 
@@ -164,7 +178,10 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       .filter((f) => f[prefCol])
       .map((f) => f.user_id);
 
-    const franchiseId = game.franchise ? franchiseIdMap.get(game.franchise) : undefined;
+    // Franchise fanout is where every junk-content false alert this project
+    // has had actually reached a real inbox — a directly-followed game
+    // always alerts regardless of this check (see isJunkForFanout).
+    const franchiseId = game.franchise && !isJunkForFanout(game) ? franchiseIdMap.get(game.franchise) : undefined;
     const franchiseFollowerIds = franchiseId
       ? (franchiseFollowsByFranchise.get(franchiseId) ?? [])
           .filter((f) => f[prefCol])
