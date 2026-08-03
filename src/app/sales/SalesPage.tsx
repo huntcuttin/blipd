@@ -91,14 +91,15 @@ export default function SalesPage() {
     return () => clearTimeout(timer);
   }, [search, consolePreference]);
 
-  const allGames = deduplicateGames(games ?? []);
+  const allGames = useMemo(() => deduplicateGames(games ?? []), [games]);
 
   const emptyFranchises = useMemo(() => new Set<string>(), []);
 
   // Filter by event if active
-  const eventFilteredGames = activeEventId
-    ? allGames.filter((g) => g.saleEventId === activeEventId)
-    : allGames;
+  const eventFilteredGames = useMemo(
+    () => (activeEventId ? allGames.filter((g) => g.saleEventId === activeEventId) : allGames),
+    [allGames, activeEventId]
+  );
 
   // Filter by genre
   const genreFiltered = useMemo(() => {
@@ -118,8 +119,11 @@ export default function SalesPage() {
     [genreFiltered, isFollowingGame]
   );
 
-  const allTimeLows = tierFiltered.filter((g) => g.isAllTimeLow);
-  const sortedSales = sortGames(tierFiltered, sort, emptyFranchises);
+  const allTimeLows = useMemo(() => tierFiltered.filter((g) => g.isAllTimeLow), [tierFiltered]);
+  const sortedSales = useMemo(
+    () => sortGames(tierFiltered, sort, emptyFranchises),
+    [tierFiltered, sort, emptyFranchises]
+  );
 
   return (
     <div className="px-4">
