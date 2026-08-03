@@ -238,12 +238,23 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
   const releaseStatus = releaseDate === "2099-12-31" && msrp > 0
     ? "released"
     : computeReleaseStatus(releaseDate);
-  const publisher = hit.softwarePublisher || "Unknown";
   const franchiseStr = typeof hit.franchises === "string" ? hit.franchises : "";
   const rawFranchise = franchiseStr.length > 0 && franchiseStr !== "[]" && franchiseStr.trim() !== "" ? franchiseStr : null;
   const detectedFranchise = rawFranchise || detectFranchise(title);
   // Normalize known variants (e.g. "Pokémon" → "Pokemon" to match detectFranchise output)
   const franchise = detectedFranchise ? normalizeFranchiseName(detectedFranchise) : null;
+  // Nintendo's own Algolia backend appears to default softwarePublisher to
+  // "Nintendo" for pre-announcement placeholder listings that don't have
+  // real publisher metadata wired up yet (observed live: two confirmed
+  // third-party indie titles, both with no nsuid and no franchise match,
+  // carried publisher="Nintendo" and it never self-corrected once the
+  // listing rotated out of every sync query — see CLAUDE.md session log
+  // 2026-08-02 overnight). A listing with no confirmed SKU (no nsuid) and
+  // no franchise match to a known Nintendo series is not credibly
+  // Nintendo's own game, so don't trust the claim in that case.
+  const publisherClaim = hit.softwarePublisher || "Unknown";
+  const publisher =
+    publisherClaim === "Nintendo" && !hit.nsuid && !franchise ? "Unknown" : publisherClaim;
 
   const hasDemo = Array.isArray(hit.generalFilters) && hit.generalFilters.some(
     (f) => /demo\s*available/i.test(f)
