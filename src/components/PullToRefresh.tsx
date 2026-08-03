@@ -1,31 +1,41 @@
 "use client";
 
 import { useCallback, useRef, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 const THRESHOLD = 80;
 
 export default function PullToRefresh({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef(0);
+  const startX = useRef(0);
   const isPulling = useRef(false);
 
   const onTouchStart = useCallback((e: TouchEvent) => {
     if (window.scrollY > 0 || refreshing) return;
     startY.current = e.touches[0].clientY;
+    startX.current = e.touches[0].clientX;
     isPulling.current = true;
   }, [refreshing]);
 
   const onTouchMove = useCallback((e: TouchEvent) => {
     if (!isPulling.current) return;
-    const diff = e.touches[0].clientY - startY.current;
-    if (diff <= 0) {
+    const diffY = e.touches[0].clientY - startY.current;
+    const diffX = e.touches[0].clientX - startX.current;
+    // A horizontal-scroll carousel (All-Time-Lows, franchise rows, ...) can
+    // pick up a touch that starts at scrollY 0 too — bail out entirely once
+    // the gesture reads as sideways rather than a downward pull, instead of
+    // fighting it with preventDefault based on vertical delta alone.
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      isPulling.current = false;
       setPullDistance(0);
       return;
     }
-    const dampened = Math.min(diff * 0.4, THRESHOLD * 1.5);
+    if (diffY <= 0) {
+      setPullDistance(0);
+      return;
+    }
+    const dampened = Math.min(diffY * 0.4, THRESHOLD * 1.5);
     setPullDistance(dampened);
     if (dampened > 10) e.preventDefault();
   }, []);
@@ -36,16 +46,17 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
     if (pullDistance >= THRESHOLD) {
       setRefreshing(true);
       setPullDistance(THRESHOLD * 0.4);
-      router.refresh();
-      // Give the refresh a moment to process
-      setTimeout(() => {
-        setRefreshing(false);
-        setPullDistance(0);
-      }, 1000);
+      // router.refresh() only re-fetches server-rendered data — every page
+      // here loads its actual visible data client-side via Supabase queries
+      // in useEffect, so refresh() alone was a no-op from the user's POV. A
+      // full reload is heavier but is the only thing that genuinely
+      // refreshes what pull-to-refresh promises, given no shared client-side
+      // query-invalidation mechanism exists across pages.
+      window.location.reload();
     } else {
       setPullDistance(0);
     }
-  }, [pullDistance, router]);
+  }, [pullDistance]);
 
   useEffect(() => {
     document.addEventListener("touchstart", onTouchStart, { passive: true });
