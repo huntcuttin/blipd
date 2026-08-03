@@ -396,11 +396,18 @@ export async function batchGetRatings(
   return { results, attemptedIds };
 }
 
-// Rate-limited batch processor with circuit breaker for 429s
+// Rate-limited batch processor with circuit breaker for 429s. Returns
+// attemptedIds alongside results (same shape as batchGetRatings, added for
+// the same reason -- see its comment) so a caller can tell a genuine
+// IGDB no-match apart from a game that never got its turn because the
+// breaker tripped mid-batch. Without that distinction, marking every
+// un-matched game as "no match" would also permanently deprioritize
+// rate-limit casualties that were never actually checked.
 export async function batchGetReleaseDates(
   games: { id: string; title: string }[]
-): Promise<Map<string, { releaseDate: string; matchedName: string }>> {
+): Promise<{ results: Map<string, { releaseDate: string; matchedName: string }>; attemptedIds: Set<string> }> {
   const results = new Map<string, { releaseDate: string; matchedName: string }>();
+  const attemptedIds = new Set<string>();
   let consecutive429s = 0;
   const CIRCUIT_BREAKER_THRESHOLD = 3;
 
@@ -409,6 +416,7 @@ export async function batchGetReleaseDates(
       console.warn(`  IGDB circuit breaker tripped after ${consecutive429s} consecutive 429s — stopping early`);
       break;
     }
+    attemptedIds.add(game.id);
 
     try {
       const result = await getIGDBReleaseDate(game.title);
@@ -436,5 +444,5 @@ export async function batchGetReleaseDates(
     await sleep(500);
   }
 
-  return results;
+  return { results, attemptedIds };
 }
