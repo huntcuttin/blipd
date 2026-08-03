@@ -127,6 +127,14 @@ export async function GET(request: Request) {
             }))
             .sort((a, b) => b.discount - a.discount); // Highest discount first
 
+          // Nothing on sale this week -- an empty "0 games on sale" digest
+          // is exactly the noise-between-Wednesday-nights the Bible warns
+          // against, not a genuine "here's what changed" moment.
+          if (userSaleGames.length === 0) {
+            skipped++;
+            return;
+          }
+
           const { subject, html } = weeklyDigest({
             salesCount: userSaleGames.length,
             games: userSaleGames.slice(0, 10), // Cap at 10 games per digest

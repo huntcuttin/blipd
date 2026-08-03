@@ -19,7 +19,13 @@ export interface PushPayload {
   tag?: string;
 }
 
-export async function sendPushToUser(userId: string, payload: PushPayload): Promise<number> {
+export interface PushResult {
+  /** How many subscriptions existed to try. 0 means "nothing to attempt", not a failure. */
+  attempted: number;
+  succeeded: number;
+}
+
+export async function sendPushToUser(userId: string, payload: PushPayload): Promise<PushResult> {
   ensureVapid();
   const supabase = createAdminClient();
   const { data: subs } = await supabase
@@ -27,7 +33,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     .select("endpoint, p256dh, auth")
     .eq("user_id", userId);
 
-  if (!subs || subs.length === 0) return 0;
+  if (!subs || subs.length === 0) return { attempted: 0, succeeded: 0 };
 
   const results = await Promise.allSettled(
     subs.map((sub) =>
@@ -45,7 +51,10 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     ) as Promise<unknown>[]
   );
 
-  return results.filter((r) => r.status === "fulfilled").length;
+  return {
+    attempted: subs.length,
+    succeeded: results.filter((r) => r.status === "fulfilled").length,
+  };
 }
 
 export async function sendPushToUsers(userIds: string[], payload: PushPayload): Promise<number> {
@@ -53,6 +62,6 @@ export async function sendPushToUsers(userIds: string[], payload: PushPayload): 
     userIds.map((id) => sendPushToUser(id, payload))
   );
   return results
-    .filter((r): r is PromiseFulfilledResult<number> => r.status === "fulfilled")
-    .reduce((sum, r) => sum + r.value, 0);
+    .filter((r): r is PromiseFulfilledResult<PushResult> => r.status === "fulfilled")
+    .reduce((sum, r) => sum + r.value.succeeded, 0);
 }

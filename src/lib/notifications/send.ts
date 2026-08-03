@@ -62,15 +62,16 @@ export async function sendAlert(
         case "email":
           return sendEmailAlert(userId, payload);
         case "web_push":
-          // sendPushToUser resolves the count of subscriptions successfully
-          // pushed to, not a boolean — comparing it to `true` below would
-          // never match, so a genuinely successful push was never counted
-          // as a success. Also logs to notification_log, which push never
-          // did before — without that, dispatch's dedup check (based on
-          // notification_log rows) couldn't catch a repeat push if this
-          // job runs again for the same alert.
-          return sendPushToUser(userId, alertToPushPayload(payload)).then(async (count) => {
-            const success = count > 0;
+          // sendPushToUser distinguishes "no subscriptions to try" from
+          // "had subscriptions, all failed" -- every user in production has
+          // 0 push subscriptions (push has never fired once, per CLAUDE.md),
+          // so treating attempted=0 the same as a real failure logged a
+          // spurious "failed" web_push row to notification_log for every
+          // single email-only user on every single alert this whole time.
+          // Only log when there was actually something to attempt.
+          return sendPushToUser(userId, alertToPushPayload(payload)).then(async ({ attempted, succeeded }) => {
+            if (attempted === 0) return false;
+            const success = succeeded > 0;
             await logNotification(userId, payload.alertId, "web_push", success ? "sent" : "failed");
             return success;
           });
