@@ -21,3 +21,21 @@ Operations section.
   again, check whether the migration just needs re-running before
   re-running this script — a missing index isn't the same problem as a
   data conflict.
+
+- `backfill_product_type.py` — one-time classification of `games.product_type`
+  (added 20260803_007) via Nintendo's own Algolia data. Ongoing catalog sync
+  can never label most junk itself: `isStandaloneGame()` drops ADD_ON_CONTENT
+  hits *before* the row is ever created, so the DB rows that *are* that
+  content predate the filter and are structurally invisible to it. Run
+  2026-08-03: 2,869 NULL rows classified — 1,153 ADD_ON_CONTENT, 374 BUNDLE,
+  1,251 TITLE, 157 UNKNOWN (unresolvable — mostly nsuid-null placeholder
+  listings). Only ever touches rows where `product_type IS NULL`, so it's
+  safe to re-run periodically as a catch-up sweep for anything that slips
+  through ingest uncounted (e.g. Algolia transient errors during a prior
+  run — those get written as UNKNOWN, not left NULL, so re-running won't
+  double-count them; if you want to re-attempt UNKNOWN rows specifically,
+  reset them to NULL first). First run hit a `ConnectionResetError` that
+  crashed the whole batch ~2000 rows in (a script bug, not a data issue) —
+  fixed by broadening the retry's exception handling; if this script ever
+  crashes again with a raw traceback rather than printing its own summary,
+  that's the bug to look for again, not evidence of a new problem.
