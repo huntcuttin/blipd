@@ -222,8 +222,9 @@ export async function getIGDBHype(
 // Stops early if IGDB is rate-limiting us (3+ consecutive 429s)
 export async function batchGetHypeScores(
   games: { id: string; title: string; igdbId?: number | null }[]
-): Promise<Map<string, { igdbId: number; hypes: number }>> {
+): Promise<{ results: Map<string, { igdbId: number; hypes: number }>; attemptedIds: Set<string> }> {
   const results = new Map<string, { igdbId: number; hypes: number }>();
+  const attemptedIds = new Set<string>();
   let consecutive429s = 0;
   const CIRCUIT_BREAKER_THRESHOLD = 3;
 
@@ -232,6 +233,7 @@ export async function batchGetHypeScores(
       console.warn(`  IGDB circuit breaker tripped after ${consecutive429s} consecutive 429s — stopping early`);
       break;
     }
+    attemptedIds.add(game.id);
 
     try {
       const result = await getIGDBHype(game.title, game.igdbId);
@@ -254,7 +256,7 @@ export async function batchGetHypeScores(
     await sleep(500);
   }
 
-  return results;
+  return { results, attemptedIds };
 }
 
 // Fetch aggregated rating (critic score) for a game — used as Metacritic proxy
@@ -334,8 +336,9 @@ export async function getIGDBRating(
 // Batch fetch ratings with circuit breaker
 export async function batchGetRatings(
   games: { id: string; title: string; igdbId?: number | null }[]
-): Promise<Map<string, { igdbId: number; rating: number }>> {
+): Promise<{ results: Map<string, { igdbId: number; rating: number }>; attemptedIds: Set<string> }> {
   const results = new Map<string, { igdbId: number; rating: number }>();
+  const attemptedIds = new Set<string>();
   let consecutive429s = 0;
   const CIRCUIT_BREAKER_THRESHOLD = 3;
 
@@ -344,6 +347,7 @@ export async function batchGetRatings(
       console.warn(`  IGDB rating circuit breaker tripped — stopping early`);
       break;
     }
+    attemptedIds.add(game.id);
 
     try {
       const result = await getIGDBRating(game.title, game.igdbId);
@@ -366,7 +370,7 @@ export async function batchGetRatings(
     await sleep(500);
   }
 
-  return results;
+  return { results, attemptedIds };
 }
 
 // Rate-limited batch processor with circuit breaker for 429s

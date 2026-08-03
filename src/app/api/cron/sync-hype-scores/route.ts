@@ -41,7 +41,7 @@ export async function GET(request: Request) {
 
     console.log(`Syncing hype scores for ${games.length} upcoming games...`);
 
-    const results = await batchGetHypeScores(
+    const { results, attemptedIds } = await batchGetHypeScores(
       games.map((g) => ({ id: g.id, title: g.title, igdbId: g.igdb_id }))
     );
 
@@ -63,9 +63,12 @@ export async function GET(request: Request) {
       }
     }
 
-    // For games with no IGDB match, set hype to 0 so we don't re-check them
+    // For games we actually attempted but found no IGDB match for, set hype
+    // to 0 so we don't re-check them. Games never reached because the circuit
+    // breaker tripped mid-batch are left null so they're retried next run,
+    // instead of being permanently poisoned.
     const unmatchedIds = games
-      .filter((g) => !results.has(g.id))
+      .filter((g) => attemptedIds.has(g.id) && !results.has(g.id))
       .map((g) => g.id);
 
     if (unmatchedIds.length > 0) {

@@ -595,6 +595,13 @@ export async function runPriceUpdate(options?: {
     }
   }
 
+  if (priceMap.size === 0) {
+    console.error(
+      `Price API returned no usable data for any of the ${nsuids.length} nsuids this run — skipping last_price_check stamping so these games retry next cycle instead of waiting a full queue rotation`
+    );
+    return { checked: 0, priceChanges: 0, alertsCreated: 0 };
+  }
+
   // Mark ALL polled games so they don't clog the queue on next run
   // Batch in chunks of 200 to avoid PostgREST URL length limits with .in()
   const allPolledIds = games.map((g) => g.id);
@@ -649,7 +656,12 @@ export async function runPriceUpdate(options?: {
       update.price_history = newHistory;
     }
 
-    const allTimeLow = isAllTimeLow(newPrice, history);
+    // Exclude the current month's own bucket — it already holds this same
+    // price once recorded earlier this month, and a strict `<` comparison
+    // against itself is always false, flapping is_all_time_low off on the
+    // next unchanged-price poll.
+    const priorMonthsHistory = history.filter((entry) => entry.date !== currentMonth);
+    const allTimeLow = isAllTimeLow(newPrice, priorMonthsHistory);
     update.is_all_time_low = allTimeLow;
 
     pendingUpdates.push({ game, update, priceChanged, oldPrice, isOnSale, allTimeLow, endDate: priceInfo.endDate });

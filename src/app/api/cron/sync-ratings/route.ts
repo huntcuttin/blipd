@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
     console.log(`Syncing ratings for ${games.length} released games...`);
 
-    const results = await batchGetRatings(
+    const { results, attemptedIds } = await batchGetRatings(
       games.map((g) => ({ id: g.id, title: g.title, igdbId: g.igdb_id }))
     );
 
@@ -64,9 +64,12 @@ export async function GET(request: Request) {
       }
     }
 
-    // For games with no IGDB rating, set metacritic_score to 0 so we don't re-check
+    // For games we actually attempted but found no IGDB rating for, set
+    // metacritic_score to 0 so we don't re-check. Games never reached because
+    // the circuit breaker tripped mid-batch are left null so they're retried
+    // next run, instead of being permanently poisoned.
     const unmatchedIds = games
-      .filter((g) => !results.has(g.id))
+      .filter((g) => attemptedIds.has(g.id) && !results.has(g.id))
       .map((g) => g.id);
 
     if (unmatchedIds.length > 0) {

@@ -1,4 +1,5 @@
 import type { AlgoliaSearchResponse, NintendoPriceResponse, NintendoPriceEntry } from "./types";
+import { fetchWithRetry } from "@/lib/retry";
 
 const ALGOLIA_APP_ID = "U3B6GR4UA3";
 const ALGOLIA_API_KEY = "a29c6927638bfd8cee23993e51e721c9";
@@ -145,13 +146,12 @@ export async function fetchPrices(nsuids: string[]): Promise<NintendoPriceEntry[
     const batch = nsuids.slice(i, i + PRICE_BATCH_SIZE);
     const ids = batch.join(",");
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
     try {
-      const response = await fetch(`${PRICE_API_URL}?country=US&lang=en&ids=${ids}`, {
-        signal: controller.signal,
-      });
+      const response = await fetchWithRetry(
+        `${PRICE_API_URL}?country=US&lang=en&ids=${ids}`,
+        {},
+        { retries: 2, timeoutMs: 10000, label: `Nintendo price batch ${i / PRICE_BATCH_SIZE}` }
+      );
 
       if (!response.ok) {
         console.error(`Price API returned ${response.status} for batch starting at index ${i}`);
@@ -162,8 +162,6 @@ export async function fetchPrices(nsuids: string[]): Promise<NintendoPriceEntry[
       allPrices.push(...data.prices);
     } catch (error) {
       console.error(`Price API error for batch starting at index ${i}:`, error);
-    } finally {
-      clearTimeout(timeout);
     }
 
     if (i + PRICE_BATCH_SIZE < nsuids.length) {
