@@ -204,7 +204,7 @@ compatible by definition.
 
 ### Launch readiness (recommendation, not a gate — founder launches when founder wants)
 Blippd is launch-ready when these are green:
-1. Launch-minute burst polling built and verified on one real release — **not yet built, awaiting go-ahead to start**
+1. Launch-minute burst polling built and verified on one real release — **built and live 2026-08-02 (cron-job.org job 8205523); still needs verification against an actual real-world release to confirm it catches a launch within the intended window**
 2. #20 fixed (Resend errors surfaced, not logged as "sent") + bounce visibility — **#20 fixed 2026-08-02; bounce visibility infra in progress 2026-08-02 (see Infrastructure Limits below for the webhook spec)**
 3. Magic link verified working live (#9 shipped, needs a real-device check including email-app in-app browsers) — **#9's code fixed 2026-08-02; live real-device verification not yet done. ⚠️ New, more urgent finding (2026-08-02, per Fable): verify custom SMTP is actually configured for Supabase Auth before anything else on this list — see Infrastructure Limits.**
 4. Zombie sale banners verified gone in prod (#2 shipped, needs a look) — **verified 2026-08-02: only one active named_sale_event remains, with a correct tagged-game count**
@@ -303,7 +303,7 @@ to fold in next time ranking/discovery code is touched, not a standing bug.
 | Database + Auth | Supabase (Postgres + magic link) |
 | Email | Resend — sender: alerts@blippd.app |
 | Hosting | Vercel (free tier) |
-| Cron | cron-job.org (9 jobs configured) |
+| Cron | cron-job.org (14 jobs as of 2026-08-02 — see Cron Jobs table below) |
 | Payments | None — no monetization at all (see Monetization below) |
 | iOS (v2) | Expo / React Native |
 | Data | nintendo-switch-eshop npm + ITAD API + IGDB API + Algolia |
@@ -383,6 +383,8 @@ All cron endpoints live at `/api/cron/*` and require `Authorization: Bearer {CRO
 | `/api/cron/detect-directs` | Every 5 min | YouTube RSS check for Nintendo Direct videos, creates banner |
 | `/api/cron/detect-trailers` | Every 15 min | YouTube RSS + Claude API matching for game trailers |
 | `/api/cron/weekly-digest` | Weekly (Sunday) | Sends digest email of followed games currently on sale |
+| `/api/cron/health-check` | Every 30 min | Checks cron-job.org job health + price-pipeline freshness, emails admin on problems |
+| `/api/cron/launch-burst-poll` | Every 2 min | Polls only followed, upcoming games within ±30 min of predicted launch — the launch-minute differentiator, see Bible Addendum |
 
 ### Reliability infrastructure
 - **`src/lib/retry.ts`** — `withRetry` (exponential backoff), `withTimeout`, `fetchWithRetry` (drop-in fetch replacement)
@@ -518,7 +520,7 @@ GET https://api.isthereanydeal.com/games/history/v2
 
 ### Launch-Minute Alerts (New Top Priority — 2026-08-02, see Bible Addendum + Launch Readiness)
 
-- [ ] Per-game launch burst polling cron: 1-2 min interval, only polls nsuids of *followed* upcoming games within ±30 min of their predicted launch window (editions-field prediction + publisher rules). Not yet built — proposed, awaiting founder go-ahead to start.
+- [x] Per-game launch burst polling cron — **built and live 2026-08-02** (`/api/cron/launch-burst-poll`, cron-job.org job 8205523, every 2 min). Verified live: `{"ok":true,"checked":0,"inWindow":0,"released":0}` — 0 in-window is expected, no followed upcoming game happened to be near its predicted launch at verification time. **Partial implementation:** only distinguishes major first-party (publisher match, predicted midnight ET) from everything else (9am PT default) — the physical+digital rule needs `has_physical_release`, still blocked on the pending migration. Extending it once that lands is a small addition to `predictLaunchInstant()`, not a rewrite. Pacific offset computed via `Intl`'s real timezone database (correct across PST/PDT), not a hardcoded UTC offset.
 - [x] Release-date sync timeout fixed (2026-08-02, fix batch #3)
 - [x] Web push notification layer hardened — dedup logging, success-count bug, sign-out cleanup (2026-08-02, audit #10). **Per Bible Addendum 2: further push investment (iOS install flow, #11) is now gated behind the retention gate — email is the hero channel for MVP, not push.**
 - [x] #20 fixed — Resend send errors now surfaced instead of logged as "sent" (2026-08-02) — promoted to launch-critical per Bible Addendum 2
