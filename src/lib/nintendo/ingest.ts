@@ -1040,6 +1040,31 @@ export async function runReleaseStatusUpdate(): Promise<number> {
 
   if (pricedUpcoming && pricedUpcoming.length > 0) {
     const ids = pricedUpcoming.map((g) => g.id);
+
+    // A game stuck on the placeholder date usually really is a brand-new
+    // release this fallback should announce — but confirmed live 2026-08-02
+    // that a game whose current_price briefly corrupted to $0 (see the
+    // health-check zero-price monitoring added earlier tonight) and then
+    // recovers looks *identical* to this query: real price now, upcoming
+    // status, placeholder date. Monster Hunter Stories (alerting since
+    // April) got a false "out now" this way the moment its price
+    // corruption resolved. Any game with existing alert history of any
+    // kind has obviously already been out for a while — only fire the
+    // announcement for ones with none.
+    const { data: priorAlerts } = await supabase
+      .from("alerts")
+      .select("game_id")
+      .in("game_id", ids);
+    const hasHistory = new Set((priorAlerts ?? []).map((a) => a.game_id as string));
+    const genuinelyNew = pricedUpcoming.filter((g) => !hasHistory.has(g.id));
+    const falseFlagged = pricedUpcoming.filter((g) => hasHistory.has(g.id));
+
+    if (falseFlagged.length > 0) {
+      console.warn(
+        `Release-status fallback: ${falseFlagged.length} game(s) had a real price + placeholder date but already have alert history — correcting status silently, not announcing as new: ${falseFlagged.map((g) => g.title).join(", ")}`
+      );
+    }
+
     // Set release_date to today as best approximation — at minimum it makes them
     // visible in New Releases rather than staying stuck behind the 2099 exclusion filter
     await supabase
@@ -1048,7 +1073,7 @@ export async function runReleaseStatusUpdate(): Promise<number> {
       .in("id", ids);
     updated += ids.length;
 
-    for (const game of pricedUpcoming) {
+    for (const game of genuinelyNew) {
       await generateReleaseAlert(
         supabase,
         { id: game.id, title: game.title },
