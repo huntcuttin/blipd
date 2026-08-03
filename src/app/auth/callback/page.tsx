@@ -19,14 +19,25 @@ export default function AuthCallbackPage() {
     }
 
     const hash = window.location.hash;
+    const hashParams = new URLSearchParams(hash.replace(/^#/, ""));
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
+
+    // Supabase redirects expired/already-used/invalid links back here as
+    // ?error=...&error_code=otp_expired (or the same in the hash fragment)
+    // instead of a code/token — this was previously swallowed silently by
+    // falling through to a bare /login redirect with no explanation.
+    const errorCode = params.get("error_code") ?? hashParams.get("error_code") ?? params.get("error") ?? hashParams.get("error");
+    if (errorCode) {
+      router.replace(`/login?error=${encodeURIComponent(errorCode)}`);
+      return;
+    }
 
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) {
           console.error("Auth callback error:", error.message);
-          router.replace("/login");
+          router.replace("/login?error=auth_failed");
         } else {
           redirectAfterAuth();
         }
@@ -40,10 +51,12 @@ export default function AuthCallbackPage() {
         }
       });
 
-      // Timeout fallback — redirect to login (not onboarding) if auth didn't complete
+      // Timeout fallback — most commonly hit when the link is opened in an
+      // email app's in-app browser (Gmail/Outlook), which loses the PKCE
+      // verifier stored on the tab that originally requested the link.
       const timeout = setTimeout(() => {
         subscription.unsubscribe();
-        router.replace("/login");
+        router.replace("/login?error=link_expired");
       }, 5000);
 
       return () => {

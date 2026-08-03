@@ -19,7 +19,7 @@ export default function HomePage() {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { user, consolePreference } = useAuth();
-  const { followedGameIds, followedFranchiseIds, ownedGameIds, toggleOwnGame } = useFollow();
+  const { followedGameIds, followedFranchiseIds, ownedGameIds, toggleOwnGame, loading: followContextLoading } = useFollow();
 
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
   const { data: followedGamesData, loading: followedLoading } = useSupabaseQuery(
@@ -139,7 +139,7 @@ export default function HomePage() {
             Browse deals without an account →
           </Link>
         </div>
-      ) : followedLoading ? (
+      ) : followContextLoading || followedLoading ? (
         <div className="space-y-2 pt-2">
           {Array.from({ length: 4 }).map((_, i) => <GameCardSkeleton key={i} />)}
         </div>
