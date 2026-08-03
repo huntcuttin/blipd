@@ -15,6 +15,76 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 - **Domain:** blippd.app (purchased, pointing to Vercel)
 - **Company:** Westside Software LLC (or similar holding entity, never customer-facing)
 
+## Blippd Product Bible — Non-Negotiables (Founder Interview, 2026-08-02)
+
+### What Blippd is
+A launch and price alert app for Nintendo eShop games. You follow games
+you care about. When something happens — it launches, it goes on sale,
+it hits an all-time low — you find out immediately. That's it.
+
+The product is the alert. Not the store, not the discovery feed,
+not the recommendation engine. The alert.
+
+### The hero moment
+A user is at a party on a Wednesday night. A game they'd been watching
+drops on the eShop. Their phone buzzes once. They buy it from their phone.
+It's downloading at home before they get back.
+
+That moment — that's what every decision gets measured against. **The test
+for any new feature: "Does this make the Wednesday night moment better, or
+does it add noise between Wednesday nights?" If it adds noise: don't build it.**
+
+### Priority order (locked)
+1. **Launch alerts** — game just went live on eShop, fire immediately
+2. **Release timing** — exact time a game drops, in the user's timezone
+3. **Sales and price drops** — when something they follow goes on sale
+   or hits an all-time low
+
+This is the product hierarchy. Launch is the headline. Sales are
+secondary. Discovery is tertiary.
+
+### Non-negotiables (no exceptions, no edge cases)
+
+**On notifications:**
+- Never send a notification the user didn't explicitly opt into. No
+  trending deals, no re-engagement pushes, no "you haven't opened the app
+  in a while."
+- Never fire a duplicate. One alert per event per user.
+- Never obscure why an alert fired. Every notification must make
+  immediately obvious: what game, what changed, by how much.
+- Never paywall a notification. Alerts are the product — paywalling them
+  is the thing that makes NT Deals bad.
+
+**On the feed and alerts page:**
+- Never show a game the user didn't follow in their alerts or notification
+  feed. The alerts page is sacred — only followed games.
+- Discovery (Deals page, browse, search) is a separate opt-in experience.
+  The user goes there. It doesn't come to them.
+
+**On the business:**
+- Never make the alert the product in a commercial sense. Blippd doesn't
+  sell games, doesn't earn from clicks, doesn't profit from purchase
+  behavior. The alert tells you. What you do is yours.
+- Never show an ad. The clean, ad-free experience is the portfolio signal
+  and the product signal simultaneously. (See Monetization below — already
+  independently decided the same way.)
+
+**On reliability:**
+- An alert that arrives late is worse than no alert. If the pipeline is
+  delayed, the product has failed its one job.
+- Users should never have to wonder if their alerts are working. "Last
+  checked X min ago" is always visible.
+
+### What success looks like
+A user goes a full week without opening Blippd once. Then their phone
+buzzes. They open it, see exactly what changed on a game they care about,
+and act on it — or don't. Either way, they trust it. That's the product working.
+
+### What Blippd is not
+Not a game store. Not a recommendation engine. Not a social network. Not
+a deal aggregator. Not a review site. Not a source of revenue from user
+attention.
+
 ## Project Philosophy (Decided 2026-08-02, per Fable)
 
 **Blippd is a proof-of-concept that runs in production, not a growth business.** This was effectively decided by the zero-touch + monthly-check-in constraint (see Zero-Touch Operations below) — a real product means responding to users, alert failures, and Nintendo API changes on their timeline, not yours. Naming it a POC is the filter for every roadmap/audit decision:
@@ -39,11 +109,11 @@ Launch-minute alerts are what nobody does. This is Blippd's edge.
 - The "out now" alert stays ground-truth: it fires when the price actually
   goes live, prediction only tells the poller when to watch closely.
 - This re-sorts the audit priorities: launch-alert reliability (release-date
-  sync timeout, placeholder dates, web push never validated) outranks
-  sale-alert polish. The hero moment requires push working on a random
-  Wednesday, not just Thursday-midnight bursts. (Web push hardening shipped
-  2026-08-02 — see session log; release-date sync timeout and placeholder
-  dates already fixed earlier the same day — see fix batches #3/#5/#6.)
+  sync timeout, placeholder dates) outranks sale-alert polish. (Release-date
+  sync timeout and placeholder dates fixed 2026-08-02 — see fix batches
+  #3/#5/#6. Web push hardening also shipped 2026-08-02, but see Bible
+  Addendum 2 below — push itself is now deprioritized post-retention-gate;
+  email is the hero channel for MVP.)
 - **Not yet built:** the launch burst polling cron itself. This is the next
   real feature, not just a hygiene fix — pending implementation.
 
@@ -72,7 +142,10 @@ Resolution: don't force the hierarchy on the UI — encode it in positioning.
 If the pipeline is late or misses a launch, do not notify users about the
 miss. No "we were late" notes. The health-check email tells the admin; the
 user just gets the alert when it fires. Rationale: zero-touch, and a miss
-note draws attention to a failure most users would never have noticed.
+note draws attention to a failure most users would never have noticed. The
+"last checked" timestamp stays visible — that's the freshness signal that
+resolves this against the "never wonder if it's working" principle (see
+Product Bible above).
 
 ### Nintendo platform risk (deferred, one line)
 Not worried at POC scale. If a C&D ever arrives: comply immediately, don't
@@ -84,11 +157,107 @@ The app stays running indefinitely on free tiers regardless of involvement
 level. Low involvement ≠ shutdown. Monthly check-in keeps it alive; there
 is no sunset plan and none is needed.
 
-### Retention gate for POC → product (proposed default, adopt unless overridden)
+### Retention gate for POC → product (adopted)
 **10+ users returning in week 2, OR ≥25% week-2 return rate from the launch
 cohort** — either triggers a genuine reconsideration of the POC framing
 (supporter tier, iOS app, catalog expansion all become discussable). Below
 that: stay POC, stay zero-touch, no re-litigating.
+
+## Bible Addendum 2 — Channel & Launch Decisions (2026-08-02)
+
+### Email is the hero channel for MVP (decided)
+Users will not add a PWA to their home screen — accept reality.
+- Web push audit items (#11, iOS PWA install flow) drop to
+  post-retention-gate. Do not build install prompts. (#10's actual bugs —
+  dedup logging, sign-out cleanup, the success-count miscount — were
+  already fixed 2026-08-02 before this decision landed; that work wasn't
+  wasted, it's just not where further investment goes next.)
+- Email deliverability is therefore the entire product. Promote to
+  launch-critical: #20 (Resend errors ignored, failures logged as "sent")
+  — **fixed 2026-08-02** — and bounce visibility (not yet built) — a
+  silently-dead email address is a silently-dead user, and it's the #1
+  documented failure mode in this category (Slickdeals bounce suppression,
+  see Competitor Intelligence).
+- Launch-minute burst polling still ships: "the minute it launches, in
+  your inbox" still beats every competitor's cadence. The pocket-buzz
+  version of the hero moment is what the iOS app unlocks later.
+
+### iOS app: gated behind retention, explicitly (decided)
+Maintaining web + native roughly doubles the surface (App Store review,
+$99/yr dev account, OS breakage ~2x/yr, cert management, second codebase)
+and breaks zero-touch. The app is built if and only if the retention gate
+triggers. Its pitch at that point: real push notifications — the actual
+hero moment — not "our website, installed."
+
+### alerts table growth (noted, no action)
+`alerts` is the global event log (every price event on all ~2,800 games),
+not per-user — 17k rows with one user is expected, not a bug. Per-user
+deliveries live in notification_log. Cleanup policy: alerts with no
+user_alert_status references and older than 6 months are eligible for
+deletion. Add a saved script to `fixes/` eventually (see Zero-Touch
+Operations); no action needed until row count actually matters (years away).
+
+### Portfolio artifact (decided)
+The live app is the artifact. No case study, no write-up, no blog post.
+Someone visits blippd.app and it works — that's the proof. Zero-touch
+compatible by definition.
+
+### Launch readiness (recommendation, not a gate — founder launches when founder wants)
+Blippd is launch-ready when these are green:
+1. Launch-minute burst polling built and verified on one real release — **not yet built, awaiting go-ahead to start**
+2. #20 fixed (Resend errors surfaced, not logged as "sent") + bounce visibility — **#20 fixed 2026-08-02; bounce visibility not yet built**
+3. Magic link verified working live (#9 shipped, needs a real-device check including email-app in-app browsers) — **#9's code fixed 2026-08-02; live real-device verification not yet done**
+4. Zombie sale banners verified gone in prod (#2 shipped, needs a look) — **verified 2026-08-02: only one active named_sale_event remains, with a correct tagged-game count**
+5. One end-to-end dress rehearsal: follow a game, trigger a real alert, receive the email, click through — the full loop, on a phone — **not yet done**
+
+Everything else in the audit is post-launch. When these five are green,
+the three launch posts (r/NintendoSwitch thread, Show HN, one Discord) are
+the next action.
+
+### Notification voice (direction set, final copy pending)
+Warmth over pure utility — the alert should feel like "it's here," not a
+receipt. Direction only: final template copy is a founder decision. **Any
+session writing or editing notification/email templates must prompt the
+founder with concrete copy options before shipping.** Same applies to the
+sender identity question (human name vs anonymous alerts@blippd.app) —
+unresolved, ask when email templates are touched.
+
+## Research Queue (2026-08-02, per Fable strategy pass)
+
+In priority order — these keep the project moving between check-ins:
+1. **Resend free-tier limits + bounce webhook setup** — launch-critical given email-is-the-product. Daily send cap, bounce webhook availability on free tier, upgrade cost if launch day exceeds limits. Also check Supabase auth rate limits and cron-job.org limits — "what breaks at 500 users" before Show HN, not after.
+2. **Calibrate launch-time predictions against reality** — for the next 3-5 notable releases, log predicted vs actual eShop go-live time in this doc. Turns the four documented rules into a validated system. Zero-touch: just check timestamps after each release.
+3. **Draft the launch posts before launch day** — the pitch is the differentiator ("emails you the minute a game goes live on eShop"), not "another price tracker." Check r/NintendoSwitch + r/NintendoSwitch2 self-promo rules at time of posting — they change, and a launch-day ban is a real outcome.
+4. **NTPrices trajectory check at each monthly check-in** — the one competitor worth watching. If they add launch alerts, the differentiator window narrows.
+
+## Game Quality & Catalog Ranking (2026-08-02, per Fable)
+
+Surface quality alongside price. A 90% discount on a 2-star shovelware title
+is not a deal — it's noise. A 30% drop on a 95-rated game is signal.
+
+### Ranking signals (in priority order)
+1. OpenCritic / Metacritic score (≥75 = quality threshold for featuring)
+2. Nintendo first-party titles always surface (regardless of discount %)
+3. User follow count on Blippd (social proof from our own users)
+4. Discount depth (% off, not absolute price)
+5. All-time low flag (is this the cheapest it's ever been?)
+
+### Catalog tiers
+- **Tier 1:** Nintendo first-party + games with OC score ≥85. Always show.
+- **Tier 2:** Third-party with OC score 75-84. Show in standard feeds.
+- **Tier 3:** OC score <75 or unscored. Only show on direct search or
+  followed by user. Never surface in "trending" or featured slots.
+
+### Principles
+- Never surface unscored shovelware in any featured or algorithmic slot.
+- A followed game always alerts regardless of tier — the user opted in.
+- Quality filters apply to discovery, not to personal watchlists.
+- Launch catalog = top 500 most-followed Switch titles, pre-filtered by tier.
+
+**Implementation status: not yet built.** The existing `computeTrendingScore`
+(src/lib/ranking.ts) drives current "Best Deals" sort — it doesn't yet
+incorporate a Metacritic/OpenCritic tier system. This is a design decision
+to fold in next time ranking/discovery code is touched, not a standing bug.
 
 ## Locked Stack
 
@@ -311,11 +480,13 @@ GET https://api.isthereanydeal.com/games/history/v2
 - [x] Critic rating scores on game cards (IGDB aggregated_rating)
 - [x] Weekly digest re-engagement email (cron job 7358907, Sunday)
 
-### Launch-Minute Alerts (New Top Priority — 2026-08-02, see Bible Addendum)
+### Launch-Minute Alerts (New Top Priority — 2026-08-02, see Bible Addendum + Launch Readiness)
 
-- [ ] Per-game launch burst polling cron: 1-2 min interval, only polls nsuids of *followed* upcoming games within ±30 min of their predicted launch window (editions-field prediction + publisher rules). Not yet built.
+- [ ] Per-game launch burst polling cron: 1-2 min interval, only polls nsuids of *followed* upcoming games within ±30 min of their predicted launch window (editions-field prediction + publisher rules). Not yet built — proposed, awaiting founder go-ahead to start.
 - [x] Release-date sync timeout fixed (2026-08-02, fix batch #3)
-- [x] Web push notification layer hardened — dedup logging, success-count bug, sign-out cleanup (2026-08-02, fix batch, audit #10)
+- [x] Web push notification layer hardened — dedup logging, success-count bug, sign-out cleanup (2026-08-02, audit #10). **Per Bible Addendum 2: further push investment (iOS install flow, #11) is now gated behind the retention gate — email is the hero channel for MVP, not push.**
+- [x] #20 fixed — Resend send errors now surfaced instead of logged as "sent" (2026-08-02) — promoted to launch-critical per Bible Addendum 2
+- [ ] Bounce visibility for email — not yet built, launch-critical per Bible Addendum 2
 - [ ] Placeholder-date cleanup — confirm no regressions from the has_physical_release migration once applied
 
 ### Pre-Launch Polish (Current Focus)
@@ -762,6 +933,7 @@ Given the POC-not-product decision, the following items are explicitly **won't-f
 - **#12** — DB migration baseline (`supabase db dump`). Not worth it for a POC; only matters for long-term reproducibility.
 - **#26** — Major dependency version bumps (Next 14→16, React 18→19, Tailwind 3→4, etc.). Pin current versions and stop tracking major upgrades. Minor/security patches (already done via #24/#25) still fine to keep doing.
 - Post-V2 roadmap items requiring ongoing curation or new infra: multi-region/platform expansion (PlayStation, Xbox, Steam), publisher/developer following.
+- **#11** (iOS push unreachable / add-to-home-screen prompt) — added 2026-08-02 per Bible Addendum 2: push itself is now gated behind the retention gate, not just generally deprioritized. Email is the hero channel for MVP.
 Everything else in the fix list — alert correctness (#2, #5-#8, #15, #20, #27, #29, #31), health-check/monitoring effectiveness (#4, already built), and cheap one-time hygiene (#13-#14, #16-#25, #32-#40) — stays in scope, since those are either product-grade-required or cheap enough to just do.
 
 ## Session Log — 2026-08-02 (Fix Batches 1-4)
