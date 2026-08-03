@@ -1,8 +1,10 @@
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { sendAlertToUsers } from "./send";
-import { sendBatchedDigest } from "./send-batch";
+import { sendBatchedDigest, sendLaunchDigest } from "./send-batch";
+import { planUserDispatch } from "./batching";
 import type { AlertPayload } from "./types";
 import type { BatchAlertGame } from "./batch-template";
+import type { LaunchDigestGame } from "./launch-digest-template";
 
 export type PrefColumn = "notify_sales" | "notify_all_time_low" | "notify_releases" | "notify_announcements";
 
@@ -23,9 +25,8 @@ interface AlertGame {
   franchise: string | null;
 }
 
-// Alert types that qualify for batching (price-related alerts only)
-const BATCHABLE_TYPES = new Set(["price_drop", "all_time_low", "sale_started", "sale_ending"]);
-const BATCH_THRESHOLD = 5;
+// Which alert types group together, and how many it takes to collapse into one
+// email, now lives in ./batching — see planUserDispatch.
 
 // Map alert types to the notification preference column that controls them
 export function getPrefColumn(alertType: string): PrefColumn {
@@ -51,7 +52,10 @@ export function getPrefColumn(alertType: string): PrefColumn {
 
 interface PendingAlert {
   payload: AlertPayload;
+  /** Row data if this ends up in a price digest. */
   batchGame: BatchAlertGame;
+  /** Row data if this ends up in a launch digest. */
+  launchGame: LaunchDigestGame;
 }
 
 /**
@@ -147,10 +151,9 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   }
 
   // ── Phase 1: Collect per-user alert lists ──
-  // Map userId -> list of { payload, batchGame } for batchable alerts
-  // Map userId -> list of payloads for non-batchable alerts
-  const userBatchableAlerts = new Map<string, PendingAlert[]>();
-  const userNonBatchableAlerts = new Map<string, AlertPayload[]>();
+  // Map userId -> every alert they're due, in creation order. Whether each one
+  // collapses into a digest is decided per user in Phase 2.
+  const userPendingAlerts = new Map<string, PendingAlert[]>();
 
   for (const alert of alerts) {
     const game = alert.games as unknown as AlertGame;
@@ -201,48 +204,57 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     }
     if (alert.sale_end_date) payload.saleEndDate = alert.sale_end_date;
 
-    const isBatchable = BATCHABLE_TYPES.has(alert.type);
+    const pending: PendingAlert = {
+      payload,
+      batchGame: {
+        title: game.title,
+        slug: game.slug,
+        newPrice: payload.newPrice ?? 0,
+        oldPrice: payload.oldPrice ?? 0,
+        discount: payload.discount ?? 0,
+        alertType: alert.type,
+        saleEndDate: alert.sale_end_date,
+        nsuid: game.nsuid,
+      },
+      launchGame: {
+        title: game.title,
+        slug: game.slug,
+        price: payload.newPrice ?? null,
+        nsuid: game.nsuid,
+      },
+    };
 
     for (const userId of allUserIds) {
-      if (isBatchable) {
-        const list = userBatchableAlerts.get(userId) ?? [];
-        list.push({
-          payload,
-          batchGame: {
-            title: game.title,
-            slug: game.slug,
-            newPrice: payload.newPrice ?? 0,
-            oldPrice: payload.oldPrice ?? 0,
-            discount: payload.discount ?? 0,
-            alertType: alert.type,
-            saleEndDate: alert.sale_end_date,
-            nsuid: game.nsuid,
-          },
-        });
-        userBatchableAlerts.set(userId, list);
-      } else {
-        const list = userNonBatchableAlerts.get(userId) ?? [];
-        list.push(payload);
-        userNonBatchableAlerts.set(userId, list);
-      }
+      const list = userPendingAlerts.get(userId) ?? [];
+      list.push(pending);
+      userPendingAlerts.set(userId, list);
     }
   }
 
-  // ── Phase 2: Send non-batchable alerts individually (grouped by alert for efficiency) ──
-  const nonBatchableByAlert = new Map<string, { payload: AlertPayload; userIds: string[] }>();
-  for (const [userId, payloads] of Array.from(userNonBatchableAlerts.entries())) {
-    for (const payload of payloads) {
-      const existing = nonBatchableByAlert.get(payload.alertId);
-      if (existing) {
-        existing.userIds.push(userId);
-      } else {
-        nonBatchableByAlert.set(payload.alertId, { payload, userIds: [userId] });
-      }
+  // ── Phase 2: Decide per user what batches and what doesn't ──
+  // Digests are per user; individual sends are pooled back together by alert so
+  // one alert going to N users stays a single sendAlertToUsers call.
+  const digestJobs: { userId: string; group: "price" | "launch"; items: PendingAlert[] }[] = [];
+  const individualByAlert = new Map<string, { payload: AlertPayload; userIds: string[] }>();
+
+  for (const [userId, pendingAlerts] of Array.from(userPendingAlerts.entries())) {
+    const plan = planUserDispatch(pendingAlerts, (pa) => pa.payload.alertType);
+
+    for (const digest of plan.digests) {
+      digestJobs.push({ userId, group: digest.group, items: digest.items });
+    }
+
+    for (const pa of plan.individual) {
+      const existing = individualByAlert.get(pa.payload.alertId);
+      if (existing) existing.userIds.push(userId);
+      else individualByAlert.set(pa.payload.alertId, { payload: pa.payload, userIds: [userId] });
     }
   }
 
   dispatched = 0; // Reset — count actual sends
-  for (const { payload, userIds } of Array.from(nonBatchableByAlert.values())) {
+
+  // ── Phase 3: Individual sends ──
+  for (const { payload, userIds } of Array.from(individualByAlert.values())) {
     console.log(`  Dispatching "${payload.alertType}" for "${payload.gameTitle}" to ${userIds.length} users`);
     const sent = await sendAlertToUsers(userIds, payload);
     dispatched += sent;
@@ -251,21 +263,19 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     }
   }
 
-  // ── Phase 3: Handle batchable alerts — batch or individual ──
-  for (const [userId, pendingAlerts] of Array.from(userBatchableAlerts.entries())) {
-    if (pendingAlerts.length >= BATCH_THRESHOLD) {
-      // Send one batched digest email
-      console.log(`  Batching ${pendingAlerts.length} price alerts for user ${userId.slice(0, 8)}...`);
-      const games = pendingAlerts.map((pa) => pa.batchGame);
-      await sendBatchedDigest(userId, games, pendingAlerts.map((pa) => pa.payload.alertId));
-      dispatched += 1; // One email, not N
-    } else {
-      // Send individually
-      for (const pa of pendingAlerts) {
-        await sendAlertToUsers([userId], pa.payload);
-        dispatched += 1;
-      }
-    }
+  // ── Phase 4: Grouped digests — one email per user per group ──
+  for (const job of digestJobs) {
+    const alertIds = job.items.map((pa) => pa.payload.alertId);
+    const shortId = job.userId.slice(0, 8);
+    console.log(`  Batching ${job.items.length} ${job.group} alerts for user ${shortId}...`);
+
+    const ok =
+      job.group === "launch"
+        ? await sendLaunchDigest(job.userId, job.items.map((pa) => pa.launchGame), alertIds)
+        : await sendBatchedDigest(job.userId, job.items.map((pa) => pa.batchGame), alertIds);
+
+    if (ok) dispatched += 1; // One email, not N
+    else console.warn(`  ${job.group} digest failed for user ${shortId}`);
   }
 
   console.log(`  Dispatch complete: ${dispatched} notifications sent`);

@@ -1,8 +1,10 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { batchedAlerts } from "./batch-template";
+import { launchDigest } from "./launch-digest-template";
 import { namedSaleEvent } from "./templates";
 import type { BatchAlertGame } from "./batch-template";
+import type { LaunchDigestGame } from "./launch-digest-template";
 
 const FROM_ADDRESS = "Blippd <alerts@blippd.app>";
 
@@ -16,18 +18,18 @@ function getResend(): Resend {
 }
 
 /**
- * Sends a single batched digest email for multiple price-related alerts.
- * Used when 5+ alerts hit the same user in one dispatch window.
- * Logs notification for each alert ID so dedup still works.
+ * Sends one rendered digest email and logs a notification_log row per covered
+ * alert, so dedup on the next dispatch pass sees every alert as delivered.
+ * Shared by the price and launch digests — they differ only in their template.
  */
-export async function sendBatchedDigest(
+async function sendDigest(
   userId: string,
-  games: BatchAlertGame[],
-  alertIds: string[]
+  alertIds: string[],
+  rendered: { subject: string; html: string },
+  label: string
 ): Promise<boolean> {
   const supabase = createAdminClient();
 
-  // Get user email
   const { data: userData } = await supabase.auth.admin.getUserById(userId);
   const email = userData?.user?.email;
   if (!email) {
@@ -35,40 +37,58 @@ export async function sendBatchedDigest(
     return false;
   }
 
-  const { subject, html } = batchedAlerts(games);
+  const logRows = (status: "sent" | "failed", error: string | null) =>
+    alertIds.map((alertId) => ({
+      user_id: userId,
+      alert_id: alertId,
+      channel: "email",
+      status,
+      error,
+    }));
 
   try {
     const resend = getResend();
-    const { error } = await resend.emails.send({ from: FROM_ADDRESS, to: email, subject, html });
+    const { error } = await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: email,
+      subject: rendered.subject,
+      html: rendered.html,
+    });
     if (error) throw new Error(error.message);
 
-    // Log notification for each alert so dedup prevents re-sends
-    const logRows = alertIds.map((alertId) => ({
-      user_id: userId,
-      alert_id: alertId,
-      channel: "email",
-      status: "sent",
-      error: null,
-    }));
-    await supabase.from("notification_log").insert(logRows);
-
+    await supabase.from("notification_log").insert(logRows("sent", null));
     return true;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    console.error(`Failed to send batched digest to ${email}:`, msg);
-
-    // Log failure for each alert
-    const logRows = alertIds.map((alertId) => ({
-      user_id: userId,
-      alert_id: alertId,
-      channel: "email",
-      status: "failed",
-      error: msg,
-    }));
-    await supabase.from("notification_log").insert(logRows);
-
+    console.error(`Failed to send ${label} digest to ${email}:`, msg);
+    await supabase.from("notification_log").insert(logRows("failed", msg));
     return false;
   }
+}
+
+/**
+ * Sends a single batched digest email for multiple price-related alerts.
+ * Used when 5+ price alerts hit the same user in one dispatch window.
+ */
+export async function sendBatchedDigest(
+  userId: string,
+  games: BatchAlertGame[],
+  alertIds: string[]
+): Promise<boolean> {
+  return sendDigest(userId, alertIds, batchedAlerts(games), "price");
+}
+
+/**
+ * Sends a single grouped email for several games that went live in the same
+ * dispatch window — the launch-side equivalent of sendBatchedDigest. Without
+ * this, a multi-release day sent one email per game per follower.
+ */
+export async function sendLaunchDigest(
+  userId: string,
+  games: LaunchDigestGame[],
+  alertIds: string[]
+): Promise<boolean> {
+  return sendDigest(userId, alertIds, launchDigest(games), "launch");
 }
 
 /**
