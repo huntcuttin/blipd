@@ -59,18 +59,31 @@ export async function GET(request: Request) {
     const results = await batchGetReleaseDates(games);
 
     const now = new Date().toISOString();
-    const updates = Array.from(results.entries()).map(([gameId, result]) => ({
-      id: gameId,
-      release_date: result.releaseDate,
-      release_status: computeReleaseStatus(result.releaseDate),
-      release_date_source: "igdb",
-      updated_at: now,
-    }));
-
-    const { error: upsertError } = await supabase.from("games").upsert(updates);
-    const updated = upsertError ? 0 : updates.length;
-    if (upsertError) {
-      console.error("Batch upsert failed:", upsertError.message);
+    // Confirmed live 2026-08-03: a 2026-03-16 refactor changed this from
+    // per-row .update() calls to a single batched .upsert(). Since games
+    // has several NOT NULL, no-default columns (title, slug, publisher,
+    // cover_art, current_price, original_price) that this payload never
+    // included, Postgres rejects the INSERT side of every ON CONFLICT DO
+    // UPDATE statement regardless of the rows already existing -- so this
+    // has been silently failing on every single run for ~5 months, always
+    // returning ok:true with updated:0 underneath. .update() only touches
+    // the columns given, so it doesn't hit this constraint at all.
+    let updated = 0;
+    for (const [gameId, result] of Array.from(results.entries())) {
+      const { error: updateError } = await supabase
+        .from("games")
+        .update({
+          release_date: result.releaseDate,
+          release_status: computeReleaseStatus(result.releaseDate),
+          release_date_source: "igdb",
+          updated_at: now,
+        })
+        .eq("id", gameId);
+      if (updateError) {
+        console.error(`Failed to update ${gameId}:`, updateError.message);
+      } else {
+        updated++;
+      }
     }
 
     console.log(`Release date sync complete: ${games.length} checked, ${updated} updated`);
