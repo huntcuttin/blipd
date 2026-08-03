@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
+import { PLACEHOLDER_DATES, isYearOnlyDate, isMonthOnlyDate, isPlaceholderDate } from "@/lib/format";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -116,6 +117,141 @@ async function checkSuspiciousZeroPrices(): Promise<string[]> {
   ];
 }
 
+// ── Catalog-integrity invariants (audit §D, 2026-08-03) ──
+// Every check below is purely informational: it emails the admin and never
+// blocks, delays, or filters any alert or dispatch path. These are
+// regression traps for incident classes this project has already hit at
+// least once, not core pipeline health -- a failure here should never be
+// treated as more urgent than the freshness/cron checks above.
+
+// A real Direct-day IGDB correction wave could plausibly touch a couple
+// dozen rows with genuinely distinct real dates in 24h -- the floor here is
+// "the exact same date, not just the same day," which only a bulk mis-write
+// bug (the 499-game "released today" incident) would ever produce.
+const MASS_DATE_THRESHOLD = 50;
+
+async function checkMassDateWrites(): Promise<string[]> {
+  const supabase = createAdminClient();
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("games")
+    .select("release_date")
+    .eq("is_suppressed", false)
+    .gte("updated_at", since);
+
+  if (error) return [`Mass-date check failed: ${error.message}`];
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    const d = row.release_date as string;
+    // Sentinel/imprecise dates are excluded -- a real batch of IGDB
+    // year-only or month-only corrections legitimately clusters many rows
+    // on Dec 31 or a month-end, that's not the bulk-mis-write signal this
+    // check exists for.
+    if (isPlaceholderDate(d) || isYearOnlyDate(d) || isMonthOnlyDate(d)) continue;
+    counts.set(d, (counts.get(d) ?? 0) + 1);
+  }
+
+  const problems: string[] = [];
+  for (const [date, count] of Array.from(counts.entries())) {
+    if (count > MASS_DATE_THRESHOLD) {
+      problems.push(`${count} unsuppressed games all got release_date=${date} in the last 24h -- looks like a bulk mis-write, not real launches`);
+    }
+  }
+  return problems;
+}
+
+// Regression trap for the exact incident class Phase 0/1 fixed (2026-08-03):
+// any junk row that isn't suppressed is itself the leak, regardless of
+// whether it's currently sitting in a released/upcoming window -- every
+// user-facing surface's own filter is the thing that's supposed to keep
+// this at 0, so a nonzero count here means one of those filters (or the
+// ingest gate) regressed.
+async function checkJunkLeak(): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("games")
+    .select("title")
+    .eq("is_suppressed", false)
+    .in("product_type", ["ADD_ON_CONTENT", "BUNDLE"])
+    .limit(10);
+
+  if (error) return [`Junk-leak check failed: ${error.message}`];
+  if (!data || data.length === 0) return [];
+
+  const examples = data.slice(0, 5).map((g) => g.title).join(", ");
+  return [`${data.length}+ ADD_ON_CONTENT/BUNDLE rows are unsuppressed and eligible for Out Now/Coming Soon/Deals -- ingest gate or a query filter may have regressed. Examples: ${examples}`];
+}
+
+// Every row should get a real classification at ingest time (transform.ts).
+// A small buffer absorbs an in-flight sync or a genuinely-new Algolia edge
+// case; a NULL count much above that means something upstream of the
+// backfill (2026-08-03) has regressed.
+const PRODUCT_TYPE_NULL_THRESHOLD = 5;
+
+async function checkProductTypeNulls(): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { count, error } = await supabase
+    .from("games")
+    .select("id", { count: "exact", head: true })
+    .is("product_type", null);
+
+  if (error) return [`product_type NULL check failed: ${error.message}`];
+  if ((count ?? 0) <= PRODUCT_TYPE_NULL_THRESHOLD) return [];
+  return [`${count} games have product_type=NULL (expected ~0 after the 2026-08-03 backfill) -- ingest may have stopped classifying new rows`];
+}
+
+// A game stuck on a placeholder date with a real price should get resolved
+// (released, suppressed, or dated for real) within a run or two of the
+// event-creation breaker/pricedUpcoming fallback -- one still sitting here
+// after a week suggests something is looping without making progress.
+const STUCK_PLACEHOLDER_DAYS = 7;
+
+async function checkStuckPlaceholderPricedGames(): Promise<string[]> {
+  const supabase = createAdminClient();
+  const staleSince = new Date(Date.now() - STUCK_PLACEHOLDER_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("games")
+    .select("title")
+    .eq("is_suppressed", false)
+    .in("release_date", PLACEHOLDER_DATES as unknown as string[])
+    .gt("current_price", 0)
+    .lt("updated_at", staleSince)
+    .limit(10);
+
+  if (error) return [`Stuck-placeholder check failed: ${error.message}`];
+  if (!data || data.length === 0) return [];
+
+  const examples = data.slice(0, 5).map((g) => g.title).join(", ");
+  return [`${data.length}+ games have a real price + placeholder release_date, unsuppressed, unchanged for >${STUCK_PLACEHOLDER_DAYS} days -- may be stuck in the event-creation breaker's hold state. Examples: ${examples}`];
+}
+
+// Launches cluster at known Nintendo eShop go-live times (9am/9pm PT,
+// midnight ET), so a real Direct-day wave can legitimately exceed the
+// informational floor -- only the alarm tier is treated as a problem.
+const OUT_NOW_VOLUME_INFO = 15;
+const OUT_NOW_VOLUME_ALARM = 50;
+
+async function checkOutNowVolume(): Promise<string[]> {
+  const supabase = createAdminClient();
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabase
+    .from("alerts")
+    .select("id", { count: "exact", head: true })
+    .eq("type", "out_now")
+    .gte("created_at", since);
+
+  if (error) return [`out_now volume check failed: ${error.message}`];
+  const n = count ?? 0;
+  if (n > OUT_NOW_VOLUME_ALARM) {
+    return [`${n} out_now alerts created in the last 60 min (>${OUT_NOW_VOLUME_ALARM}) -- alarm tier, verify this is a real Direct-day wave and not a leak`];
+  }
+  if (n > OUT_NOW_VOLUME_INFO) {
+    console.log(`Health check: ${n} out_now alerts in the last 60 min -- above the informational floor (${OUT_NOW_VOLUME_INFO}), not alarming (launches legitimately cluster at known go-live times)`);
+  }
+  return [];
+}
+
 async function sendAlertEmail(problems: string[]): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -140,13 +276,36 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [cronProblems, freshnessProblems, zeroPriceProblems] = await Promise.all([
+  const [
+    cronProblems,
+    freshnessProblems,
+    zeroPriceProblems,
+    massDateProblems,
+    junkLeakProblems,
+    productTypeNullProblems,
+    stuckPlaceholderProblems,
+    outNowVolumeProblems,
+  ] = await Promise.all([
     checkCronJobOrg(),
     checkPricePipelineFreshness(),
     checkSuspiciousZeroPrices(),
+    checkMassDateWrites(),
+    checkJunkLeak(),
+    checkProductTypeNulls(),
+    checkStuckPlaceholderPricedGames(),
+    checkOutNowVolume(),
   ]);
 
-  const problems = [...cronProblems, ...freshnessProblems, ...zeroPriceProblems];
+  const problems = [
+    ...cronProblems,
+    ...freshnessProblems,
+    ...zeroPriceProblems,
+    ...massDateProblems,
+    ...junkLeakProblems,
+    ...productTypeNullProblems,
+    ...stuckPlaceholderProblems,
+    ...outNowVolumeProblems,
+  ];
 
   if (problems.length > 0) {
     console.error("Health check found problems:", problems);
