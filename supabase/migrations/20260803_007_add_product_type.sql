@@ -1,0 +1,12 @@
+-- Persists Nintendo's own eShop product classification (TITLE / ADD_ON_CONTENT
+-- / BUNDLE) so Out Now, Coming Soon, and future queries can filter on it
+-- directly instead of re-querying Algolia every time. Confirmed live
+-- 2026-08-03: individual DLC items and "Legend/Pro/Deluxe Edition"-style
+-- bundle re-listings were both slipping into Out Now looking like new
+-- releases -- e.g. "Sharing Stone" ($2.99 Pokemon Quest DLC) and "PGA TOUR
+-- 2K25 Legend Edition Year 2" (a bundle re-listing of a game that had
+-- already released two weeks earlier under its base title). Earlier
+-- suppression sweeps this session only caught rows stuck on the placeholder
+-- release date -- anything that already had a real date from ingest (most
+-- DLC/bundles do) was never touched by any of them.
+ALTER TABLE games ADD COLUMN IF NOT EXISTS product_type text;

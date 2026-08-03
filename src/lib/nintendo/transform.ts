@@ -317,5 +317,6 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
     has_demo: hasDemo,
     genres: Array.isArray(hit.gameGenreLabels) ? hit.gameGenreLabels : (Array.isArray(hit.genres) ? hit.genres : []),
     has_physical_release: hasPhysicalRelease,
+    product_type: hit.eshopDetails?.productType ?? null,
   };
 }

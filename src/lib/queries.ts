@@ -137,6 +137,19 @@ export async function getRecentReleases(supabase: Client): Promise<Game[]> {
     .select("*")
     .eq("release_status", "released")
     .eq("is_suppressed", false)
+    // Excludes individual DLC ("Sharing Stone", a $2.99 Pokemon Quest item)
+    // and edition/bundle re-listings ("PGA TOUR 2K25 Legend Edition Year 2",
+    // dated two weeks after the base game) from reading as fresh new
+    // releases -- confirmed live 2026-08-03 both were slipping through
+    // because they already had a real release_date from ingest, so none of
+    // this session's earlier placeholder-date-only suppression sweeps ever
+    // touched them. product_type is null for rows not yet backfilled after
+    // this column was added -- plain .not("product_type", "in", ...) would
+    // silently exclude every one of those too (NOT IN treats NULL as
+    // non-matching in standard SQL three-valued logic, confirmed live before
+    // shipping this), so this explicitly keeps null alongside anything
+    // that's actually not junk.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
     .gte("release_date", thirtyDaysAgo)
     .neq("release_date", "2099-12-31")
     .neq("release_date", "2020-01-01")
@@ -668,6 +681,8 @@ export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
     .select("*")
     .in("release_status", ["upcoming", "out_today"])
     .neq("is_suppressed", true)
+    // Same DLC/bundle exclusion as getRecentReleases -- see its comment.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
     .gte("release_date", today)
     .neq("release_date", "2099-12-31")
     .order("release_date", { ascending: true })
