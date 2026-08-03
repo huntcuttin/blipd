@@ -37,3 +37,10 @@ next-env.d.ts
 
 # local maintenance scripts (not for deployment)
 /scripts/
+
+# Supabase CLI local cache (pooler host/ref, machine-specific)
+/supabase/.temp/
+
+# ad-hoc audit/debug screenshots (regenerated per session, not project assets)
+audit-screenshots/
+screenshots-*/
