@@ -48,6 +48,7 @@ Blippd is a Nintendo eShop price alert app — "Beepr for Nintendo." Users follo
 - If hosting costs ever actually appear, a one-time Ko-fi link is the zero-touch answer (no account setup, no payout threshold, no ad-tag maintenance) — not an ad network.
 - Stripe removed from roadmap entirely (unchanged from before).
 - **Confirming evidence (2026-08-02, per Fable research):** Deku Deals — a multi-year incumbent with strong brand loyalty — earns an estimated ~$471/month from Patreon (~245 paid of 571 total members). Carbon-style ads need 5k+ engaged users to pay meaningfully at all; voluntary tip jars top out around 2-3% of active users paying ~$2/month even for an established brand. Neither is worth planning around at POC scale — this doesn't change the decision above, it just confirms it was the right call. (NT Deals' paywalled-feature model — desired-price threshold + multi-region — is the only pattern in this space that generates real revenue, but it requires exactly the kind of user-hostile feature-gating Blippd is explicitly trying not to do.)
+- **Counter-consideration surfaced by a second research pass (2026-08-02) — noted, does not reverse the lock above:** the category norm across DekuDeals/IsThereAnyDeal is a voluntary "supporter" tier (not ads, not a hard paywall) with "alerts delivered first" as the paid hook — monetizing alert speed/reliability anxiety without gating the core function. This is a real pattern, and it's a much softer ask than NT Deals' paywalled-threshold model. If this project ever moves off POC framing (see Project Philosophy — that requires actual retention data first), a Patreon/Ko-fi "supporter" tier offering early/faster alerts would be the pattern to revisit, not ads. Not building this now.
 
 ## Database Schema (Core Tables — Supabase public schema)
 
@@ -165,6 +166,19 @@ Digest sent a few hours after sale drops. Lists all followed games on sale with 
 - 1-4 games dropping in same 30-min window -> individual alerts
 - 5+ games in same 30-min window -> one batched digest email
 
+**Frequency cap — grounded in real data (2026-08-02, per Fable research):** Localytics research (via GoodFirms/Sci-Tech Today, directional not peer-reviewed) found 46% of users disable push at 2-5 messages/week, and 32% quit the app entirely at 6-10/week. Blippd's existing batching design (instant for target-price-hit/out-now, digest for everything else, 5+ = one email) already lands well inside the safe zone — this is validation, not a design change. Worth keeping in mind as a ceiling if any future feature considers adding more push volume.
+
+**Reliability architecture validation:** the same research calls a hybrid of event-driven detection + reconciliation jobs "the documented sweet spot" for this category — Blippd's actual architecture (10-min polling cron + the health-check reconciliation job) already matches this pattern. CamelCamelCamel's own Jan 2025 incident (a bug that re-created price watches for ~158,000 users, generating duplicate alerts) is the concrete cautionary tale for exactly the kind of idempotency gap the alerts-dedup fix (#15 in the audit list) closes — see Zero-Touch Operations and the 2026-08-02 session log.
+
+## Bulk Dismissal / Alert Feed UX (not yet built — 2026-08-02, per Fable research)
+
+The `/alerts` page doesn't yet have documented bulk-action UX. Established patterns worth following when this gets built:
+- Header-level "Clear all" (matches the safe-default pattern used by Teams' Activity → overflow menu), plus per-notification inline actions (mark read, dismiss).
+- Swipe-to-dismiss per item, tap-to-open marks that single item read.
+- A persistent read/unread dot — never let one tap silently mark the *entire* list read (a repeatedly-reported bug elsewhere).
+- An undo toast after any dismiss/mark-read action — "no visual clue to reverse the action" is a named complaint against competitors.
+- Disable "Clear all" when there are zero unread — a broken/no-op button at that state is a documented bug pattern (Hugging Face, Status mobile) to avoid repeating.
+
 ## UX Decisions (Locked — Don't Re-litigate)
 
 - Follow a game or franchise = per-category notification preferences (announcements, sales, all-time low, releases). Default all-on, customizable from detail page.
@@ -280,6 +294,8 @@ Per-game release time pages: `/games/[slug]/release-time`
 
 **The actually-viable programmatic SEO angle, per the same research: per-game price-history/current-sale-status pages** ("[game] price," "[game] Nintendo eShop sale") — this is what Deku Deals and NTPrices both rank for. Worth considering as a future SEO investment if/when that becomes a priority; not something to build now given the users-first sequencing below.
 
+**Important correction from a second research pass (2026-08-02): even for the category leaders, SEO is not actually the primary channel.** Per Semrush, DekuDeals gets 77.81% of traffic from Direct and only 9.32% from Google; IsThereAnyDeal is ~64% Direct vs ~29% Organic Search, and its top organic keywords are almost entirely branded ("isthereanydeal"), not per-game queries. These are loyalty/return-visit businesses — SEO is a supporting long-tail channel, not the growth engine, even at their scale. This directly reinforces the already-locked users-first sequencing (Marketing Strategy below): retention is what actually sustains this category, not search traffic. Build per-game pages for long-tail credibility, don't expect them to move the needle on their own.
+
 Nintendo eShop US launch time rules:
 - Digital-only -> 9:00 AM PT on release day
 - Physical + digital -> 9:00 PM PT night BEFORE release day
@@ -288,7 +304,7 @@ Nintendo eShop US launch time rules:
 
 Page elements: inferred launch time, timezone converter, countdown (release week), "Notify me when it goes live" CTA -> follows game.
 
-Competitor comparison page: `/vs/nt-deals` — honest comparison table, surfaces Switch 2 catalog issue, ad model difference, notification philosophy.
+Competitor comparison page: `/vs/nt-deals` — honest comparison table, ad model difference, notification philosophy. (The Switch 2 catalog row was removed 2026-08-02 — NT Deals fixed that gap, see Competitive Context.)
 
 **Per-game launch time prediction (added 2026-08-02):** the catalog sync captures Nintendo's own `editions` field (Digital vs Digital+Physical) alongside publisher, letting `/games/[slug]/release-time` predict a specific rule per game instead of listing all four generically. **Prediction accuracy is a copy concern, not a correctness concern — decided 2026-08-02, per Fable:**
 - Rule-backed predictions (major first-party via publisher match, physical via the editions field) get a specific, confident time ("9:00 AM PT").
@@ -410,6 +426,8 @@ When helping with Blippd, default to:
 - **Stale subscriptions.** Users report getting alerts for items they already removed from their list — a dedup/cleanup gap, not a delivery gap.
 - **Ad-gated notifications (NT Deals specific).** A reviewer says watchlist notifications require watching a popup ad first. Users who don't tolerate that simply never see their alert.
 - **Spam trains users to ignore.** Alerts that don't match a user's actual subscriptions get flooded, and users adapt by ignoring notifications from the app entirely — the batching/dedup discipline already built into Blippd (5+ price alerts = one digest) directly guards against this.
+- **Duplicate-alert bugs happen even to category veterans, at real scale (2026-08-02, per second Fable research pass).** CamelCamelCamel's own Jan 2025 postmortem: a bug "accidentally recreate[d] price watches for all wishlist items," affecting ~158,000 users with duplicate watches and flooded emails, live for 4 days before the fix. Directly validates prioritizing the alerts-dedup work (#15 in the audit fix list) rather than treating it as a nice-to-have.
+- **CamelCamelCamel's own words on what "reliable" actually requires:** after admitting alerts were arriving so late "their pricing data appears incorrect," their fix was re-prioritizing alert-processing infrastructure so "price watch alerts are treated like the First Class passengers they are" — i.e. alert delivery needs to be a first-class, monitored system, not an afterthought bolted onto the main pipeline.
 
 The through-line: across this whole space, the trust failure is almost always "I didn't get it" or "I got it too late," essentially never "I got too many." Blippd's passive alert model (follow → alert fires → buy on console, no ad-gating, no login-wall surprises) already sidesteps most of what's actively breaking trust for NT Deals right now.
 
