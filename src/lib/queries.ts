@@ -153,6 +153,8 @@ export async function getActiveNamedSaleEvents(supabase: Client): Promise<NamedS
   // Deduplicate by name — keep the most recent (already ordered by detected_at desc)
   const seen = new Set<string>();
   const deduped = (data ?? []).filter((row) => {
+    // Defensive: never show a 0-tagged event even if `active` is stale
+    if (row.games_count <= 0) return false;
     if (seen.has(row.name)) return false;
     seen.add(row.name);
     return true;

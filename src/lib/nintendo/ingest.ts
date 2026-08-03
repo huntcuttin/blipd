@@ -690,6 +690,11 @@ export async function runPriceUpdate(options?: {
             if (await generatePriceDropAlert(supabase, ref, oldPrice, newPrice, discount, followers, isOnSale ? endDate : null)) alertsCreated++;
           } else if (isNewSale) {
             if (await generateSaleStartedAlert(supabase, ref, discount, newPrice, endDate, followers)) alertsCreated++;
+          }
+          // Track sale onset independently of which branch above fired an alert —
+          // a sale-start that also reads as a price drop must still count toward
+          // the named-sale-event threshold below.
+          if (isNewSale) {
             newSaleGames.push({ id: game.id, title: game.title, publisher: (game as typeof game & { publisher?: string }).publisher ?? null });
           }
           if (allTimeLow) {
@@ -741,6 +746,13 @@ export async function runPriceUpdate(options?: {
       console.error("Named sale event detection failed:", e)
     );
   }
+
+  // Recompute tagged-game counts for every active event on every run (not just
+  // when a new detection happens to fire), and deactivate any that have
+  // dropped to 0 tagged games — otherwise events go stale once their sale ends.
+  await refreshActiveSaleEventCounts(supabase).catch((e) =>
+    console.error("Named sale event count refresh failed:", e)
+  );
 
   console.log(`Price update complete: ${games.length} checked, ${priceChanges} changes, ${alertsCreated} alerts`);
   return { checked: games.length, priceChanges, alertsCreated };
@@ -875,6 +887,42 @@ async function detectAndFireNamedSaleEvent(
   console.log(`  Sending named sale Tier 1 blast to ${uniqueUserIds.size} users`);
   const { sendNamedSaleEventEmail } = await import("@/lib/notifications/send-batch");
   await sendNamedSaleEventEmail(Array.from(uniqueUserIds), saleName, totalGames, saleEndDate);
+}
+
+// Recompute games_count from actual tagged games for every active event, and
+// deactivate any event whose tagged count has fallen to 0 (sale ended and
+// nothing renewed it). Runs every price-update cycle so events don't require
+// a fresh ≥5-game detection to get cleaned up.
+async function refreshActiveSaleEventCounts(
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<void> {
+  const { data: activeEvents } = await supabase
+    .from("named_sale_events")
+    .select("id, name, games_count")
+    .eq("active", true);
+
+  if (!activeEvents || activeEvents.length === 0) return;
+
+  for (const event of activeEvents) {
+    const { count } = await supabase
+      .from("games")
+      .select("id", { count: "exact", head: true })
+      .eq("sale_event_id", event.id);
+
+    const actualCount = count ?? 0;
+    if (actualCount === 0) {
+      await supabase
+        .from("named_sale_events")
+        .update({ games_count: 0, active: false })
+        .eq("id", event.id);
+      console.log(`  Named sale event "${event.name}" deactivated — 0 games remaining`);
+    } else if (actualCount !== event.games_count) {
+      await supabase
+        .from("named_sale_events")
+        .update({ games_count: actualCount })
+        .eq("id", event.id);
+    }
+  }
 }
 
 export async function runReleaseStatusUpdate(): Promise<number> {
