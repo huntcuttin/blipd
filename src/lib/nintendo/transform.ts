@@ -10,9 +10,21 @@ const NON_GAME_PATTERNS = /\b(DLC|Season Pass|Expansion Pass|Bundle|Pack|Transfe
 const FREE_UTILITY = /\b(Transfer Tool|Online Service|Membership|Voucher)\b/i;
 
 export function isStandaloneGame(hit: AlgoliaHit): boolean {
+  // Nintendo's own categorization is far more reliable than title regex —
+  // confirmed live 2026-08-03 that individual costume pieces, armor pieces,
+  // single songs, and "BGM" packs all carry eshopDetails.productType ===
+  // "ADD_ON_CONTENT" (a real game is "TITLE"), regardless of whether their
+  // title happens to contain any of the NON_GAME_PATTERNS keywords below.
+  // This was flooding followers of a franchise with every piece of DLC ever
+  // released under it, each firing a false "is available now" launch alert
+  // (see CLAUDE.md session log 2026-08-03) since these items never get a
+  // real release date synced and permanently match the placeholder-date +
+  // real-price fallback in runReleaseStatusUpdate.
+  if (hit.eshopDetails?.productType === "ADD_ON_CONTENT") return false;
   // Filter out free utilities ($0 items that aren't real games)
   if (hit.msrp <= 0 && FREE_UTILITY.test(hit.title)) return false;
-  // Filter out DLC, season passes, bundles, demos, etc.
+  // Filter out DLC, season passes, bundles, demos, etc. — kept as a
+  // secondary net for anything the productType check above doesn't catch.
   if (NON_GAME_PATTERNS.test(hit.title)) return false;
   return true;
 }
@@ -57,22 +69,35 @@ export function computeDiscount(currentPrice: number, originalPrice: number): nu
 
 const MONTH_YEAR_RE = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})$/i;
 
-function parseReleaseDate(releaseDateDisplay: string): string {
-  if (!releaseDateDisplay || releaseDateDisplay === "TBD") {
-    return "2099-12-31";
-  }
-  // Detect "Month Year" (no day) — store as last day of month so isMonthOnlyDate() detects it
-  const monthYear = releaseDateDisplay.match(MONTH_YEAR_RE);
-  if (monthYear) {
-    const d = new Date(`${monthYear[1]} 1, ${monthYear[2]}`);
-    if (!isNaN(d.getTime())) {
-      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-      return lastDay.toISOString().split("T")[0];
+function parseReleaseDate(releaseDateDisplay: string, releaseDate?: string): string {
+  // releaseDateDisplay's "Month Year" convention (no day) intentionally
+  // resolves to the last day of the month so isMonthOnlyDate() can render it
+  // as a vague/approximate date in the UI — that signal matters for genuine
+  // upcoming titles and must win when present, so it's checked first.
+  if (releaseDateDisplay && releaseDateDisplay !== "TBD") {
+    const monthYear = releaseDateDisplay.match(MONTH_YEAR_RE);
+    if (monthYear) {
+      const d = new Date(`${monthYear[1]} 1, ${monthYear[2]}`);
+      if (!isNaN(d.getTime())) {
+        const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        return lastDay.toISOString().split("T")[0];
+      }
     }
+    const parsed = new Date(releaseDateDisplay);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().split("T")[0];
   }
-  const parsed = new Date(releaseDateDisplay);
-  if (isNaN(parsed.getTime())) return "2099-12-31";
-  return parsed.toISOString().split("T")[0];
+  // releaseDateDisplay is absent far more often than not — confirmed live
+  // 2026-08-03 that even long-released, well-known titles (e.g. Super Mario
+  // Odyssey, released 2017) carry a null releaseDateDisplay while still
+  // having a real releaseDate. Without this fallback, every such game (and
+  // in particular nearly all DLC/add-on listings) fell straight to the
+  // 2099-12-31 placeholder, which is what let runReleaseStatusUpdate's
+  // priced-but-placeholder-dated fallback treat them as brand-new releases.
+  if (releaseDate) {
+    const parsed = new Date(releaseDate);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().split("T")[0];
+  }
+  return "2099-12-31";
 }
 
 const NINTENDO_CDN_PREFIX =
@@ -241,7 +266,7 @@ export function algoliaHitToGameRow(hit: AlgoliaHit) {
   const currentPrice = salePrice != null && salePrice < msrp ? salePrice : msrp;
   const discount = computeDiscount(currentPrice, msrp);
   const isOnSale = salePrice != null && salePrice < msrp;
-  const releaseDate = parseReleaseDate(hit.releaseDateDisplay);
+  const releaseDate = parseReleaseDate(hit.releaseDateDisplay, hit.releaseDate);
   // If release date is unknown but game has a real price, it's almost certainly released
   const releaseStatus = releaseDate === "2099-12-31" && msrp > 0
     ? "released"

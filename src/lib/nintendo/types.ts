@@ -27,13 +27,24 @@ export interface AlgoliaHit {
   generalFilters: string[];
   availability: string[];
   releaseDateDisplay: string;
+  // The reliably-populated ISO release date. releaseDateDisplay is often
+  // null even for real, long-released titles (confirmed live 2026-08-03
+  // against Super Mario Odyssey and others) — releaseDate is the field
+  // that's actually always there.
+  releaseDate?: string;
   platform: string;
   corePlatforms: string[];
   esrbRating: string;
   freeToStart: boolean;
   objectID: string;
   topLevelCategoryCode: string;
-  eshopDetails?: unknown;
+  // productType: "TITLE" for a real standalone game, "ADD_ON_CONTENT" for
+  // DLC/cosmetics/soundtracks/etc — confirmed live 2026-08-03 (e.g. "Taiko
+  // no Tatsujin: Rhythm Festival - Habit", a $1.49 song pack, vs. a real
+  // game like Super Mario Odyssey). Far more reliable than title regex.
+  eshopDetails?: { productType?: string };
+  topLevelFilters?: string[];
+  hasDlc?: boolean;
   editions?: string[];
 }
 
