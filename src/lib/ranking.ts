@@ -213,6 +213,24 @@ export function isQualityGame(game: Game): boolean {
   return false;
 }
 
+/**
+ * Catalog quality tier — see CLAUDE.md "Game Quality & Catalog Ranking".
+ * Tier 1: Nintendo first-party (always, regardless of score) + OC/Metacritic >=85. Always show.
+ * Tier 2: Third-party with a score in 75-84. Standard feeds.
+ * Tier 3: Score <75 or unscored. Only on direct search or when followed — never
+ * a featured/trending slot.
+ *
+ * This is a discovery-only signal. Never gate a followed or searched-for game
+ * on it — callers are responsible for exempting those cases.
+ */
+export function getGameTier(game: Game): 1 | 2 | 3 {
+  if (game.franchise && NINTENDO_1ST_PARTY.has(game.franchise)) return 1;
+  const score = game.metacriticScore;
+  if (score !== null && score >= 85) return 1;
+  if (score !== null && score >= 75) return 2;
+  return 3;
+}
+
 // Edition suffixes to strip when finding duplicate games
 const EDITION_RE = /\s*[-–:]?\s*(Digital\s+)?(Deluxe|Standard|Complete|Ultimate|Gold|Platinum|Collector'?s?|Anniversary|Encore|Special|Limited|Premium)\s+Edition\s*$/i;
 const BUNDLE_RE = /\s*[-–:]?\s*Bundle\s*$/i;

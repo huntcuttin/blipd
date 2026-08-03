@@ -11,7 +11,8 @@ import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGamesOnSale, searchGames, getActiveNamedSaleEvents } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/AuthContext";
-import { computeTrendingScore, deduplicateGames } from "@/lib/ranking";
+import { useFollow } from "@/lib/FollowContext";
+import { computeTrendingScore, deduplicateGames, getGameTier } from "@/lib/ranking";
 import type { Game } from "@/lib/types";
 
 const SORTS = ["Best Deals", "Biggest Discount", "Lowest Price", "Ending Soon"] as const;
@@ -68,6 +69,7 @@ export default function SalesPage() {
   const [sort, setSort] = useState<SortMode>("Best Deals");
   const [genreFilter, setGenreFilter] = useState<GenreFilter>("All");
   const { consolePreference } = useAuth();
+  const { isFollowingGame } = useFollow();
 
   const { data: games, loading: gamesLoading, error: gamesError } = useSupabaseQuery(getGamesOnSale);
   const { data: saleEvents } = useSupabaseQuery(getActiveNamedSaleEvents);
@@ -108,8 +110,16 @@ export default function SalesPage() {
     );
   }, [eventFilteredGames, genreFilter]);
 
-  const allTimeLows = genreFiltered.filter((g) => g.isAllTimeLow);
-  const sortedSales = sortGames(genreFiltered, sort, emptyFranchises);
+  // Tier 3 (unscored/low-scored, non-Nintendo) games are noise in an algorithmic
+  // feed — a 90% discount on 2-star shovelware isn't a deal. They still show up
+  // via search (separate branch above) or if the user already follows them.
+  const tierFiltered = useMemo(
+    () => genreFiltered.filter((g) => getGameTier(g) < 3 || isFollowingGame(g.id)),
+    [genreFiltered, isFollowingGame]
+  );
+
+  const allTimeLows = tierFiltered.filter((g) => g.isAllTimeLow);
+  const sortedSales = sortGames(tierFiltered, sort, emptyFranchises);
 
   return (
     <div className="px-4">
@@ -205,7 +215,7 @@ export default function SalesPage() {
             </div>
           </div>
 
-          {genreFiltered.length === 0 ? (
+          {tierFiltered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 px-4">
               <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
                 <svg className="w-8 h-8 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
