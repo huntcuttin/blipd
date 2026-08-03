@@ -3,10 +3,11 @@
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { requestPushPermission } from "@/components/ServiceWorkerRegistration";
 import { createClient } from "@/lib/supabase/client";
-import { setConsolePreference, getUserRetroFollows, toggleRetroFollow } from "@/lib/queries";
+import { setConsolePreference, getUserRetroFollows, toggleRetroFollow, getGamesByIds } from "@/lib/queries";
+import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import type { ConsolePreference } from "@/lib/types";
 
 const RETRO_CONSOLES = [
@@ -85,6 +86,13 @@ export default function SettingsPage() {
   const gameCount = followedGameIds.size;
   const franchiseCount = followedFranchiseIds.size;
   const ownedCount = ownedGameIds.size;
+
+  const ownedIds = useMemo(() => Array.from(ownedGameIds), [ownedGameIds]);
+  const { data: ownedGamesData } = useSupabaseQuery(
+    (sb) => ownedIds.length > 0 ? getGamesByIds(sb, ownedIds) : Promise.resolve([]),
+    [ownedIds.join(",")]
+  );
+  const ownedGames = ownedGamesData ?? [];
 
   const authProvider = user?.app_metadata?.provider;
   const authLabel = authProvider === "google" ? "Google" : authProvider === "apple" ? "Apple" : "Email";
@@ -209,6 +217,34 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+
+          {/* My Shelf — owned games, tucked away here rather than on Home */}
+          {ownedGames.length > 0 && (
+            <div className="bg-[#111111] rounded-xl border border-[#222222] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[10px] font-bold text-[#7c3aed] tracking-wider">MY SHELF</h2>
+                <span className="text-[#555555] text-[11px]">{ownedGames.length} game{ownedGames.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="grid grid-cols-6 gap-2">
+                {ownedGames.map((game) => (
+                  <Link
+                    key={game.id}
+                    href={`/game/${game.slug}`}
+                    className="aspect-[3/4] rounded-md overflow-hidden bg-[#1a1a1a] block"
+                  >
+                    {game.coverArt ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={game.coverArt} alt={game.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[#555555] text-[10px] font-bold">
+                        {game.title.charAt(0)}
+                      </div>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Notifications info */}
           <div className="bg-[#111111] rounded-xl border border-[#222222] p-4">

@@ -52,10 +52,10 @@ export default function HomePage() {
     followedFranchiseIds.has(f.id)
   );
 
-  // Split followed games into categories
+  // Split followed games into categories. Owned games are intentionally excluded
+  // from Home entirely — that collection lives tucked away in Settings instead.
   const onSale = followedGames.filter((g) => g.isOnSale && !ownedGameIds.has(g.id));
   const watching = followedGames.filter((g) => !g.isOnSale && !ownedGameIds.has(g.id));
-  const owned = followedGames.filter((g) => ownedGameIds.has(g.id));
 
   const hasPersonalContent = followedGames.length > 0 || followedFranchiseList.length > 0;
 
@@ -198,16 +198,6 @@ export default function HomePage() {
                 {watching.map((game) => (
                   <GameCard key={game.id} game={game} ownAction={() => toggleOwnGame(game.id)} />
                 ))}
-              </div>
-            </section>
-          )}
-
-          {/* My Library */}
-          {owned.length > 0 && (
-            <section>
-              <h2 className="text-[10px] font-bold text-[#7c3aed]/60 tracking-wider mb-2 uppercase">My Library</h2>
-              <div className="space-y-2">
-                {owned.map((game) => <GameCard key={game.id} game={game} />)}
               </div>
             </section>
           )}
