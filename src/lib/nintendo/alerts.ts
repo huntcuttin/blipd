@@ -148,6 +148,55 @@ export async function generateAllTimeLowAlert(
   });
 }
 
+/**
+ * update-prices' isNewSale check (isOnSale && !game.is_on_sale) assumes
+ * is_on_sale only flips false->true when a sale genuinely starts. Observed
+ * live: "Monster Hunter Stories" re-fired sale_started every ~1-2 days for
+ * two months straight, always at the identical 67% off / $9.99 — Nintendo's
+ * own price API appears to occasionally report a brief false "not on sale"
+ * reading for an otherwise-continuous promo, which round-trips is_on_sale
+ * false then true again with no real change. hasRecentAlert's 24h window
+ * doesn't catch this since the gaps between re-fires ran well past 24h.
+ * Before firing a fresh sale_started, check whether the last sale-related
+ * alert we sent for this game (over a much longer window) already carried
+ * the exact same discount + price — if so, this isn't a new sale.
+ */
+export async function isDuplicateSaleSignature(
+  supabase: AdminClient,
+  gameId: string,
+  discount: number,
+  newPrice: number,
+  lookbackDays = 14
+): Promise<boolean> {
+  const since = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const data = await withRetry(
+      async () => {
+        const { data, error } = await supabase
+          .from("alerts")
+          .select("discount, new_price")
+          .eq("game_id", gameId)
+          .in("type", ["sale_started", "price_drop"])
+          .gte("created_at", since)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (error) throw new Error(error.message);
+        return data;
+      },
+      { retries: 2, baseDelay: 300, label: `isDuplicateSaleSignature ${gameId}` }
+    );
+    if (!data || data.length === 0) return false;
+    const last = data[0] as { discount: number | null; new_price: string | number | null };
+    return last.discount === discount && Number(last.new_price) === newPrice;
+  } catch (err) {
+    // Fail open — worst case a genuine duplicate slips through occasionally,
+    // same as before this guard existed. hasRecentAlert's 24h gate is still
+    // the primary dedup line of defense.
+    console.error(`isDuplicateSaleSignature query failed for ${gameId}:`, err instanceof Error ? err.message : err);
+    return false;
+  }
+}
+
 export async function generateSaleStartedAlert(
   supabase: AdminClient,
   game: GameRef,

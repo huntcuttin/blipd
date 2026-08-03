@@ -15,6 +15,7 @@ import {
   generatePriceDropAlert,
   generateAllTimeLowAlert,
   generateSaleStartedAlert,
+  isDuplicateSaleSignature,
   generateReleaseAlert,
   generateSwitch2EditionAlert,
   generateSaleEndingAlert,
@@ -698,7 +699,10 @@ export async function runPriceUpdate(options?: {
         const newPrice = update.current_price as number;
         const discount = update.discount as number;
         const isPriceDrop = newPrice < oldPrice;
-        const isNewSale = isOnSale && !game.is_on_sale;
+        let isNewSale = isOnSale && !game.is_on_sale;
+        if (isNewSale && await isDuplicateSaleSignature(supabase, game.id, discount, newPrice)) {
+          isNewSale = false;
+        }
         if (isPriceDrop || allTimeLow || isNewSale) {
           const ref = { id: game.id, title: game.title };
 
