@@ -231,6 +231,17 @@ export function getGameTier(game: Game): 1 | 2 | 3 {
   return 3;
 }
 
+/**
+ * Narrower than getGameTier() === 1 — that bucket also includes any
+ * high-scoring third-party game, which is right for a "don't hide this"
+ * gate but wrong when a caller specifically wants Nintendo's own titles to
+ * lead (e.g. a curated pick list), since a 95-rated indie would otherwise
+ * still outrank Mario on raw score within the same tier.
+ */
+export function isNintendoFirstParty(game: Game): boolean {
+  return Boolean(game.franchise && NINTENDO_1ST_PARTY.has(game.franchise));
+}
+
 // Edition suffixes to strip when finding duplicate games
 const EDITION_RE = /\s*[-–:]?\s*(Digital\s+)?(Deluxe|Standard|Complete|Ultimate|Gold|Platinum|Collector'?s?|Anniversary|Encore|Special|Limited|Premium)\s+Edition\s*$/i;
 const BUNDLE_RE = /\s*[-–:]?\s*Bundle\s*$/i;

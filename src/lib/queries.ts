@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent } from "@/lib/types";
-import { getGameTier } from "@/lib/ranking";
+import { getGameTier, isNintendoFirstParty } from "@/lib/ranking";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;
@@ -160,10 +160,13 @@ export async function getPopularGames(supabase: Client): Promise<Game[]> {
     .limit(60);
   if (error) throw error;
   const games = (data ?? []).map(mapGame);
-  // Nintendo first-party (and other Tier 1 titles) surface first per the
-  // Game Quality & Catalog Ranking spec — a 95-rated third-party game
-  // shouldn't outrank Mario just because its score is a few points higher.
+  // Nintendo's own titles lead regardless of score — getGameTier() alone
+  // isn't enough here, since it buckets Nintendo in with any 85+ third-party
+  // game, and a 95-rated indie would still outrank Mario within that tier on
+  // raw score. Tier still breaks the remaining ties (Tier 2 above Tier 3).
   games.sort((a, b) => {
+    const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
+    if (nintendoDiff !== 0) return nintendoDiff;
     const tierDiff = getGameTier(a) - getGameTier(b);
     if (tierDiff !== 0) return tierDiff;
     return (b.metacriticScore ?? 0) - (a.metacriticScore ?? 0);
