@@ -1,0 +1,3 @@
+# mobile/ is a separate Expo/React Native scaffold (V2 roadmap item, gated
+# behind the retention gate) -- unrelated to this Next.js app's build.
+mobile/
