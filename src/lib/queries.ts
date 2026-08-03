@@ -645,9 +645,22 @@ export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
     .lte("release_date", sixtyDaysOut)
     .neq("release_date", "2099-12-31")
     .order("release_date", { ascending: true })
-    .limit(50);
+    .limit(100);
   if (error) throw error;
-  return (data ?? []).map(mapGame);
+  const games = (data ?? []).map(mapGame);
+  // Unlike /sales, getGameTier()'s score-based filter doesn't apply here —
+  // unreleased games essentially never have a metacritic_score yet, so
+  // filtering on it would wipe out almost every non-Nintendo upcoming title,
+  // review-less rather than low-quality. Nintendo's own upcoming titles
+  // still lead (same reasoning as the games-you-own picker), release date
+  // still governs the rest so the page stays "what's coming, soonest first."
+  return games
+    .sort((a, b) => {
+      const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
+      if (nintendoDiff !== 0) return nintendoDiff;
+      return a.releaseDate.localeCompare(b.releaseDate);
+    })
+    .slice(0, 30);
 }
 
 

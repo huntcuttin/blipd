@@ -128,7 +128,7 @@ export default function SalesPage() {
   return (
     <div className="px-4">
       {/* Header */}
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between py-4 pr-12">
         <h1 className="text-2xl font-bold text-white">Deals</h1>
         <SearchBar
           value={search}

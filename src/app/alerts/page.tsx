@@ -141,7 +141,7 @@ export default function AlertsPage() {
   return (
     <div className="px-4">
       {/* Header */}
-      <div className="py-4">
+      <div className="py-4 pr-12">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-white">Alerts</h1>
@@ -154,8 +154,11 @@ export default function AlertsPage() {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="text-xs text-[#888888] font-medium hover:text-white hover:underline py-2 px-2"
+              className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-full bg-[#111111] border border-[#222222] text-[#aaaaaa] text-xs font-medium hover:border-[#333333] hover:text-white transition-all active:scale-[0.97]"
             >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
               Mark all read
             </button>
           )}
