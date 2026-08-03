@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import type { GameAlert, AlertType } from "@/lib/types";
+
+const SWIPE_DISMISS_THRESHOLD = 80;
 
 const alertConfig: Record<
   AlertType,
@@ -23,15 +25,22 @@ export default function AlertCard({
   alert,
   onTap,
   onRemind,
+  onDismiss,
 }: {
   alert: GameAlert;
   onTap?: (id: string) => void;
   onRemind?: (id: string) => void;
+  onDismiss?: (id: string) => void;
 }) {
   const config = alertConfig[alert.type] ?? { label: alert.type.toUpperCase(), color: "text-[#888888]", bg: "bg-[#888888]/15" };
   const [reminded, setReminded] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const [dismissing, setDismissing] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const dragging = useRef(false);
 
   const handleClick = () => {
+    if (dragging.current) return;
     if (!alert.read) onTap?.(alert.id);
   };
 
@@ -42,69 +51,134 @@ export default function AlertCard({
     onRemind?.(alert.id);
   };
 
+  const handleDismissClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerDismiss();
+  };
+
+  const triggerDismiss = () => {
+    setDismissing(true);
+    setDragX(-400);
+    setTimeout(() => onDismiss?.(alert.id), 180);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    dragging.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const delta = e.touches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 6) dragging.current = true;
+    if (delta < 0) setDragX(Math.max(delta, -140));
+  };
+
+  const handleTouchEnd = () => {
+    touchStartX.current = null;
+    if (dragX <= -SWIPE_DISMISS_THRESHOLD && onDismiss) {
+      triggerDismiss();
+    } else {
+      setDragX(0);
+      // Let the click handler see stale dragging state briefly, then reset.
+      setTimeout(() => {
+        dragging.current = false;
+      }, 50);
+    }
+  };
+
   const inner = (
-    <div
-      onClick={handleClick}
-      className={`flex gap-3 p-3 rounded-xl border transition-all ${
-        alert.read
-          ? "bg-[#111111]/60 border-[#1a1a1a] opacity-60"
-          : "bg-[#111111] border-[#333333]"
-      }`}
-    >
-      {/* Unread dot */}
-      <div className="shrink-0 flex items-start pt-1">
-        {!alert.read ? (
-          <div className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]" />
-        ) : (
-          <div className="w-2" />
-        )}
-      </div>
-
-      {/* Cover art */}
-      {alert.gameCoverArt && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={alert.gameCoverArt}
-          alt={alert.gameTitle}
-          loading="lazy"
-          className="w-12 h-12 rounded-lg object-cover object-center bg-[#1a1a1a] shrink-0"
-        />
+    <div className="relative overflow-hidden rounded-xl">
+      {onDismiss && (
+        <div className="absolute inset-0 flex items-center justify-end pr-5 bg-[#ff4d4d]/20 rounded-xl">
+          <svg className="w-5 h-5 text-[#ff4d4d]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </div>
       )}
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${config.color} ${config.bg}`}
-          >
-            {config.label}
-          </span>
-          <span className="text-[#555555] text-[10px] ml-auto shrink-0">
-            {alert.timestamp}
-          </span>
+      <div
+        onClick={handleClick}
+        onTouchStart={onDismiss ? handleTouchStart : undefined}
+        onTouchMove={onDismiss ? handleTouchMove : undefined}
+        onTouchEnd={onDismiss ? handleTouchEnd : undefined}
+        style={{
+          transform: `translateX(${dragX}px)`,
+          transition: dragging.current && dragX !== 0 && !dismissing ? "none" : "transform 0.18s ease-out, opacity 0.18s ease-out",
+          opacity: dismissing ? 0 : 1,
+        }}
+        className={`relative flex gap-3 p-3 rounded-xl border ${
+          alert.read
+            ? "bg-[#111111]/60 border-[#1a1a1a] opacity-60"
+            : "bg-[#111111] border-[#333333]"
+        }`}
+      >
+        {/* Unread dot */}
+        <div className="shrink-0 flex items-start pt-1">
+          {!alert.read ? (
+            <div className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]" />
+          ) : (
+            <div className="w-2" />
+          )}
         </div>
 
-        <h3
-          className={`font-semibold text-sm leading-tight ${
-            alert.read ? "text-white/70" : "text-white"
-          }`}
-        >
-          {alert.headline}
-        </h3>
-        <p className="text-[#555555] text-xs mt-0.5">{alert.subtext}</p>
+        {/* Cover art */}
+        {alert.gameCoverArt && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={alert.gameCoverArt}
+            alt={alert.gameTitle}
+            loading="lazy"
+            className="w-12 h-12 rounded-lg object-cover object-center bg-[#1a1a1a] shrink-0"
+          />
+        )}
 
-        {/* Remind action — only show on unread alerts */}
-        {!alert.read && onRemind && !reminded && (
-          <button
-            onClick={handleRemind}
-            className="mt-1 py-2.5 min-h-[44px] text-[11px] text-[#666666] hover:text-white transition-colors flex items-center"
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${config.color} ${config.bg}`}
+            >
+              {config.label}
+            </span>
+            <span className="text-[#555555] text-[10px] ml-auto shrink-0">
+              {alert.timestamp}
+            </span>
+            {onDismiss && (
+              <button
+                onClick={handleDismissClick}
+                aria-label="Dismiss alert"
+                className="shrink-0 -m-2 p-2 text-[#444444] hover:text-white transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <h3
+            className={`font-semibold text-sm leading-tight ${
+              alert.read ? "text-white/70" : "text-white"
+            }`}
           >
-            Remind me in a few days
-          </button>
-        )}
-        {reminded && (
-          <p className="mt-1.5 text-[10px] text-[#00ff88]">Reminder set</p>
-        )}
+            {alert.headline}
+          </h3>
+          <p className="text-[#555555] text-xs mt-0.5">{alert.subtext}</p>
+
+          {/* Remind action — only show on unread alerts */}
+          {!alert.read && onRemind && !reminded && (
+            <button
+              onClick={handleRemind}
+              className="mt-1 py-2.5 min-h-[44px] text-[11px] text-[#666666] hover:text-white transition-colors flex items-center"
+            >
+              Remind me in a few days
+            </button>
+          )}
+          {reminded && (
+            <p className="mt-1.5 text-[10px] text-[#00ff88]">Reminder set</p>
+          )}
+        </div>
       </div>
     </div>
   );

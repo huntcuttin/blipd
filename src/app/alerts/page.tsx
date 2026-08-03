@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import AlertCard from "@/components/AlertCard";
+import UndoToast from "@/components/UndoToast";
 
 import QueryError from "@/components/QueryError";
 import { useAuth } from "@/lib/AuthContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getAlerts, markAlertRead, markAllAlertsRead, remindAlert } from "@/lib/queries";
+import { getAlerts, markAlertRead, markAllAlertsRead, remindAlert, dismissAlerts } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import type { GameAlert, AlertType } from "@/lib/types";
+
+const UNDO_WINDOW_MS = 5000;
 
 type TimeGroup = "today" | "yesterday" | "this_week" | "earlier";
 type AlertFilter = "all" | "price" | "sales" | "releases";
@@ -44,10 +47,72 @@ export default function AlertsPage() {
 
   const [localAlerts, setLocalAlerts] = useState<GameAlert[]>([]);
   const [filter, setFilter] = useState<AlertFilter>("all");
+  const [pending, setPending] = useState<{ alerts: GameAlert[]; message: string } | null>(null);
+  const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (fetchedAlerts) setLocalAlerts(fetchedAlerts);
   }, [fetchedAlerts]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingTimer.current) clearTimeout(pendingTimer.current);
+    };
+  }, []);
+
+  const commitPending = async (alertsToDismiss: GameAlert[]) => {
+    if (!user || alertsToDismiss.length === 0) return;
+    try {
+      const supabase = createClient();
+      await dismissAlerts(supabase, user.id, alertsToDismiss.map((a) => a.id));
+    } catch {
+      // Already removed from view; a failed write just means it may
+      // reappear next refresh. Not worth a rollback UX for this action.
+    }
+  };
+
+  const dismissWithUndo = (alertsToDismiss: GameAlert[], message: string) => {
+    if (alertsToDismiss.length === 0) return;
+    // A dismiss fired while a previous one is still pending — commit that
+    // one immediately rather than losing it.
+    if (pendingTimer.current) {
+      clearTimeout(pendingTimer.current);
+      if (pending) commitPending(pending.alerts);
+    }
+    const dismissIds = new Set(alertsToDismiss.map((a) => a.id));
+    setLocalAlerts((prev) => prev.filter((a) => !dismissIds.has(a.id)));
+    setPending({ alerts: alertsToDismiss, message });
+    pendingTimer.current = setTimeout(() => {
+      commitPending(alertsToDismiss);
+      setPending(null);
+      pendingTimer.current = null;
+    }, UNDO_WINDOW_MS);
+  };
+
+  const handleUndo = () => {
+    if (!pending) return;
+    if (pendingTimer.current) {
+      clearTimeout(pendingTimer.current);
+      pendingTimer.current = null;
+    }
+    setLocalAlerts((prev) =>
+      [...prev, ...pending.alerts].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+    );
+    setPending(null);
+  };
+
+  const handleDismiss = (id: string) => {
+    const alert = localAlerts.find((a) => a.id === id);
+    if (!alert) return;
+    dismissWithUndo([alert], "Alert dismissed");
+  };
+
+  const handleClearAll = () => {
+    if (localAlerts.length === 0) return;
+    dismissWithUndo(localAlerts, `${localAlerts.length} alert${localAlerts.length !== 1 ? "s" : ""} cleared`);
+  };
 
   const handleTap = async (id: string) => {
     setLocalAlerts((prev) =>
@@ -151,17 +216,30 @@ export default function AlertsPage() {
               </span>
             )}
           </div>
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllRead}
-              className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-full bg-[#111111] border border-[#222222] text-[#aaaaaa] text-xs font-medium hover:border-[#333333] hover:text-white transition-all active:scale-[0.97]"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-              Mark all read
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-full bg-[#111111] border border-[#222222] text-[#aaaaaa] text-xs font-medium hover:border-[#333333] hover:text-white transition-all active:scale-[0.97]"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                Mark all read
+              </button>
+            )}
+            {localAlerts.length > 0 && (
+              <button
+                onClick={handleClearAll}
+                className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-full bg-[#111111] border border-[#222222] text-[#aaaaaa] text-xs font-medium hover:border-[#ff4d4d]/40 hover:text-[#ff4d4d] transition-all active:scale-[0.97]"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+                Clear all
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -239,6 +317,7 @@ export default function AlertsPage() {
                         alert={alert}
                         onTap={handleTap}
                         onRemind={handleRemind}
+                        onDismiss={user ? handleDismiss : undefined}
                       />
                     ))}
                   </div>
@@ -253,6 +332,7 @@ export default function AlertsPage() {
           </div>
         </>
       )}
+      {pending && <UndoToast message={pending.message} onUndo={handleUndo} />}
     </div>
   );
 }
