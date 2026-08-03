@@ -201,19 +201,6 @@ export function isRarelyOnSale(game: Game): boolean {
 
 
 /**
- * Quality gate — returns true for games worth surfacing in curated sections.
- * Requires cover art + at least one quality signal.
- */
-export function isQualityGame(game: Game): boolean {
-  if (!game.coverArt) return false;
-  if (game.metacriticScore !== null && game.metacriticScore >= 70) return true;
-  if (game.igdbHype && game.igdbHype >= 20) return true;
-  if (game.franchise && (NINTENDO_1ST_PARTY.has(game.franchise) || REPUTABLE_3RD_PARTY.has(game.franchise))) return true;
-  if (game.publisher && REPUTABLE_PUBLISHERS.has(game.publisher)) return true;
-  return false;
-}
-
-/**
  * Catalog quality tier — see CLAUDE.md "Game Quality & Catalog Ranking".
  * Tier 1: Nintendo first-party (always, regardless of score) + OC/Metacritic >=85. Always show.
  * Tier 2: Third-party with a score in 75-84. Standard feeds.

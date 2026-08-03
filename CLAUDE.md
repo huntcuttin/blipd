@@ -965,6 +965,7 @@ Scale check: 1 user, 18 follows, 0 push subs, 17,492 alerts, 1,007 emails sent. 
 - "PriceSnapshot table — start accumulating own data now" never happened: table absent in prod, writer never wired. Price history chart rarely renders (needs 3+ points; history is monthly buckets).
 - vercel.json also declares 3 daily crons — redundant double-scheduling against cron-job.org. Delete them.
 - `sale_started`/named-event claims: sale_started alerts DO fire in prod (510 last 30d) — but named-event detection is starved by the else-if branching (see fix #2).
+- **#34 and #39 are already done**, contrary to the fix-list table above — confirmed via `git log`: README replaced 2026-08-02 (`e36028e`, no longer create-next-app boilerplate) and `.env.example` completed the same day (`8653da0`, all 13 vars present including VAPID×3/ANTHROPIC/TWITCH×2/ADMIN_EMAIL/TEST_EMAIL). Likely landed via the concurrent session working this same repo. Found while re-checking the minor/hygiene tier during the 2026-08-02 overnight loop — no action needed.
 
 ### Suggested execution order for next session
 1. Rotate service_role key (#1) — 10 minutes, do it first
