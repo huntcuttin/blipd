@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
@@ -11,15 +12,30 @@ import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getGamesByIds, getAllFranchises, searchGames } from "@/lib/queries";
+import { getGamesByIds, getAllFranchises, searchGames, getUserProfile } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/client";
 import type { Game, Franchise } from "@/lib/types";
 
 export default function HomePage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Game[] | null>(null);
   const { user, consolePreference } = useAuth();
   const { followedGameIds, followedFranchiseIds, ownedGameIds, toggleOwnGame, loading: followContextLoading } = useFollow();
+
+  // onboarding_completed is otherwise only checked once, in the auth callback
+  // right after login — a user who abandons onboarding mid-flow keeps a live
+  // session and never gets prompted again on a later visit, since nothing
+  // else re-checks it. Home is the primary landing surface for a returning
+  // signed-in user, so this catches that case without adding the check to
+  // every page.
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    getUserProfile(supabase, user.id).then(({ onboardingCompleted }) => {
+      if (!onboardingCompleted) router.replace("/onboarding");
+    });
+  }, [user, router]);
 
   const followedIds = useMemo(() => Array.from(followedGameIds), [followedGameIds]);
   const { data: followedGamesData, loading: followedLoading } = useSupabaseQuery(
