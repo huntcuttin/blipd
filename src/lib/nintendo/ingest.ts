@@ -210,14 +210,24 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     }
   }
 
-  // Save IGDB-sourced release dates before upsert (upsert will overwrite them)
-  const { data: igdbDates } = await supabase
+  // Save trusted release dates before upsert (upsert will overwrite them with
+  // Algolia's own — Algolia can carry a null releaseDateDisplay for a game
+  // that's definitely released, which parseReleaseDate falls back to the
+  // 2099-12-31 placeholder for, silently demoting an already-"released" game
+  // back to "upcoming" on every daily sync. Confirmed live 2026-08-02 for
+  // "DRAGON QUEST - HD-2D Erdrick Trilogy Collection": Algolia's own record
+  // has releaseDateDisplay=null and msrp=null despite the game being real
+  // and out. release_date_source distinguishes two trusted origins here:
+  // "igdb" (the existing sync-release-dates cron) and "price-confirmed" (the
+  // pricedUpcoming fallback in runReleaseStatusUpdate below) — both get
+  // restored the same way after the sync potentially clobbers them.
+  const { data: trustedDates } = await supabase
     .from("games")
-    .select("id, release_date, release_status")
-    .eq("release_date_source", "igdb");
-  const igdbDateMap = new Map<string, { release_date: string; release_status: string }>();
-  for (const g of igdbDates ?? []) {
-    igdbDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status });
+    .select("id, release_date, release_status, release_date_source")
+    .in("release_date_source", ["igdb", "price-confirmed"]);
+  const trustedDateMap = new Map<string, { release_date: string; release_status: string; release_date_source: string }>();
+  for (const g of trustedDates ?? []) {
+    trustedDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status, release_date_source: g.release_date_source });
   }
 
   // Find which games already exist (by nsuid) so we don't overwrite their prices
@@ -392,16 +402,17 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     }
   }
 
-  // Restore IGDB-sourced release dates that were overwritten by upsert
-  if (igdbDateMap.size > 0) {
-    console.log(`  Restoring ${igdbDateMap.size} IGDB-sourced release dates...`);
-    for (const [id, dates] of Array.from(igdbDateMap.entries())) {
+  // Restore trusted (IGDB or price-confirmed) release dates that were
+  // overwritten by upsert
+  if (trustedDateMap.size > 0) {
+    console.log(`  Restoring ${trustedDateMap.size} trusted release dates...`);
+    for (const [id, dates] of Array.from(trustedDateMap.entries())) {
       await supabase
         .from("games")
         .update({
           release_date: dates.release_date,
           release_status: dates.release_status,
-          release_date_source: "igdb",
+          release_date_source: dates.release_date_source,
         })
         .eq("id", id);
     }
@@ -1066,10 +1077,16 @@ export async function runReleaseStatusUpdate(): Promise<number> {
     }
 
     // Set release_date to today as best approximation — at minimum it makes them
-    // visible in New Releases rather than staying stuck behind the 2099 exclusion filter
+    // visible in New Releases rather than staying stuck behind the 2099 exclusion
+    // filter. Tagging the source lets Catalog Sync's trusted-date restore step
+    // (ingest.ts, near the top of runFullCatalogSync) protect this correction
+    // the same way it already protects IGDB-sourced dates — otherwise a game
+    // whose own Algolia record has a null release date (confirmed live for at
+    // least one real title) gets silently demoted back to "upcoming" on the
+    // very next daily sync.
     await supabase
       .from("games")
-      .update({ release_status: "released", release_date: todayStr, updated_at: new Date().toISOString() })
+      .update({ release_status: "released", release_date: todayStr, release_date_source: "price-confirmed", updated_at: new Date().toISOString() })
       .in("id", ids);
     updated += ids.length;
 
