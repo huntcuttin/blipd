@@ -77,7 +77,7 @@ export default function FranchiseDetailClient({ name }: { name: string }) {
         {/* Back button */}
         <Link
           href="/home"
-          className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center rounded-full bg-[#0a0a0a]/60 backdrop-blur-sm text-white"
+          className="absolute top-4 left-4 w-11 h-11 flex items-center justify-center rounded-full bg-[#0a0a0a]/60 backdrop-blur-sm text-white"
         >
           <svg
             className="w-5 h-5"

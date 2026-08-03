@@ -71,7 +71,7 @@ export default function DirectBanner() {
             }
           }}
           aria-label="Dismiss"
-          className="shrink-0 w-6 h-6 flex items-center justify-center text-[#666666] hover:text-white transition-colors"
+          className="shrink-0 w-11 h-11 -m-2.5 flex items-center justify-center text-[#666666] hover:text-white transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />

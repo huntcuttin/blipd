@@ -35,7 +35,7 @@ export default function FollowButton({
       <button
         onClick={handleClick}
         className={`flex items-center justify-center gap-1.5 font-semibold rounded-lg bg-[#1a1a1a] text-white border border-[#333333] transition-all active:scale-95 ${
-          isLarge ? "px-6 py-3 text-base w-full" : "min-h-[36px] px-3 py-1.5 text-xs"
+          isLarge ? "px-6 py-3 text-base w-full" : "min-h-[44px] px-3 py-1.5 text-xs"
         }`}
       >
         <CheckIcon className={isLarge ? "w-5 h-5" : "w-3.5 h-3.5"} />
@@ -48,7 +48,7 @@ export default function FollowButton({
     <button
       onClick={handleClick}
       className={`flex items-center justify-center gap-1.5 font-medium rounded-lg border border-[#333333] text-[#888888] transition-all active:scale-95 hover:border-[#00ff88] hover:text-[#00ff88] ${
-        isLarge ? "px-6 py-3 text-base w-full" : "min-h-[36px] px-3 py-1.5 text-xs"
+        isLarge ? "px-6 py-3 text-base w-full" : "min-h-[44px] px-3 py-1.5 text-xs"
       }`}
     >
       <PlusIcon className={isLarge ? "w-5 h-5" : "w-3.5 h-3.5"} />

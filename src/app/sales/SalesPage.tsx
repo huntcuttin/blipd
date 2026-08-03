@@ -192,7 +192,7 @@ export default function SalesPage() {
                   <button
                     key={genre}
                     onClick={() => setGenreFilter(genre)}
-                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all focus:outline-none ${
+                    className={`shrink-0 min-h-[44px] px-3 flex items-center rounded-full text-xs font-medium transition-all focus:outline-none ${
                       isActive
                         ? "bg-white text-[#0a0a0a]"
                         : "bg-[#111111] text-[#666666] hover:text-white"

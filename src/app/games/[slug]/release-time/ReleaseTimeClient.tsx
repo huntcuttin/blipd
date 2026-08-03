@@ -112,7 +112,7 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle: _gam
           <select
             value={selectedZone}
             onChange={(e) => setSelectedZone(e.target.value)}
-            className="bg-[#111111] border border-[#222222] rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-[#00ff88]/50"
+            className="bg-[#111111] border border-[#222222] rounded-lg min-h-[44px] px-2 text-white text-xs focus:outline-none focus:border-[#00ff88]/50"
           >
             {TIMEZONES.map((tz) => (
               <option key={tz.zone} value={tz.zone}>{tz.label}</option>
