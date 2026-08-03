@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { batchedAlerts } from "./batch-template";
 import { launchDigest } from "./launch-digest-template";
 import { namedSaleEvent } from "./templates";
+import { isEmailSuppressed } from "./email";
 import type { BatchAlertGame } from "./batch-template";
 import type { LaunchDigestGame } from "./launch-digest-template";
 
@@ -45,6 +46,12 @@ async function sendDigest(
       status,
       error,
     }));
+
+  if (await isEmailSuppressed(email)) {
+    console.log(`  Skipping suppressed ${label} digest for ${email}`);
+    await supabase.from("notification_log").insert(logRows("failed", "Suppressed (bounce/complaint)"));
+    return false;
+  }
 
   try {
     const resend = getResend();
@@ -112,6 +119,10 @@ export async function sendNamedSaleEventEmail(
         const { data: userData } = await supabase.auth.admin.getUserById(userId);
         const email = userData?.user?.email;
         if (!email) return;
+        if (await isEmailSuppressed(email)) {
+          console.log(`  Skipping suppressed named-sale email for ${email}`);
+          return;
+        }
         try {
           const resend = getResend();
           const { error } = await resend.emails.send({ from: FROM_ADDRESS, to: email, subject, html });

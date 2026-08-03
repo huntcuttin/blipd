@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { weeklyDigest } from "@/lib/notifications/digest-template";
+import { isEmailSuppressed } from "@/lib/notifications/email";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -100,6 +101,12 @@ export async function GET(request: Request) {
           const { data: userData } = await supabase.auth.admin.getUserById(userId);
           const email = userData?.user?.email;
           if (!email) {
+            skipped++;
+            return;
+          }
+
+          if (await isEmailSuppressed(email)) {
+            console.log(`  Skipping suppressed weekly digest for ${email}`);
             skipped++;
             return;
           }

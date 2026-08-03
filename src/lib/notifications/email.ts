@@ -20,6 +20,31 @@ async function getUserEmail(userId: string): Promise<string | null> {
   return data?.user?.email ?? null;
 }
 
+/**
+ * Shared across every Resend send site (email.ts, send-batch.ts,
+ * weekly-digest) so a hard-bounced/complained address can never keep
+ * receiving mail regardless of which code path is sending — see
+ * CLAUDE.md's Slickdeals silent-bounce cautionary tale. A lookup error
+ * fails OPEN (treated as not-suppressed): a transient DB hiccup must
+ * never be the reason a real alert doesn't go out, the same "fail open
+ * toward users" principle used throughout the alert pipeline. Genuine
+ * suppression only ever comes from a real Resend bounce/complaint event.
+ */
+export async function isEmailSuppressed(email: string): Promise<boolean> {
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("email_suppressions")
+      .select("email")
+      .eq("email", email)
+      .eq("suppressed", true)
+      .maybeSingle();
+    return !!data;
+  } catch {
+    return false;
+  }
+}
+
 export async function logNotification(
   userId: string,
   alertId: string,
@@ -77,6 +102,12 @@ export async function sendEmailAlert(
   if (!email) {
     console.warn(`No email found for user ${userId}`);
     await logNotification(userId, payload.alertId, "email", "failed", "No email address");
+    return false;
+  }
+
+  if (await isEmailSuppressed(email)) {
+    console.log(`  Skipping suppressed email ${email}`);
+    await logNotification(userId, payload.alertId, "email", "failed", "Suppressed (bounce/complaint)");
     return false;
   }
 
