@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatPrice, formatShortDate } from "@/lib/format";
+import { withRetry } from "@/lib/retry";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AdminClient = SupabaseClient<any>;
@@ -15,18 +16,33 @@ async function hasRecentAlert(
   type: string
 ): Promise<boolean> {
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await supabase
-    .from("alerts")
-    .select("id")
-    .eq("game_id", gameId)
-    .eq("type", type)
-    .gte("created_at", twentyFourHoursAgo)
-    .limit(1);
-  if (error) {
-    console.error(`hasRecentAlert query failed for ${gameId}/${type}:`, error.message);
+  try {
+    // A transient query error previously fell straight through to the
+    // fail-safe "true" (suppress) default, permanently and silently losing
+    // that alert — since the underlying price has already been persisted by
+    // the time this runs, there's no later retry that would catch it. Retry
+    // transient failures first; only fall back to suppressing on a
+    // persistent error, where "don't risk a duplicate" is still the right
+    // default.
+    const data = await withRetry(
+      async () => {
+        const { data, error } = await supabase
+          .from("alerts")
+          .select("id")
+          .eq("game_id", gameId)
+          .eq("type", type)
+          .gte("created_at", twentyFourHoursAgo)
+          .limit(1);
+        if (error) throw new Error(error.message);
+        return data;
+      },
+      { retries: 2, baseDelay: 300, label: `hasRecentAlert ${gameId}/${type}` }
+    );
+    return (data?.length ?? 0) > 0;
+  } catch (err) {
+    console.error(`hasRecentAlert query failed after retries for ${gameId}/${type}:`, err instanceof Error ? err.message : err);
     return true;
   }
-  return (data?.length ?? 0) > 0;
 }
 
 export async function getFollowers(
