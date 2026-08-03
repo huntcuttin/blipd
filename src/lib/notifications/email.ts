@@ -20,7 +20,7 @@ async function getUserEmail(userId: string): Promise<string | null> {
   return data?.user?.email ?? null;
 }
 
-async function logNotification(
+export async function logNotification(
   userId: string,
   alertId: string,
   channel: string,

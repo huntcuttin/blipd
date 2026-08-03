@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import type { ConsolePreference } from "@/lib/types";
 import { getUserProfile } from "@/lib/queries";
+import { unsubscribeFromPush } from "@/components/ServiceWorkerRegistration";
 
 interface AuthContextType {
   user: User | null;
@@ -85,6 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Must happen before signOut() invalidates the session — the unsubscribe
+    // call needs a still-valid access token to authenticate the DELETE.
+    await unsubscribeFromPush();
     await supabase.auth.signOut();
   };
 

@@ -1,5 +1,5 @@
 import { getUserNotificationChannels } from "./channels";
-import { sendEmailAlert } from "./email";
+import { sendEmailAlert, logNotification } from "./email";
 import { sendPushToUser } from "./push";
 import type { AlertPayload } from "./types";
 
@@ -58,7 +58,18 @@ export async function sendAlert(
         case "email":
           return sendEmailAlert(userId, payload);
         case "web_push":
-          return sendPushToUser(userId, alertToPushPayload(payload));
+          // sendPushToUser resolves the count of subscriptions successfully
+          // pushed to, not a boolean — comparing it to `true` below would
+          // never match, so a genuinely successful push was never counted
+          // as a success. Also logs to notification_log, which push never
+          // did before — without that, dispatch's dedup check (based on
+          // notification_log rows) couldn't catch a repeat push if this
+          // job runs again for the same alert.
+          return sendPushToUser(userId, alertToPushPayload(payload)).then(async (count) => {
+            const success = count > 0;
+            await logNotification(userId, payload.alertId, "web_push", success ? "sent" : "failed");
+            return success;
+          });
         default:
           return Promise.resolve(false);
       }

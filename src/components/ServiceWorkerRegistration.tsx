@@ -78,3 +78,35 @@ async function subscribeToPush(registration: ServiceWorkerRegistration, token: s
     body: JSON.stringify(subscription.toJSON()),
   });
 }
+
+// Call before signing out — otherwise the push subscription row survives
+// sign-out entirely, and on a shared device the browser hands the *same*
+// existing subscription (see subscribeToPush's getSubscription() ?? ...
+// above) to whoever logs in next, silently reassigning it to them.
+export async function unsubscribeFromPush(): Promise<void> {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    if (!subscription) return;
+
+    const token = await getAccessToken();
+    if (token) {
+      await fetch("/api/push/subscribe", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+      });
+    }
+
+    // Unsubscribe at the browser level too, so the next user on this device
+    // gets a fresh subscription rather than inheriting this one.
+    await subscription.unsubscribe();
+  } catch (err) {
+    console.error("Failed to unsubscribe from push:", err);
+  }
+}
