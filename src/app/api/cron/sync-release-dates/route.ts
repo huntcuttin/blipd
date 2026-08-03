@@ -6,7 +6,14 @@ import { computeReleaseStatus } from "@/lib/nintendo/transform";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const BATCH_SIZE = 20;
+// 500ms of deliberate rate-limit sleep between every IGDB call (see
+// batchGetReleaseDates) means even a small batch adds up fast — 20 games
+// was still landing close to whatever the real ~30s ceiling is here
+// (cron-job.org logged a ~30002ms cutoff, well under both Vercel's 60s
+// maxDuration and cron-job.org's own 90s requestTimeout for this job, so
+// neither of those is the actual limit). 10 keeps real wall-clock time
+// comfortably under that with margin.
+const BATCH_SIZE = 10;
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;

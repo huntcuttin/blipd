@@ -54,7 +54,15 @@ async function fetchRSSEntries(): Promise<RSSEntry[]> {
   const res = await fetchWithRetry(
     RSS_URL,
     { headers: { "User-Agent": "Mozilla/5.0 (compatible; Blippd/1.0)" } },
-    { retries: 2, timeoutMs: 10000, label: "YouTube RSS (trailers)" }
+    {
+      retries: 2,
+      timeoutMs: 10000,
+      label: "YouTube RSS (trailers)",
+      // Confirmed live 2026-08-02: this endpoint can return a spurious 404
+      // for a channel that's genuinely live (a direct request 404'd, then
+      // succeeded seconds later with no change) — worth a retry here.
+      retryOnStatus: (status) => status === 404,
+    }
   );
   if (!res.ok) throw new Error(`YouTube RSS fetch failed: ${res.status}`);
 

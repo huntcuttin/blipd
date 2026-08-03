@@ -67,9 +67,18 @@ export async function fetchWithRetry(
     baseDelay?: number;
     timeoutMs?: number;
     label?: string;
+    /**
+     * By default only 5xx is retried — a 4xx is normally a permanent client
+     * error retrying won't fix. Pass this to opt a specific status into
+     * retry-as-if-server-error for endpoints known to occasionally return a
+     * spurious 4xx for a request that's genuinely valid (e.g. YouTube's RSS
+     * feed 404ing intermittently for a channel confirmed live seconds
+     * later via a direct request).
+     */
+    retryOnStatus?: (status: number) => boolean;
   } = {}
 ): Promise<Response> {
-  const { retries = 2, baseDelay = 1000, timeoutMs = 15000, label = url } = options;
+  const { retries = 2, baseDelay = 1000, timeoutMs = 15000, label = url, retryOnStatus } = options;
 
   return withRetry(
     async () => {
@@ -78,7 +87,7 @@ export async function fetchWithRetry(
         timeoutMs,
         `fetch ${label}`
       );
-      if (!res.ok && res.status >= 500) {
+      if (!res.ok && (res.status >= 500 || retryOnStatus?.(res.status))) {
         throw new Error(`${label} returned ${res.status}`);
       }
       return res;

@@ -30,7 +30,14 @@ async function fetchRSSEntries(): Promise<RSSEntry[]> {
   const res = await fetchWithRetry(
     RSS_URL,
     { headers: { "User-Agent": "Mozilla/5.0 (compatible; Blippd/1.0)" } },
-    { retries: 2, timeoutMs: 10000, label: "YouTube RSS (directs)" }
+    {
+      retries: 2,
+      timeoutMs: 10000,
+      label: "YouTube RSS (directs)",
+      // See detect-trailers/route.ts — same endpoint, confirmed live to
+      // occasionally 404 for a channel that's genuinely up.
+      retryOnStatus: (status) => status === 404,
+    }
   );
 
   if (!res.ok) {
