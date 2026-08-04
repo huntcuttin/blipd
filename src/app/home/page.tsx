@@ -114,7 +114,7 @@ export default function HomePage() {
   return (
     <div className="px-4">
       {/* Header */}
-      <div className="flex items-center justify-between py-3">
+      <div className="flex items-center justify-between py-4">
         <Logo size={28} />
         <div className="flex items-center gap-2">
           <SearchBar

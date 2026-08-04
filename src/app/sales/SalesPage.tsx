@@ -271,7 +271,7 @@ export default function SalesPage() {
                     key={s}
                     onClick={() => setSort(s)}
                     aria-pressed={sort === s}
-                    className={`px-4 py-3 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                    className={`shrink-0 min-h-[44px] px-4 flex items-center rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                       sort === s
                         ? "bg-white/10 text-white"
                         : "bg-[#1a1a1a] text-[#666666] hover:text-white"
