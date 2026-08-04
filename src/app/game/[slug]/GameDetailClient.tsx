@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import FollowButton from "@/components/FollowButton";
 import AlertCard from "@/components/AlertCard";
 import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
 import TargetPriceInput from "@/components/TargetPriceInput";
 import QueryError from "@/components/QueryError";
 import GameCoverImage from "@/components/GameCoverImage";
+import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGameBySlug, getAlertsForGame, getFranchiseByName, getGameFollowerCount } from "@/lib/queries";
@@ -15,6 +17,7 @@ import { formatPrice, formatLongDate, isPlaceholderDate, isYearOnlyDate, isMonth
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailClient({ slug }: { slug: string }) {
+  const { user } = useAuth();
   const { isFollowingFranchise, isFollowingGame, isOwningGame, toggleOwnGame, getGamePrefs, updateGamePrefs } = useFollow();
   const [justAdded, setJustAdded] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
@@ -80,6 +83,15 @@ export default function GameDetailClient({ slug }: { slug: string }) {
   const maxPrice = priceHistory.length > 0 ? Math.max(...priceHistory.map((p) => p.price)) : 0;
   const minPrice = priceHistory.length > 0 ? Math.min(...priceHistory.map((p) => p.price)) : 0;
   const gameAlerts = alerts ?? [];
+  // Nintendo's price API occasionally reports the same sale/price event more
+  // than once in a row for a game -- the underlying rows are real, but
+  // rendering each one back to back reads as a repeated/broken feed rather
+  // than distinct history, so collapse consecutive entries that display
+  // identical content into a single card.
+  const dedupedAlerts = gameAlerts.filter((alert, i) => {
+    const prev = gameAlerts[i - 1];
+    return !prev || prev.type !== alert.type || prev.headline !== alert.headline || prev.subtext !== alert.subtext;
+  });
 
   return (
     <main className="pb-4">
@@ -93,27 +105,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
 
         {/* Back button */}
-        <Link
-          href="/home"
-          aria-label="Back to Home"
-          className="absolute left-2 w-11 h-11 flex items-center justify-center rounded-full bg-[#0a0a0a]/60 backdrop-blur-sm text-white"
-          style={{ top: 'calc(8px + env(safe-area-inset-top, 0px))' }}
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 19.5 8.25 12l7.5-7.5"
-            />
-          </svg>
-        </Link>
+        <BackButton href="/home" label="Back to Home" variant="overlay" />
 
         {/* Title overlay */}
         <div className="absolute bottom-4 left-4 right-4">
@@ -127,16 +119,16 @@ export default function GameDetailClient({ slug }: { slug: string }) {
                 {followerCount} {followerCount === 1 ? "person" : "people"} watching
               </span>
             )}
-            {game.metacriticScore !== null && (
+            {game.metacriticScore !== null && game.metacriticScore >= 70 && (
               <span
                 aria-label={`Critic rating: ${game.metacriticScore}`}
-                className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${
-                  game.metacriticScore >= 85 ? "bg-[#00ce7a]/20 text-[#00ce7a]"
-                  : game.metacriticScore >= 70 ? "bg-[#ffbd3f]/20 text-[#ffbd3f]"
-                  : "bg-[#ff6874]/20 text-[#ff6874]"
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                  game.metacriticScore >= 85
+                    ? "bg-[#FFD700]/15 text-[#FFD700]"
+                    : "bg-[#888888]/15 text-[#888888]"
                 }`}
               >
-                {game.metacriticScore}%
+                ★ {game.metacriticScore}
               </span>
             )}
             {franchise && (
@@ -159,16 +151,16 @@ export default function GameDetailClient({ slug }: { slug: string }) {
         {/* Price section */}
         <div className="py-4 border-b border-[#222222]">
           <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold text-white">
+            <span className="font-mono text-3xl font-bold text-white">
               {game.currentPrice === 0 && game.originalPrice === 0 ? "Free" : formatPrice(game.currentPrice)}
             </span>
             {game.isOnSale && (
               <>
-                <span className="text-lg text-[#888888] line-through">
+                <span className="font-mono text-lg text-[#888888] line-through">
                   {formatPrice(game.originalPrice)}
                 </span>
                 {game.discount != null && (
-                  <span className="px-2 py-1 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-sm font-bold">
+                  <span className="font-mono px-2 py-1 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-sm font-bold">
                     -{game.discount}%
                   </span>
                 )}
@@ -213,25 +205,33 @@ export default function GameDetailClient({ slug }: { slug: string }) {
               {game.upgradePackPrice != null && (
                 <div className="flex items-center gap-2">
                   <span className="text-[#999999] text-xs">
-                    Upgrade Pack: <span className="text-white font-medium">{formatPrice(game.upgradePackPrice)}</span>
+                    Upgrade Pack: <span className="font-mono text-white font-medium">{formatPrice(game.upgradePackPrice)}</span>
                   </span>
                 </div>
               )}
             </div>
           )}
-          <p className="text-[#888888] text-xs mt-3">
-            {placeholderDate
+          {(() => {
+            // A "released" row whose date is still only year/month precision
+            // (an IGDB estimate, or a not-yet-resolved placeholder) has no
+            // real day to report -- showing "Released <date>" anyway would
+            // read as ground truth when it's actually a guess, so this case
+            // renders nothing rather than a fabricated exact date.
+            const releaseDateImprecise = isYearOnlyDate(game.releaseDate) || isMonthOnlyDate(game.releaseDate);
+            const releaseLine = placeholderDate
               ? "Release date TBD"
               : game.releaseStatus === "released"
-              ? `Released ${formatLongDate(game.releaseDate)}`
+              ? (releaseDateImprecise ? null : `Released ${formatLongDate(game.releaseDate)}`)
               : game.releaseStatus === "out_today"
               ? "Released today"
               : isYearOnlyDate(game.releaseDate)
               ? `Releasing in ${new Date(game.releaseDate + "T12:00:00").getFullYear()}`
               : isMonthOnlyDate(game.releaseDate)
               ? `Releasing ${formatMonthYear(game.releaseDate)}`
-              : `Releasing ${formatLongDate(game.releaseDate)}`}
-          </p>
+              : `Releasing ${formatLongDate(game.releaseDate)}`;
+            if (!releaseLine) return null;
+            return <p className="text-[#888888] text-xs mt-3">{releaseLine}</p>;
+          })()}
           {game.releaseStatus === "upcoming" && !placeholderDate && !isYearOnlyDate(game.releaseDate) && (
             <a
               href={`/games/${game.slug}/release-time`}
@@ -277,7 +277,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
         {/* Notification preferences */}
         {isFollowingGame(game.id) && !isOwningGame(game.id) && (
           <div className="pb-3 border-b border-[#222222]">
-            <h2 className="text-xs font-bold text-[#666666] tracking-wider mb-2">NOTIFY ME ABOUT</h2>
+            <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">NOTIFY ME ABOUT</h2>
             <NotifyPrefsPanel
               prefs={getGamePrefs(game.id)}
               onChange={(key: keyof NotifyPrefs, value: boolean) => updateGamePrefs(game.id, { [key]: value })}
@@ -337,8 +337,8 @@ export default function GameDetailClient({ slug }: { slug: string }) {
             <div className="relative" role="img" aria-label={`Price history chart: current price ${formatPrice(game.currentPrice)}, lowest ${formatPrice(minPrice)}, highest ${formatPrice(maxPrice)}`}>
               {/* Y-axis labels */}
               <div className="absolute left-0 top-0 bottom-5 flex flex-col justify-between text-[9px] text-[#777777] w-8">
-                <span>${maxPrice.toFixed(0)}</span>
-                {maxPrice !== minPrice && <span>${minPrice.toFixed(0)}</span>}
+                <span className="font-mono">${maxPrice.toFixed(0)}</span>
+                {maxPrice !== minPrice && <span className="font-mono">${minPrice.toFixed(0)}</span>}
               </div>
               {/* Chart */}
               <div className="ml-9">
@@ -352,7 +352,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
                         className="flex-1 flex flex-col items-center gap-1"
                       >
                         <span
-                          className={`text-[9px] font-medium ${
+                          className={`font-mono text-[9px] font-medium ${
                             isLatest ? "text-[#00ff88]" : "text-[#777777]"
                           }`}
                         >
@@ -405,10 +405,14 @@ export default function GameDetailClient({ slug }: { slug: string }) {
           <h2 className="text-sm font-bold text-white mb-3">
             Recent Alerts
           </h2>
-          {gameAlerts.length > 0 ? (
+          {dedupedAlerts.length > 0 ? (
             <div className="space-y-2">
-              {gameAlerts.map((alert) => (
-                <AlertCard key={alert.id} alert={alert} />
+              {dedupedAlerts.map((alert) => (
+                // This feed has no real per-visitor read state (it's the
+                // game's own history, not a personal inbox) -- the unread
+                // dot only makes sense once there's an actual signed-in
+                // reader it could be unread *for*.
+                <AlertCard key={alert.id} alert={user ? alert : { ...alert, read: true }} />
               ))}
             </div>
           ) : (

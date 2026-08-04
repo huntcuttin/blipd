@@ -148,7 +148,7 @@ export default function AlertCard({
               <button
                 onClick={handleDismissClick}
                 aria-label="Dismiss alert"
-                className="shrink-0 -m-2 p-2 text-[#444444] hover:text-white transition-colors"
+                className="shrink-0 w-11 h-11 -m-2.5 flex items-center justify-center text-[#444444] hover:text-white transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
