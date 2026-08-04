@@ -39,3 +39,13 @@ Operations section.
   fixed by broadening the retry's exception handling; if this script ever
   crashes again with a raw traceback rather than printing its own summary,
   that's the bug to look for again, not evidence of a new problem.
+
+- `verify_catalog_surfaces.sh` — per the audit's change-discipline rule
+  (`docs/AUDIT-2026-08-03.md` §F): run this after any edit touching a shared
+  catalog signal (`is_suppressed`, `product_type`, `release_date`
+  semantics/placeholders) and eyeball the top-20 output for each of the
+  three real user-facing surfaces (Out Now, Coming Soon, Deals) before
+  committing. Replicates each surface's actual filter/order clauses
+  against the live REST API — not a literal re-run of the TypeScript
+  queries, but faithful to their WHERE/ORDER conditions. Read-only, safe to
+  run anytime, no side effects.

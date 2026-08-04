@@ -27,7 +27,7 @@ const features: Feature[] = [
   { name: "Sale started alerts", blippd: true, ntDeals: true },
   { name: "Release day alerts", blippd: true, ntDeals: false },
   { name: "Email notifications", blippd: true, ntDeals: true },
-  { name: "Push notifications", blippd: true, ntDeals: true },
+  { name: "Push notifications", blippd: "Available", ntDeals: true, note: "Blippd's email alerts are the primary, most-tested channel; push is built but newer" },
   { name: "Named sale detection", blippd: true, ntDeals: false, note: "Blippd detects named events like Mar10 Day and groups alerts intelligently" },
   { name: "Price history", blippd: "Building", ntDeals: "9 years" },
   { name: "Desired price threshold", blippd: "Free", ntDeals: "Premium only" },
@@ -147,7 +147,7 @@ export default function VsNtDealsPage() {
 
         <div className="text-center py-4">
           <p className="text-[#666666] text-xs">
-            Last updated March 2026. We keep this page honest — if something changes, we update it.
+            Last updated August 2026. We keep this page honest — if something changes, we update it.
           </p>
         </div>
       </div>

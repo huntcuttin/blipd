@@ -11,7 +11,7 @@ import GameCoverImage from "@/components/GameCoverImage";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getGameBySlug, getAlertsForGame, getFranchiseByName, getGameFollowerCount } from "@/lib/queries";
-import { formatPrice, formatShortDate, formatLongDate, isPlaceholderDate, isYearOnlyDate, isMonthOnlyDate, formatMonthYear } from "@/lib/format";
+import { formatPrice, formatLongDate, isPlaceholderDate, isYearOnlyDate, isMonthOnlyDate, formatMonthYear, getSaleEndLabel } from "@/lib/format";
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailClient({ slug }: { slug: string }) {
@@ -175,12 +175,18 @@ export default function GameDetailClient({ slug }: { slug: string }) {
               </>
             )}
             {game.isOnSale && game.saleEndDate && (() => {
-              const target = new Date(game.saleEndDate);
-              const days = Math.round((target.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-              const urgency = days <= 3 ? "text-[#ff4444] font-bold" : days <= 7 ? "text-[#ffaa00]" : "text-[#777777]";
+              // Was its own inline `new Date(saleEndDate)` computation --
+              // parses a date-only string as UTC midnight, which shifts the
+              // effective day back by one in any US timezone (the same
+              // class of bug already fixed via getSaleEndLabel/getDaysUntil
+              // for GameCard and /deals; this page's own copy was missed).
+              const label = getSaleEndLabel(game.saleEndDate);
+              if (!label) return null;
+              const urgency =
+                label.urgency === "high" ? "text-[#ff4444] font-bold" : label.urgency === "medium" ? "text-[#ffaa00]" : "text-[#777777]";
               return (
                 <span className={`text-sm font-medium ml-1 ${urgency}`}>
-                  Sale ends {formatShortDate(game.saleEndDate)}
+                  {label.text}
                 </span>
               );
             })()}
