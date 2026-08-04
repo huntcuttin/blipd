@@ -219,7 +219,7 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
             ) : game.releaseStatus === "upcoming" ? (
               <div className="flex items-center gap-1.5">
                 {game.currentPrice > 0 && (
-                  <span className="text-white font-bold text-xs">{formatPrice(game.currentPrice)}</span>
+                  <span className="font-mono text-white font-bold text-xs">{formatPrice(game.currentPrice)}</span>
                 )}
                 <span className="text-[#666666] text-[10px]">
                   {game.releaseDate && !isPlaceholderDate(game.releaseDate)
@@ -228,7 +228,7 @@ export const GameCardCompact = memo(function GameCardCompact({ game }: { game: G
                 </span>
               </div>
             ) : (
-              <span className="text-white font-bold text-xs">
+              <span className="font-mono text-white font-bold text-xs">
                 {game.currentPrice === 0 && game.originalPrice === 0 ? "Free" : game.currentPrice > 0 ? formatPrice(game.currentPrice) : ""}
               </span>
             )}
@@ -264,8 +264,11 @@ function splitTitle(title: string): { base: string; edition: string | null } {
 }
 
 function getReleaseLabel(game: Game, daysUntil: number): string | null {
-  // If a game is on sale or has a price, it's released — never show a release label
-  if (game.isOnSale || game.currentPrice > 0 || game.originalPrice > 0) return null;
+  // A populated price alone isn't proof a game has released -- Nintendo's API
+  // can carry a real preorder price on a still-upcoming listing -- so this
+  // only suppresses the label once the game is actually on sale or confirmed
+  // released. A price and a release-date label can legitimately show together.
+  if (game.isOnSale || game.releaseStatus === "released") return null;
   if (game.releaseStatus === "out_today") return "Out Now";
   if (game.releaseStatus === "upcoming") {
     if (!game.releaseDate || isPlaceholderDate(game.releaseDate)) return "TBA";

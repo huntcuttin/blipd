@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { formatPrice, getSaleEndLabel } from "@/lib/format";
+import { baseTitle } from "@/lib/ranking";
 import GameCoverImage from "@/components/GameCoverImage";
 
 export const revalidate = 300; // 5 min ISR
@@ -50,9 +51,30 @@ async function getDeals(): Promise<DealRow[]> {
   return data ?? [];
 }
 
+// The All-Time-Low rail has no upstream dedup (unlike /sales, which runs
+// deduplicateGames() before this point) -- without this, an edition variant
+// ("...Gold Edition") and its base game can both independently be flagged
+// is_all_time_low and show up side by side as if they were two different deals.
+function dedupeAllTimeLowFamilies(rows: DealRow[]): DealRow[] {
+  const groups = new Map<string, DealRow[]>();
+  for (const row of rows) {
+    const key = baseTitle(row.title);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
+  }
+  const winners = new Set<string>();
+  for (const group of Array.from(groups.values())) {
+    const deepest = [...group].sort(
+      (a, b) => (b.discount ?? 0) - (a.discount ?? 0) || a.current_price - b.current_price
+    )[0];
+    winners.add(deepest.slug);
+  }
+  return rows.filter((r) => winners.has(r.slug));
+}
+
 export default async function DealsPage() {
   const deals = await getDeals();
-  const allTimeLows = deals.filter((d) => d.is_all_time_low);
+  const allTimeLows = dedupeAllTimeLowFamilies(deals.filter((d) => d.is_all_time_low));
   const totalSavings = deals.reduce(
     (sum, d) => sum + Math.max(0, Number(d.original_price) - Number(d.current_price)),
     0
@@ -116,7 +138,7 @@ export default async function DealsPage() {
         {/* All-time lows section */}
         {allTimeLows.length > 0 && (
           <section className="mb-6">
-            <h2 className="text-xs font-bold text-[#FFD700] tracking-wider mb-3">
+            <h2 className="text-[10px] font-bold text-[#FFD700] tracking-wider mb-3">
               ALL-TIME LOW PRICES
             </h2>
             <div className="space-y-2">
@@ -129,7 +151,7 @@ export default async function DealsPage() {
 
         {/* All deals */}
         <section>
-          <h2 className="text-xs font-bold text-[#666666] tracking-wider mb-3">
+          <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
             ALL DEALS ({deals.length})
           </h2>
           <div className="space-y-2">

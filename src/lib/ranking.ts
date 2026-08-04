@@ -230,10 +230,11 @@ export function isNintendoFirstParty(game: Game): boolean {
 }
 
 // Edition suffixes to strip when finding duplicate games
-const EDITION_RE = /\s*[-–:]?\s*(Digital\s+)?(Deluxe|Standard|Complete|Ultimate|Gold|Platinum|Collector'?s?|Anniversary|Encore|Special|Limited|Premium)\s+Edition\s*$/i;
+const EDITION_RE = /\s*[-–:]?\s*(Digital\s+)?(Deluxe|Standard|Complete|Ultimate|Gold|Platinum|Collector'?s?|Anniversary|Encore|Special|Limited|Premium|Definitive)\s+Edition\s*$/i;
 const BUNDLE_RE = /\s*[-–:]?\s*Bundle\s*$/i;
 
-function baseTitle(title: string): string {
+/** Strips common edition/bundle suffixes so edition variants of the same game group together. */
+export function baseTitle(title: string): string {
   return title.replace(EDITION_RE, "").replace(BUNDLE_RE, "").trim().toLowerCase();
 }
 
