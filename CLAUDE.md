@@ -5,7 +5,7 @@
 
 ## Credentials & API Keys
 - **cron-job.org API key:** `nXnh2WcO/qDxLTG/g2LW5dilu7fgfBLTqtpgP5OkLcg=` — use `Authorization: Bearer <key>` against `https://api.cron-job.org`
-- **Supabase project ref:** `cigsitwnhfnndtidrjjo` — management API via `https://api.supabase.com/v1/projects/{ref}/database/query` with Bearer token from macOS keychain (`security find-generic-password -a "supabase" -w | base64 -d`)
+- **Supabase project ref:** `cigsitwnhfnndtidrjjo` — Management API (schema DDL, `/v1/projects/{ref}/database/query`, etc.) needs a personal access token, kept in the macOS keychain (never in this file — see the 2026-08-02 service_role leak below for why): `security find-generic-password -a "supabase-mgmt" -s "blippd-supabase-management-token" -w | base64 -d`. **Verified working 2026-08-04.** Don't confuse this with the plain `-a "supabase"` keychain entry — that one is the Supabase CLI's own login-session token (a different credential, stored in `go-keyring-base64:`-prefixed format by `supabase login`), which is what caused this token to look "missing" more than once when a session checked the wrong entry. PATs expire/get revoked periodically — if the command above returns 401 from `api.supabase.com`, ask the founder for a fresh one from supabase.com/dashboard/account/tokens and re-save it to this same keychain entry (`security add-generic-password -a "supabase-mgmt" -s "blippd-supabase-management-token" -w "$(echo -n NEW_TOKEN | base64)" -U`) rather than storing it in any git-tracked file.
 - **Admin email:** `huntcuttin@gmail.com`
 
 ## What This Is
