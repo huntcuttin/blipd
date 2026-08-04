@@ -133,10 +133,24 @@ const MASS_DATE_THRESHOLD = 50;
 async function checkMassDateWrites(): Promise<string[]> {
   const supabase = createAdminClient();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Confirmed live 2026-08-03 (first real run of this check): updated_at is
+  // NOT a valid proxy for "release_date was just written" on its own --
+  // routine price polling (runPriceUpdate) bumps updated_at on every game it
+  // touches every ~10 min regardless of release_date, so within any 24h
+  // window most of the catalog's updated_at has moved. The first live run
+  // flagged 100 real, long-released games (Persona 5 Royal, Dark Souls
+  // Remastered, etc.) sharing "2026-03-24" -- their release_date_source was
+  // "unknown" (the original catalog-seed value from March, never touched by
+  // any date-writing code path since), not a bulk mis-write. Only
+  // "igdb"/"price-confirmed" sources are ever actively written by a
+  // date-setting code path (sync-release-dates, the pricedUpcoming
+  // fallback), and both are throttled to small batches/day -- restricting to
+  // these makes 50+ genuinely sharing one date within 24h actually anomalous.
   const { data, error } = await supabase
     .from("games")
     .select("release_date")
     .eq("is_suppressed", false)
+    .in("release_date_source", ["igdb", "price-confirmed"])
     .gte("updated_at", since);
 
   if (error) return [`Mass-date check failed: ${error.message}`];
@@ -162,25 +176,33 @@ async function checkMassDateWrites(): Promise<string[]> {
 }
 
 // Regression trap for the exact incident class Phase 0/1 fixed (2026-08-03):
-// any junk row that isn't suppressed is itself the leak, regardless of
-// whether it's currently sitting in a released/upcoming window -- every
-// user-facing surface's own filter is the thing that's supposed to keep
-// this at 0, so a nonzero count here means one of those filters (or the
-// ingest gate) regressed.
+// an unsuppressed junk row is the leak, UNLESS it's directly followed --
+// the Bible's "a followed game always alerts" exemption means a followed
+// BUNDLE/ADD_ON_CONTENT is *supposed* to stay unsuppressed (confirmed live
+// 2026-08-03: the first real run of this check flagged exactly the two
+// known, deliberately-exempted rows from Phase 0.4 -- Dave the Diver: In
+// the Jungle and DRAGON QUEST - HD-2D Erdrick Trilogy Collection -- as a
+// false positive). Every OTHER user-facing surface's own filter is what's
+// supposed to keep the non-exempt count at 0.
 async function checkJunkLeak(): Promise<string[]> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("games")
-    .select("title")
-    .eq("is_suppressed", false)
-    .in("product_type", ["ADD_ON_CONTENT", "BUNDLE"])
-    .limit(10);
+  const [junkResult, followsResult] = await Promise.all([
+    supabase
+      .from("games")
+      .select("id, title")
+      .eq("is_suppressed", false)
+      .in("product_type", ["ADD_ON_CONTENT", "BUNDLE"]),
+    supabase.from("user_game_follows").select("game_id"),
+  ]);
 
-  if (error) return [`Junk-leak check failed: ${error.message}`];
-  if (!data || data.length === 0) return [];
+  if (junkResult.error) return [`Junk-leak check failed: ${junkResult.error.message}`];
+  const followedIds = new Set((followsResult.data ?? []).map((f) => f.game_id as string));
+  const leaked = (junkResult.data ?? []).filter((g) => !followedIds.has(g.id));
 
-  const examples = data.slice(0, 5).map((g) => g.title).join(", ");
-  return [`${data.length}+ ADD_ON_CONTENT/BUNDLE rows are unsuppressed and eligible for Out Now/Coming Soon/Deals -- ingest gate or a query filter may have regressed. Examples: ${examples}`];
+  if (leaked.length === 0) return [];
+
+  const examples = leaked.slice(0, 5).map((g) => g.title).join(", ");
+  return [`${leaked.length} non-followed ADD_ON_CONTENT/BUNDLE rows are unsuppressed and eligible for Out Now/Coming Soon/Deals -- ingest gate or a query filter may have regressed. Examples: ${examples}`];
 }
 
 // Every row should get a real classification at ingest time (transform.ts).
@@ -204,7 +226,13 @@ async function checkProductTypeNulls(): Promise<string[]> {
 // A game stuck on a placeholder date with a real price should get resolved
 // (released, suppressed, or dated for real) within a run or two of the
 // event-creation breaker/pricedUpcoming fallback -- one still sitting here
-// after a week suggests something is looping without making progress.
+// after a week suggests something is looping without making progress. Not
+// currently a live concern (neither of the two known followed-junk rows
+// happens to sit on a placeholder date right now), but not filtered by
+// product_type -- a followed junk item genuinely stuck here is still a real
+// stuck-row signal worth surfacing, so no followed-exemption here, unlike
+// checkJunkLeak (which is specifically about junk *reaching users*, not
+// about whether a row's data is stuck).
 const STUCK_PLACEHOLDER_DAYS = 7;
 
 async function checkStuckPlaceholderPricedGames(): Promise<string[]> {
