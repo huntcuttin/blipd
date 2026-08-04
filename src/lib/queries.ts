@@ -314,6 +314,24 @@ export async function getGameFollowerCount(supabase: Client, gameId: string): Pr
   return count ?? 0;
 }
 
+/**
+ * Pipeline-global freshness signal for the "last checked X min ago" stamp
+ * (Bible mandate: "users should never have to wonder if their alerts are
+ * working"). Deliberately the freshest last_price_check across the WHOLE
+ * catalog, not any single game's -- same query health-check's own
+ * freshness check already uses to detect a stale pipeline.
+ */
+export async function getLastPriceCheckTimestamp(supabase: Client): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("last_price_check")
+    .order("last_price_check", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.last_price_check) return null;
+  return data.last_price_check as string;
+}
+
 export async function getGamesByFranchise(supabase: Client, franchiseName: string): Promise<Game[]> {
   const { data, error } = await supabase.from("games").select("*").eq("franchise", franchiseName);
   if (error) throw error;

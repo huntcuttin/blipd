@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
-import { formatPrice, getSaleEndLabel } from "@/lib/format";
+import { formatPrice, getSaleEndLabel, formatFreshness } from "@/lib/format";
 import { baseTitle } from "@/lib/ranking";
+import { getLastPriceCheckTimestamp } from "@/lib/queries";
 import GameCoverImage from "@/components/GameCoverImage";
 
 export const revalidate = 300; // 5 min ISR
@@ -73,7 +74,15 @@ function dedupeAllTimeLowFamilies(rows: DealRow[]): DealRow[] {
 }
 
 export default async function DealsPage() {
-  const deals = await getDeals();
+  const supabase = createAdminClient();
+  const [deals, lastChecked] = await Promise.all([
+    getDeals(),
+    // ISR caveat: this page revalidates every 5 min, so the stamp can read
+    // up to ~5 min staler than the true freshness for a visitor near the
+    // end of a revalidation window -- still far better than no signal at
+    // all, and the pipeline itself checks prices every 10 min regardless.
+    getLastPriceCheckTimestamp(supabase),
+  ]);
   const allTimeLows = dedupeAllTimeLowFamilies(deals.filter((d) => d.is_all_time_low));
   const totalSavings = deals.reduce(
     (sum, d) => sum + Math.max(0, Number(d.original_price) - Number(d.current_price)),
@@ -113,9 +122,10 @@ export default async function DealsPage() {
         <h1 className="text-2xl font-bold text-white mb-1">
           Nintendo Switch Deals
         </h1>
-        <p className="text-[#666666] text-sm mb-6">
+        <p className="text-[#666666] text-sm mb-1">
           {deals.length} games on sale &middot; Up to ${totalSavings.toFixed(0)} in savings
         </p>
+        <p className="text-[#555555] text-xs mb-6">{formatFreshness(lastChecked)}</p>
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2 mb-6">

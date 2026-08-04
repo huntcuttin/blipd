@@ -98,3 +98,25 @@ export function getSaleEndLabel(dateStr: string): { text: string; urgency: SaleE
   if (days <= 14) return { text: `Ends in ${days} days`, urgency: "low" };
   return null;
 }
+
+/**
+ * "Last checked X min ago" -- the Bible's own mandate ("users should never
+ * have to wonder if their alerts are working") requires minute-level
+ * granularity, unlike the alert-feed's own coarser formatTimestamp (which
+ * only goes down to "Just now" for anything under an hour). This is
+ * pipeline-global (the caller should pass max(last_price_check) across the
+ * whole catalog), never per-game -- a per-game timestamp honestly showing
+ * "4h ago" for a stale-but-not-broken game manufactures doubt the pipeline
+ * doesn't actually have.
+ */
+export function formatFreshness(lastCheckedAt: string | null | undefined): string {
+  if (!lastCheckedAt) return "Checking prices...";
+  const diffMs = Date.now() - new Date(lastCheckedAt).getTime();
+  const diffMin = Math.max(0, Math.floor(diffMs / 60000));
+  if (diffMin < 1) return "Checked just now";
+  if (diffMin < 60) return `Checked ${diffMin} min ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `Checked ${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `Checked ${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+}

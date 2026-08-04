@@ -12,8 +12,8 @@ import GameCoverImage from "@/components/GameCoverImage";
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
-import { getGameBySlug, getAlertsForGame, getFranchiseByName, getGameFollowerCount } from "@/lib/queries";
-import { formatPrice, formatLongDate, isPlaceholderDate, isYearOnlyDate, isMonthOnlyDate, formatMonthYear, getSaleEndLabel } from "@/lib/format";
+import { getGameBySlug, getAlertsForGame, getFranchiseByName, getGameFollowerCount, getLastPriceCheckTimestamp } from "@/lib/queries";
+import { formatPrice, formatLongDate, isPlaceholderDate, isYearOnlyDate, isMonthOnlyDate, formatMonthYear, getSaleEndLabel, formatFreshness } from "@/lib/format";
 import type { NotifyPrefs } from "@/lib/types";
 
 export default function GameDetailClient({ slug }: { slug: string }) {
@@ -41,6 +41,11 @@ export default function GameDetailClient({ slug }: { slug: string }) {
     (sb) => (game ? getGameFollowerCount(sb, game.id) : Promise.resolve(0)),
     [game?.id]
   );
+
+  // Pipeline-global, not per-game -- see formatFreshness's own comment on
+  // why a per-game timestamp would manufacture doubt the pipeline doesn't
+  // actually have.
+  const { data: lastChecked } = useSupabaseQuery(getLastPriceCheckTimestamp, []);
 
   if (gameLoading) {
     return (
@@ -240,6 +245,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
               What time does it launch? →
             </a>
           )}
+          <p className="text-[#555555] text-[11px] mt-2">{formatFreshness(lastChecked)}</p>
         </div>
 
         {/* Follow / Own actions */}
