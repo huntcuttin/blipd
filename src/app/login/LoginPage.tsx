@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -75,15 +75,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-[#0a0a0a] -mb-20 relative">
       {/* Back button */}
-      <Link
-        href="/home"
-        aria-label="Back to home"
-        className="absolute top-4 left-4 w-11 h-11 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#333333] transition-all"
-      >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-        </svg>
-      </Link>
+      <BackButton href="/home" label="Back to home" variant="card" />
 
       {/* Logo */}
       <div className="mb-8">

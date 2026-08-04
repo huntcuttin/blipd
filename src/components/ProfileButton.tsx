@@ -19,7 +19,7 @@ export default function ProfileButton() {
       <div className="max-w-[430px] mx-auto flex justify-end p-3">
         <Link
           href="/profile"
-          className="pointer-events-auto w-9 h-9 rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center hover:border-[#333333] transition-colors"
+          className="pointer-events-auto min-h-[44px] min-w-[44px] rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center hover:border-[#333333] transition-colors"
           aria-label="Profile"
         >
           <span className="text-white text-[13px] font-bold">{initial}</span>

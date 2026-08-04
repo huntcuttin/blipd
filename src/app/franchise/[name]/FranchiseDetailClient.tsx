@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import GameCard from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
@@ -75,24 +76,7 @@ export default function FranchiseDetailClient({ name }: { name: string }) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/60 to-transparent" />
 
         {/* Back button */}
-        <Link
-          href="/home"
-          className="absolute top-4 left-4 w-11 h-11 flex items-center justify-center rounded-full bg-[#0a0a0a]/60 backdrop-blur-sm text-white"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 19.5 8.25 12l7.5-7.5"
-            />
-          </svg>
-        </Link>
+        <BackButton href="/home" label="Back to Home" variant="overlay" />
 
         {/* Franchise info overlay */}
         <div className="absolute bottom-4 left-4 right-4 flex items-end gap-3">
@@ -132,7 +116,7 @@ export default function FranchiseDetailClient({ name }: { name: string }) {
         {/* Notification preferences */}
         {isFollowingFranchise(franchise.id) && (
           <div className="py-3 border-b border-[#222222]">
-            <h2 className="text-xs font-bold text-[#666666] tracking-wider mb-2">NOTIFY ME ABOUT</h2>
+            <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">NOTIFY ME ABOUT</h2>
             <NotifyPrefsPanel
               prefs={getFranchisePrefs(franchise.id)}
               onChange={(key: keyof NotifyPrefs, value: boolean) => updateFranchisePrefs(franchise.id, { [key]: value })}

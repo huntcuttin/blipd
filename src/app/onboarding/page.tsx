@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserProfile, setConsolePreference, getPopularGames, markGameOwned, setRetroFollows } from "@/lib/queries";
 import type { ConsolePreference, Game } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
+import BackButton from "@/components/BackButton";
 import GameCoverImage from "@/components/GameCoverImage";
 import Logo from "@/components/Logo";
 
@@ -181,15 +182,7 @@ export default function OnboardingPage() {
   return (
     <div className="flex flex-col items-center min-h-[80vh] px-6 pt-12 pb-24 relative">
       {(step === "retro" || step === "games") && (
-        <button
-          onClick={handleBack}
-          aria-label="Back"
-          className="absolute top-4 left-4 w-11 h-11 flex items-center justify-center rounded-full bg-[#111111] border border-[#222222] text-white hover:border-[#333333] transition-all"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-          </svg>
-        </button>
+        <BackButton onClick={handleBack} label="Back" variant="card" />
       )}
 
       {/* Progress dots */}
@@ -198,7 +191,7 @@ export default function OnboardingPage() {
           <div
             key={i}
             className={`w-2 h-2 rounded-full transition-colors ${
-              i === stepIndex ? "bg-[#00ff88]" : i < stepIndex ? "bg-[#00ff88]/40" : "bg-[#333333]"
+              i === stepIndex ? "bg-white" : i < stepIndex ? "bg-white/40" : "bg-[#333333]"
             }`}
           />
         ))}
@@ -445,7 +438,7 @@ function GamePickerStep({
                   {game.title}
                 </p>
                 {game.currentPrice > 0 && (
-                  <p className="text-[#555555] text-[10px] mt-0.5 px-0.5">
+                  <p className="text-[#555555] text-[10px] mt-0.5 px-0.5 font-mono">
                     {formatPrice(game.currentPrice)}
                   </p>
                 )}
