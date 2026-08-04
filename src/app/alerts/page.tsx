@@ -220,7 +220,7 @@ export default function AlertsPage() {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-full bg-[#111111] border border-[#222222] text-[#aaaaaa] text-xs font-medium hover:border-[#333333] hover:text-white transition-all active:scale-[0.97]"
+                className="shrink-0 flex items-center gap-1 min-h-[44px] px-3 py-2 rounded-full bg-[#111111] border border-[#222222] text-[#aaaaaa] text-xs font-medium hover:border-[#333333] hover:text-white transition-all active:scale-[0.97]"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -231,7 +231,7 @@ export default function AlertsPage() {
             {localAlerts.length > 0 && (
               <button
                 onClick={handleClearAll}
-                className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-full bg-[#111111] border border-[#222222] text-[#aaaaaa] text-xs font-medium hover:border-[#ff4d4d]/40 hover:text-[#ff4d4d] transition-all active:scale-[0.97]"
+                className="shrink-0 flex items-center gap-1 min-h-[44px] px-3 py-2 rounded-full bg-[#111111] border border-[#222222] text-[#aaaaaa] text-xs font-medium hover:border-[#ff4d4d]/40 hover:text-[#ff4d4d] transition-all active:scale-[0.97]"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -290,7 +290,7 @@ export default function AlertsPage() {
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 aria-pressed={filter === f.key}
-                className={`px-3 py-2.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                className={`shrink-0 min-h-[44px] px-3 flex items-center rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                   filter === f.key
                     ? "bg-white/10 text-white"
                     : "bg-[#1a1a1a] text-[#666666] hover:text-white"
@@ -307,7 +307,7 @@ export default function AlertsPage() {
               if (groupAlerts.length === 0) return null;
               return (
                 <div key={group}>
-                  <h2 className="text-xs font-bold text-[#666666] tracking-wider mb-3">
+                  <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
                     {GROUP_LABELS[group]}
                   </h2>
                   <div className="space-y-2">
