@@ -57,7 +57,7 @@ export default function TargetPriceInput({
 
   return (
     <div className="py-3 border-b border-[#222222]">
-      <h2 className="text-xs font-bold text-[#666666] tracking-wider mb-2">TARGET PRICE</h2>
+      <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2">TARGET PRICE</h2>
 
       {editing ? (
         <div className="flex items-center gap-2">
@@ -76,18 +76,18 @@ export default function TargetPriceInput({
                 if (e.key === "Escape") setEditing(false);
               }}
               placeholder={`Under ${formatPrice(originalPrice)}`}
-              className="w-full pl-7 pr-3 py-2.5 rounded-lg bg-[#111111] border border-[#333333] text-white text-sm font-mono focus:border-[#00ff88] focus:outline-none transition-colors"
+              className="w-full min-h-[44px] pl-7 pr-3 py-2.5 rounded-lg bg-[#111111] border border-[#333333] text-white text-sm font-mono focus:border-[#00ff88] focus:outline-none transition-colors"
             />
           </div>
           <button
             onClick={handleSave}
-            className="px-4 py-2.5 rounded-lg bg-[#00ff88] text-[#0a0a0a] text-xs font-bold"
+            className="min-h-[44px] px-4 py-2.5 rounded-lg bg-[#00ff88] text-[#0a0a0a] text-xs font-bold flex items-center justify-center"
           >
             Set
           </button>
           <button
             onClick={() => setEditing(false)}
-            className="px-3 py-2.5 rounded-lg bg-[#1a1a1a] text-[#666666] text-xs font-medium"
+            className="min-h-[44px] px-3 py-2.5 rounded-lg bg-[#1a1a1a] text-[#666666] text-xs font-medium flex items-center justify-center"
           >
             Cancel
           </button>
@@ -109,14 +109,14 @@ export default function TargetPriceInput({
             <div className="flex items-center gap-1.5">
               <button
                 onClick={handleStartEdit}
-                className="text-[#666666] text-xs hover:text-white transition-colors"
+                className="min-h-[44px] inline-flex items-center text-[#666666] text-xs hover:text-white transition-colors"
               >
                 Edit
               </button>
               <span className="text-[#333333]">·</span>
               <button
                 onClick={handleClear}
-                className="text-[#666666] text-xs hover:text-[#ff6874] transition-colors"
+                className="min-h-[44px] inline-flex items-center text-[#666666] text-xs hover:text-[#ff6874] transition-colors"
               >
                 Remove
               </button>
@@ -139,7 +139,7 @@ export default function TargetPriceInput({
       ) : (
         <button
           onClick={handleStartEdit}
-          className="flex items-center gap-2 w-full py-2.5 px-3 rounded-lg bg-[#111111] border border-[#222222] hover:border-[#333333] transition-colors text-left"
+          className="flex items-center gap-2 w-full min-h-[44px] py-2.5 px-3 rounded-lg bg-[#111111] border border-[#222222] hover:border-[#333333] transition-colors text-left"
         >
           <svg className="w-4 h-4 text-[#555555]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />

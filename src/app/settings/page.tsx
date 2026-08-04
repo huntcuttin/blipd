@@ -203,7 +203,7 @@ export default function SettingsPage() {
                     key={c.id}
                     onClick={() => handleRetroToggle(c.id)}
                     disabled={retroLoading === c.id}
-                    className={`flex items-center justify-center py-2 px-1 rounded-lg border-2 transition-all active:scale-[0.97] text-xs font-bold ${
+                    className={`flex items-center justify-center min-h-[44px] py-2 px-1 rounded-lg border-2 transition-all active:scale-[0.97] text-xs font-bold ${
                       active
                         ? "border-[#ffaa00]/40 bg-[#ffaa00]/10 text-[#ffaa00]"
                         : "border-[#222222] text-[#666666] hover:border-[#333333]"
@@ -278,7 +278,7 @@ export default function SettingsPage() {
                     Price drops, sales, and releases
                   </p>
                 </div>
-                <span className="px-2 py-1 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-[10px] font-bold">
+                <span className="px-2 py-1 rounded-full bg-[#222222] text-[#888888] text-[10px] font-medium">
                   ON
                 </span>
               </div>
@@ -289,7 +289,7 @@ export default function SettingsPage() {
                     Weekly roundup of followed games on sale
                   </p>
                 </div>
-                <span className="px-2 py-1 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-[10px] font-bold">
+                <span className="px-2 py-1 rounded-full bg-[#222222] text-[#888888] text-[10px] font-medium">
                   ON
                 </span>
               </div>
@@ -303,7 +303,7 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   {pushState === "granted" ? (
-                    <span className="px-2 py-1 rounded-full bg-[#00ff88]/15 text-[#00ff88] text-[10px] font-bold">ON</span>
+                    <span className="px-2 py-1 rounded-full bg-[#222222] text-[#888888] text-[10px] font-medium">ON</span>
                   ) : pushState === "denied" ? (
                     <span className="px-2 py-1 rounded-full bg-[#ff6874]/15 text-[#ff6874] text-[10px] font-bold">BLOCKED</span>
                   ) : (
