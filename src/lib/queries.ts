@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent } from "@/lib/types";
 import { getGameTier, isNintendoFirstParty } from "@/lib/ranking";
+import { PLACEHOLDER_DATES } from "@/lib/format";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;
@@ -718,6 +719,38 @@ export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
       return a.releaseDate.localeCompare(b.releaseDate);
     })
     .slice(0, 30);
+}
+
+/**
+ * Real, followable upcoming titles with no resolvable release date at all --
+ * genuinely different from getUpcomingGamesSoon's pool, which requires a
+ * real date to even be selected (`neq release_date 2099-12-31`). Without
+ * this query these games are invisible everywhere in the app despite being
+ * legitimate catalog entries, not junk -- surfaced separately as "On the
+ * Horizon" inside the Coming Soon page's TBA bucket.
+ */
+export async function getUnannouncedUpcomingGames(supabase: Client): Promise<Game[]> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("release_status", "upcoming")
+    .eq("is_suppressed", false)
+    // Same DLC/bundle exclusion as getUpcomingGamesSoon -- see its comment.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
+    .in("release_date", [...PLACEHOLDER_DATES])
+    .order("igdb_hype", { ascending: false, nullsFirst: false })
+    .limit(60);
+  if (error) throw error;
+  const games = (data ?? []).map(mapGame);
+  // Same Nintendo-first convention as getUpcomingGamesSoon/getPopularGames;
+  // hype score is the only remaining signal once there's no date to sort by.
+  return games
+    .sort((a, b) => {
+      const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
+      if (nintendoDiff !== 0) return nintendoDiff;
+      return (b.igdbHype ?? 0) - (a.igdbHype ?? 0);
+    })
+    .slice(0, 20);
 }
 
 
