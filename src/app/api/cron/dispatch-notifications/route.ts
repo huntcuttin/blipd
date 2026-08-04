@@ -11,15 +11,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    // A 15-min lookback silently drops an alert forever if this cron is
-    // ever down/erroring for longer than that (no schema change available
-    // right now to track per-alert dispatch completion directly -- see
-    // CLAUDE.md's audit Phase 1 #11 note). 3 hours is a generous safety
-    // net against a real outage while staying cheap to rescan even on a
-    // busy sale day; dispatchRecentAlerts' existing alreadySentPairs check
-    // makes re-fetching already-delivered alerts safe either way.
-    const since = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-    const dispatched = await dispatchRecentAlerts(since);
+    // dispatchRecentAlerts is now durable by construction (dispatched_at
+    // column, audit Phase 1 #11) -- no time window to pick here at all.
+    const dispatched = await dispatchRecentAlerts();
     return NextResponse.json({ ok: true, dispatched });
   } catch (error) {
     console.error("Notification dispatch failed:", error);

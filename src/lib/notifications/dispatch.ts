@@ -75,18 +75,24 @@ interface PendingAlert {
 }
 
 /**
- * Dispatches notifications for all alerts created since the given timestamp.
+ * Dispatches notifications for every alert not yet marked dispatched.
  * Implements batching: if a user would receive 5+ price-related alerts in one
  * dispatch window, they get a single digest email instead of individual ones.
+ *
+ * Durable by construction (audit Phase 1 #11, unblocked 2026-08-04): rather
+ * than a now()-minus-N-hours lookback window (which silently drops an alert
+ * forever if this cron is ever down/erroring longer than the window), this
+ * queries dispatched_at IS NULL directly -- an alert only leaves that set
+ * once its full follower resolution + send attempt has actually run. A
+ * missed cron tick, a deploy outage, or a Resend rate-limit stop all
+ * self-heal on the next run regardless of how long the gap was.
  */
-export async function dispatchRecentAlerts(since: string): Promise<number> {
+export async function dispatchRecentAlerts(): Promise<number> {
   const supabase = createAdminClient();
   let dispatched = 0;
   resetRateLimitFlag();
 
-  // Get alerts created since the given timestamp. Paginated -- PostgREST
-  // caps an unbounded select at 1,000 rows, which this select had no
-  // .range() to get past, silently truncating on a busy enough window.
+  // Paginated -- PostgREST caps an unbounded select at 1,000 rows.
   const ALERT_PAGE_SIZE = 1000;
   const ALERT_SELECT = "id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, nintendo_url, franchise, is_suppressed, product_type )";
   type AlertRow = {
@@ -99,11 +105,11 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     const { data, error } = await supabase
       .from("alerts")
       .select(ALERT_SELECT)
-      .gte("created_at", since)
+      .is("dispatched_at", null)
       .order("created_at", { ascending: true })
       .range(from, from + ALERT_PAGE_SIZE - 1);
     if (error) {
-      console.error("Failed to fetch recent alerts for dispatch:", error.message);
+      console.error("Failed to fetch undispatched alerts:", error.message);
       return 0;
     }
     if (!data || data.length === 0) break;
@@ -111,7 +117,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     if (data.length < ALERT_PAGE_SIZE) break;
   }
 
-  console.log(`  Found ${alerts.length} alerts to dispatch since ${since}`);
+  console.log(`  Found ${alerts.length} undispatched alerts`);
 
   // Collect unique IDs for batch queries
   const alertIds = alerts.map((a) => a.id);
@@ -186,6 +192,11 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
   // Map userId -> every alert they're due, in creation order. Whether each one
   // collapses into a digest is decided per user in Phase 2.
   const userPendingAlerts = new Map<string, PendingAlert[]>();
+  // Every alertId that had at least one eligible recipient this run -- used
+  // below to tell "genuinely nothing to do" (mark dispatched immediately)
+  // apart from "has work still pending completion" (mark only once that
+  // work is actually attempted, see the end of this function).
+  const alertIdsWithAnyRecipient = new Set<string>();
 
   for (const alert of alerts) {
     const game = alert.games as unknown as AlertGame;
@@ -211,6 +222,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
       .filter((uid) => !alreadySentPairs.has(`${alert.id}:${uid}`));
 
     if (allUserIds.length === 0) continue;
+    alertIdsWithAnyRecipient.add(alert.id);
 
     const payload: AlertPayload = {
       alertId: alert.id,
@@ -288,12 +300,26 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
 
   dispatched = 0; // Reset — count actual sends
 
+  // Track how many distinct dispatch work items (individual send + digest
+  // entries) still need to run for each alert, so dispatched_at is only
+  // set once every one of them has actually been attempted -- an alert can
+  // span both an individual send (for users below the batching threshold)
+  // and one or more digests (for other users above it). Decremented as
+  // each work item completes below; an alertId reaching 0 is fully done.
+  const remainingWorkForAlert = new Map<string, number>();
+  const bumpWork = (id: string) => remainingWorkForAlert.set(id, (remainingWorkForAlert.get(id) ?? 0) + 1);
+  for (const { payload } of Array.from(individualByAlert.values())) bumpWork(payload.alertId);
+  for (const job of digestJobs) {
+    for (const pa of job.items) bumpWork(pa.payload.alertId);
+  }
+  const completeWork = (id: string) => remainingWorkForAlert.set(id, (remainingWorkForAlert.get(id) ?? 1) - 1);
+
   // ── Phase 3: Individual sends ──
   // Rate-limit-aware: once any send this run hits Resend's rate_limit_exceeded,
   // stop making further calls rather than hammering an already-limited API
-  // through the rest of a potentially large batch. Nothing is lost — the
-  // remaining alerts stay inside the (now 3h, not 15min) lookback window and
-  // get retried whole on the next cron tick, once the limit has reset.
+  // through the rest of a potentially large batch. Nothing is lost — alerts
+  // whose work never got attempted this run are never marked dispatched
+  // (see below), so they're picked up again in full on the next tick.
   for (const { payload, userIds } of Array.from(individualByAlert.values())) {
     if (isRateLimited()) {
       console.warn("  Resend rate limit hit — stopping this run, remainder retries next tick");
@@ -305,6 +331,7 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
     if (sent < userIds.length) {
       console.warn(`  ${userIds.length - sent}/${userIds.length} failed for alert ${payload.alertId}`);
     }
+    completeWork(payload.alertId);
   }
 
   // ── Phase 4: Grouped digests — one email per user per group ──
@@ -324,8 +351,28 @@ export async function dispatchRecentAlerts(since: string): Promise<number> {
 
     if (ok) dispatched += 1; // One email, not N
     else console.warn(`  ${job.group} digest failed for user ${shortId}`);
+    for (const id of alertIds) completeWork(id);
   }
 
-  console.log(`  Dispatch complete: ${dispatched} notifications sent`);
+  // ── Mark dispatched: alerts with zero eligible recipients (nothing to
+  // do at all) plus alerts whose full fanout was actually attempted this
+  // run. Anything left mid-flight (rate-limit stop) stays undispatched and
+  // is re-fetched whole on the next tick. ──
+  const doneIds = alerts
+    .map((a) => a.id)
+    .filter((id) => !alertIdsWithAnyRecipient.has(id) || (remainingWorkForAlert.get(id) ?? 0) <= 0);
+
+  if (doneIds.length > 0) {
+    // PostgREST .in() has a practical URL-length ceiling -- chunk the update.
+    const UPDATE_CHUNK = 500;
+    const now = new Date().toISOString();
+    for (let i = 0; i < doneIds.length; i += UPDATE_CHUNK) {
+      const chunk = doneIds.slice(i, i + UPDATE_CHUNK);
+      const { error } = await supabase.from("alerts").update({ dispatched_at: now }).in("id", chunk);
+      if (error) console.error("Failed to mark alerts dispatched:", error.message);
+    }
+  }
+
+  console.log(`  Dispatch complete: ${dispatched} notifications sent, ${doneIds.length}/${alerts.length} alerts marked dispatched`);
   return dispatched;
 }
