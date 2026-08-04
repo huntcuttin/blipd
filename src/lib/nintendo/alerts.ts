@@ -287,3 +287,26 @@ export async function generateReleaseAlert(
     new_price: price,
   });
 }
+
+/**
+ * Fires once, the moment a followed game's release date resolves from a
+ * placeholder to a real one (sync-release-dates' only write path for
+ * release_date -- see its route for why this is the sole hook point).
+ * Never fires on a real-date-to-real-date change (dates can flap as IGDB
+ * corrects itself; that's a distinct, deliberately-deferred alert class).
+ * insertAndDispatch's default follower resolution already scopes this to
+ * users who follow this specific game with notify_releases on -- no
+ * explicit followers list needed. No email template is registered for
+ * this type yet (see getTemplate in templates.ts) -- in-app feed only,
+ * pending founder sign-off on copy before any send path is wired in.
+ */
+export async function generateReleaseDateSetAlert(
+  supabase: AdminClient,
+  game: GameRef,
+  releaseDate: string
+): Promise<boolean> {
+  return insertAndDispatch(supabase, game, "release_date_set", {
+    headline: `${game.title} now has a release date`,
+    subtext: `Releasing ${formatShortDate(releaseDate)}`,
+  });
+}

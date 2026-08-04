@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { batchGetReleaseDates } from "@/lib/igdb";
 import { computeReleaseStatus } from "@/lib/nintendo/transform";
+import { generateReleaseDateSetAlert } from "@/lib/nintendo/alerts";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -101,6 +102,7 @@ export async function GET(request: Request) {
     // returning ok:true with updated:0 underneath. .update() only touches
     // the columns given, so it doesn't hit this constraint at all.
     let updated = 0;
+    const resolvedIds: string[] = [];
     for (const [gameId, result] of Array.from(results.entries())) {
       const { error: updateError } = await supabase
         .from("games")
@@ -115,6 +117,38 @@ export async function GET(request: Request) {
         console.error(`Failed to update ${gameId}:`, updateError.message);
       } else {
         updated++;
+        resolvedIds.push(gameId);
+      }
+    }
+
+    // Date-locked alert: this route is the sole write path for
+    // release_date going from placeholder to real (the pricedUpcoming
+    // fallback in ingest.ts deliberately no longer guesses a date, only
+    // flips release_status -- see its own comment), so every successful
+    // update above is, by construction, a genuine placeholder->real
+    // transition -- never a real->real change
+    // (a distinct, deliberately-deferred alert class per
+    // docs/AUDIT-2026-08-03.md, since dates can still flap as IGDB
+    // corrects itself). Only worth an alerts-table row for games someone
+    // actually follows; insertAndDispatch's own recipient resolution
+    // additionally scopes the actual notification to followers with
+    // notify_releases on, but checking here too avoids growing the global
+    // alerts log for the (much more common) unfollowed case.
+    let dateLockedAlerts = 0;
+    if (resolvedIds.length > 0) {
+      const { data: followedRows } = await supabase
+        .from("user_game_follows")
+        .select("game_id")
+        .in("game_id", resolvedIds);
+      const followedIds = new Set((followedRows ?? []).map((f) => f.game_id as string));
+      const titleById = new Map(games.map((g) => [g.id, g.title]));
+
+      for (const gameId of resolvedIds) {
+        if (!followedIds.has(gameId)) continue;
+        const result = results.get(gameId)!;
+        const title = titleById.get(gameId) ?? "";
+        const fired = await generateReleaseDateSetAlert(supabase, { id: gameId, title }, result.releaseDate);
+        if (fired) dateLockedAlerts++;
       }
     }
 
@@ -134,7 +168,7 @@ export async function GET(request: Request) {
       if (markError) console.error("Failed to mark no-match rows:", markError.message);
     }
 
-    console.log(`Release date sync complete: ${games.length} checked, ${updated} updated, ${noMatchIds.length} marked no-match`);
+    console.log(`Release date sync complete: ${games.length} checked, ${updated} updated, ${noMatchIds.length} marked no-match, ${dateLockedAlerts} date-locked alert(s) fired`);
 
     return NextResponse.json({
       ok: true,
@@ -142,6 +176,7 @@ export async function GET(request: Request) {
       matched: results.size,
       updated,
       noMatch: noMatchIds.length,
+      dateLockedAlerts,
     });
   } catch (error) {
     console.error("Release date sync failed:", error);

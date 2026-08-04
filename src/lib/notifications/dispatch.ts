@@ -54,6 +54,7 @@ export function getPrefColumn(alertType: string): PrefColumn {
       return "notify_all_time_low";
     case "release_today":
     case "out_now":
+    case "release_date_set":
       return "notify_releases";
     case "announced":
     case "switch2_edition_announced":
