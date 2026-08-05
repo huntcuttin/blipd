@@ -61,6 +61,13 @@ secondary. Discovery is tertiary.
 - Discovery (Deals page, browse, search) is a separate opt-in experience.
   The user goes there. It doesn't come to them.
 
+**On copy (added 2026-08-05, founder rule):**
+- Never use em dashes in any user-facing text: UI copy, meta/page titles,
+  email subjects and bodies, alert headlines, error messages. Use a
+  period, comma, colon, or the app's " · " separator instead. (The bare
+  "—" glyph as a missing-price placeholder is a data glyph, not prose,
+  and is fine.) This file and internal code comments are exempt.
+
 **On the business:**
 - Never make the alert the product in a commercial sense. Blippd doesn't
   sell games, doesn't earn from clicks, doesn't profit from purchase
