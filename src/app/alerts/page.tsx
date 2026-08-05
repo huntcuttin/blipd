@@ -13,6 +13,11 @@ import { createClient } from "@/lib/supabase/client";
 import type { GameAlert, AlertType } from "@/lib/types";
 
 const UNDO_WINDOW_MS = 5000;
+// Must match AlertCard's own EXIT_DURATION_MS — the card animates itself out
+// over this long before the parent actually drops it from state.
+const EXIT_ANIM_MS = 250;
+// Stagger offset between each card in a "Clear all" cascade.
+const CLEAR_ALL_STAGGER_MS = 45;
 
 type TimeGroup = "today" | "yesterday" | "this_week" | "earlier";
 type AlertFilter = "all" | "price" | "sales" | "releases";
@@ -49,6 +54,10 @@ export default function AlertsPage() {
   const [filter, setFilter] = useState<AlertFilter>("all");
   const [pending, setPending] = useState<{ alerts: GameAlert[]; message: string } | null>(null);
   const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ids currently mid-exit-animation, mapped to their stagger delay (ms).
+  // The alert stays in localAlerts (and thus rendered) until its animation
+  // finishes, so AlertCard can actually play the exit transition.
+  const [leavingDelays, setLeavingDelays] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (fetchedAlerts) setLocalAlerts(fetchedAlerts);
@@ -105,13 +114,43 @@ export default function AlertsPage() {
 
   const handleDismiss = (id: string) => {
     const alert = localAlerts.find((a) => a.id === id);
-    if (!alert) return;
-    dismissWithUndo([alert], "Alert dismissed");
+    if (!alert || leavingDelays.has(id)) return;
+    // Play the exit animation first; only remove from state (and start the
+    // undo window) once AlertCard has actually finished animating it away.
+    setLeavingDelays((prev) => {
+      const next = new Map(prev);
+      next.set(id, 0);
+      return next;
+    });
+    setTimeout(() => {
+      setLeavingDelays((prev) => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+      dismissWithUndo([alert], "Alert dismissed");
+    }, EXIT_ANIM_MS);
   };
 
   const handleClearAll = () => {
-    if (localAlerts.length === 0) return;
-    dismissWithUndo(localAlerts, `${localAlerts.length} alert${localAlerts.length !== 1 ? "s" : ""} cleared`);
+    if (localAlerts.length === 0 || leavingDelays.size > 0) return;
+    // Stagger by the order cards actually appear in (the current filter's
+    // visible order) so the cascade reads top-to-bottom regardless of
+    // which alerts happen to be filtered out of view right now.
+    const filterTypes = FILTER_TYPES[filter];
+    const visibleOrder = filterTypes ? localAlerts.filter((a) => filterTypes.includes(a.type)) : localAlerts;
+    const delays = new Map<string, number>();
+    visibleOrder.forEach((a, i) => delays.set(a.id, i * CLEAR_ALL_STAGGER_MS));
+    localAlerts.forEach((a) => {
+      if (!delays.has(a.id)) delays.set(a.id, 0);
+    });
+    setLeavingDelays(delays);
+    const maxDelay = visibleOrder.length > 0 ? (visibleOrder.length - 1) * CLEAR_ALL_STAGGER_MS : 0;
+    const total = localAlerts.length;
+    setTimeout(() => {
+      setLeavingDelays(new Map());
+      dismissWithUndo(localAlerts, `${total} alert${total !== 1 ? "s" : ""} cleared`);
+    }, maxDelay + EXIT_ANIM_MS);
   };
 
   const handleTap = async (id: string) => {
@@ -310,7 +349,7 @@ export default function AlertsPage() {
                   <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
                     {GROUP_LABELS[group]}
                   </h2>
-                  <div className="space-y-2">
+                  <div>
                     {groupAlerts.map((alert) => (
                       <AlertCard
                         key={alert.id}
@@ -318,6 +357,8 @@ export default function AlertsPage() {
                         onTap={handleTap}
                         onRemind={handleRemind}
                         onDismiss={user ? handleDismiss : undefined}
+                        leaving={leavingDelays.has(alert.id)}
+                        exitDelayMs={leavingDelays.get(alert.id) ?? 0}
                       />
                     ))}
                   </div>

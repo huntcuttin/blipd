@@ -6,6 +6,11 @@ import type { GameAlert, AlertType } from "@/lib/types";
 
 const SWIPE_DISMISS_THRESHOLD = 80;
 
+// Must match the setTimeout duration the parent uses to actually remove the
+// alert from state — the visual exit and the state removal are intentionally
+// decoupled (see AlertsPage), so these two numbers have to stay in sync.
+const EXIT_DURATION_MS = 250;
+
 const alertConfig: Record<
   AlertType,
   { label: string; color: string; bg: string }
@@ -26,21 +31,26 @@ export default function AlertCard({
   onTap,
   onRemind,
   onDismiss,
+  leaving = false,
+  exitDelayMs = 0,
 }: {
   alert: GameAlert;
   onTap?: (id: string) => void;
   onRemind?: (id: string) => void;
   onDismiss?: (id: string) => void;
+  /** Parent has decided this card is on its way out — play the exit transition. */
+  leaving?: boolean;
+  /** Stagger offset (ms) for "Clear all"'s cascade; 0 for a single dismiss. */
+  exitDelayMs?: number;
 }) {
   const config = alertConfig[alert.type] ?? { label: alert.type.toUpperCase(), color: "text-[#888888]", bg: "bg-[#888888]/15" };
   const [reminded, setReminded] = useState(false);
   const [dragX, setDragX] = useState(0);
-  const [dismissing, setDismissing] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const dragging = useRef(false);
 
   const handleClick = () => {
-    if (dragging.current) return;
+    if (dragging.current || leaving) return;
     if (!alert.read) onTap?.(alert.id);
   };
 
@@ -51,25 +61,26 @@ export default function AlertCard({
     onRemind?.(alert.id);
   };
 
+  // Just hand off intent — the parent owns leaving/exitDelayMs and the
+  // actual removal timing, so the card itself doesn't self-animate anymore.
+  const triggerDismiss = () => {
+    onDismiss?.(alert.id);
+  };
+
   const handleDismissClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     triggerDismiss();
   };
 
-  const triggerDismiss = () => {
-    setDismissing(true);
-    setDragX(-400);
-    setTimeout(() => onDismiss?.(alert.id), 180);
-  };
-
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (leaving) return;
     touchStartX.current = e.touches[0].clientX;
     dragging.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
+    if (leaving || touchStartX.current === null) return;
     const delta = e.touches[0].clientX - touchStartX.current;
     if (Math.abs(delta) > 6) dragging.current = true;
     if (delta < 0) setDragX(Math.max(delta, -140));
@@ -103,9 +114,23 @@ export default function AlertCard({
         onTouchMove={onDismiss ? handleTouchMove : undefined}
         onTouchEnd={onDismiss ? handleTouchEnd : undefined}
         style={{
-          transform: `translateX(${dragX}px)`,
-          transition: dragging.current && dragX !== 0 && !dismissing ? "none" : "transform 0.18s ease-out, opacity 0.18s ease-out",
-          opacity: dismissing ? 0 : 1,
+          transform: leaving ? "translateX(120%)" : `translateX(${dragX}px)`,
+          opacity: leaving ? 0 : 1,
+          // A single explicit transitionProperty list, covering both the
+          // exit/drag motion AND the read-state color fade below — an
+          // inline transitionProperty fully replaces (not merges with) any
+          // transition-property a Tailwind class would set, so the color
+          // easing has to live here too or it silently never runs.
+          transitionProperty: "transform, opacity, background-color, border-color",
+          transitionDuration:
+            !leaving && dragging.current && dragX !== 0
+              ? "0s, 0s, 300ms, 300ms"
+              : `${leaving ? EXIT_DURATION_MS : 180}ms, ${leaving ? EXIT_DURATION_MS : 180}ms, 300ms, 300ms`,
+          transitionTimingFunction: `${leaving ? "var(--ease-spring)" : "ease-out"}, ${
+            leaving ? "var(--ease-spring)" : "ease-out"
+          }, ease-out, ease-out`,
+          transitionDelay: `${leaving ? exitDelayMs : 0}ms, ${leaving ? exitDelayMs : 0}ms, 0ms, 0ms`,
+          pointerEvents: leaving ? "none" : undefined,
         }}
         className={`relative flex gap-3 p-3 rounded-xl border ${
           alert.read
@@ -113,13 +138,14 @@ export default function AlertCard({
             : "bg-[#111111] border-[#333333]"
         }`}
       >
-        {/* Unread dot */}
-        <div className="shrink-0 flex items-start pt-1">
-          {!alert.read ? (
-            <div className="w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88]" />
-          ) : (
-            <div className="w-2" />
-          )}
+        {/* Unread dot — always mounted so the read transition can fade it,
+            rather than swapping elements (which can't transition). */}
+        <div className="shrink-0 flex items-start pt-1 w-2">
+          <div
+            className={`w-2 h-2 rounded-full bg-[#00ff88] shadow-[0_0_8px_#00ff88] transition-opacity duration-300 ease-out ${
+              alert.read ? "opacity-0" : "opacity-100"
+            }`}
+          />
         </div>
 
         {/* Cover art */}
@@ -183,10 +209,27 @@ export default function AlertCard({
     </div>
   );
 
-  // Link to game detail if we have a slug
-  if (alert.gameSlug) {
-    return <Link href={`/game/${alert.gameSlug}`}>{inner}</Link>;
-  }
+  const linked = alert.gameSlug ? <Link href={`/game/${alert.gameSlug}`}>{inner}</Link> : inner;
 
-  return inner;
+  // grid-template-rows 1fr -> 0fr is the standard trick for animating an
+  // unknown-height element to zero without jank (a max-height transition
+  // would need a guessed cap and either clips real content or leaves a gap).
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateRows: leaving ? "0fr" : "1fr",
+        transitionProperty: "grid-template-rows",
+        transitionDuration: `${EXIT_DURATION_MS}ms`,
+        transitionTimingFunction: "ease-out",
+        transitionDelay: leaving ? `${exitDelayMs}ms` : "0ms",
+      }}
+    >
+      <div className="overflow-hidden">
+        {/* Padding (not the parent's gap/space-y) carries the inter-card
+            spacing so it collapses to zero together with the row above. */}
+        <div className="pb-2">{linked}</div>
+      </div>
+    </div>
+  );
 }

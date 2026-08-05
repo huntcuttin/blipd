@@ -6,6 +6,7 @@ import type { Game } from "@/lib/types";
 import { formatPrice, isPlaceholderDate, formatReleaseDate, getDaysUntil, getSaleEndLabel } from "@/lib/format";
 import { isRarelyOnSale } from "@/lib/ranking";
 import { useFollow } from "@/lib/FollowContext";
+import { CheckIcon } from "@/components/icons";
 import FollowButton from "./FollowButton";
 import GameCoverImage from "./GameCoverImage";
 
@@ -20,7 +21,7 @@ export default memo(function GameCard({ game, ownAction, justOwned }: { game: Ga
 
   return (
     <Link href={`/game/${game.slug}`} className="block">
-      <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors">
+      <div className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-all active:scale-[0.98]">
         {/* Cover art */}
         <div className="w-[110px] shrink-0">
           <GameCoverImage
@@ -153,15 +154,13 @@ export default memo(function GameCard({ game, ownAction, justOwned }: { game: Ga
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!justOwned) ownAction(); }}
               disabled={justOwned}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-colors ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-all active:scale-95 ${
                 justOwned
-                  ? "bg-[#00ff88]/15 text-[#00ff88] border-[#00ff88]/30"
-                  : "bg-[#7c3aed]/15 text-[#a78bfa] border-[#7c3aed]/20 hover:bg-[#7c3aed]/25"
+                  ? "bg-white/10 text-white border-white/20"
+                  : "bg-[#1a1a1a] text-[#777777] border-[#2a2a2a] hover:border-[#3a3a3a] hover:text-[#aaaaaa]"
               }`}
             >
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
+              <CheckIcon className="w-3 h-3" />
               {justOwned ? "Added!" : "I own this"}
             </button>
           )}
@@ -193,7 +192,7 @@ export function GameCardSkeleton() {
 export const GameCardCompact = memo(function GameCardCompact({ game }: { game: Game }) {
   return (
     <Link href={`/game/${game.slug}`} className="block shrink-0">
-      <div className="w-[150px] bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-colors overflow-hidden">
+      <div className="w-[150px] bg-[#111111] rounded-xl border border-[#222222] hover:border-[#333333] transition-all active:scale-[0.98] overflow-hidden">
         <GameCoverImage
           src={game.coverArt}
           alt={game.title}

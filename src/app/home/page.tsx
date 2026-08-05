@@ -6,8 +6,10 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import SearchBar from "@/components/SearchBar";
 import DirectBanner from "@/components/DirectBanner";
-import GameCard, { GameCardCompact, GameCardSkeleton } from "@/components/GameCard";
+import GameCard, { GameCardSkeleton } from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
+import RadarFeed, { buildRadarFeed } from "@/components/HomeHero";
+import RadarStatus from "@/components/RadarStatus";
 
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
@@ -93,10 +95,10 @@ export default function HomePage() {
   // OWN_CONFIRMATION_MS rather than vanishing the instant it's toggled.
   const isVisible = (g: Game) => !ownedGameIds.has(g.id) || justOwnedIds.has(g.id);
   const onSale = followedGames.filter((g) => g.isOnSale && isVisible(g));
-  // Nintendo first-party (or otherwise Tier 1) upcoming releases surface as
-  // their own section — the launch-minute differentiator is the headline
-  // feature, so an upcoming game you follow deserves more prominence on Home
-  // than a released game you're just watching for a price drop.
+  // Nintendo first-party (or otherwise Tier 1) upcoming releases sort first —
+  // the launch-minute differentiator is the headline feature, so an upcoming
+  // game you follow deserves more prominence than a released game you're
+  // just watching for a price drop.
   const comingSoon = followedGames
     .filter((g) => g.releaseStatus !== "released" && isVisible(g))
     .sort((a, b) => {
@@ -104,10 +106,21 @@ export default function HomePage() {
       if (tierDiff !== 0) return tierDiff;
       return a.releaseDate.localeCompare(b.releaseDate);
     });
-  const comingSoonIds = new Set(comingSoon.map((g) => g.id));
-  const watching = followedGames.filter(
-    (g) => !g.isOnSale && isVisible(g) && !comingSoonIds.has(g.id)
-  );
+
+  // "New for you" is a Beepr-style event feed — everything that just
+  // happened (deals, ATLs) or is about to (launch countdowns) on the
+  // user's own games, significance-ordered, no merchandising framing
+  // (founder direction 2026-08-04). Games featured in the feed drop out
+  // of the Watching list below so nothing shows twice.
+  const radarFeed = buildRadarFeed(onSale, comingSoon);
+  const feedIds = new Set(radarFeed.slice(0, 6).map((g) => g.id));
+  const watching = followedGames
+    .filter((g) => isVisible(g) && !feedIds.has(g.id))
+    .sort((a, b) => {
+      if (a.isOnSale !== b.isOnSale) return a.isOnSale ? -1 : 1;
+      if (a.isOnSale && b.isOnSale) return (b.discount ?? 0) - (a.discount ?? 0);
+      return 0;
+    });
 
   const hasPersonalContent = followedGames.length > 0 || followedFranchiseList.length > 0;
 
@@ -140,6 +153,11 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* Radar status — gated on the same loading flag as the rest of the
+          personal content below so it never flashes "Watching 0 games"
+          before follows have loaded. */}
+      {user && !followContextLoading && <RadarStatus watchingCount={followedGameIds.size} />}
 
       {/* Nintendo Direct banner */}
       <DirectBanner />
@@ -215,63 +233,17 @@ export default function HomePage() {
           </Link>
         </div>
       ) : (
-        /* Personal dashboard */
+        /* Personal dashboard — "Mission Control": one hero slot for the
+           single most important thing (best deal, or soonest upcoming
+           launch), everything else in one consolidated Watching list below. */
         <div className="space-y-5 pb-4">
-          {/* On Sale Now — most important section */}
-          {onSale.length > 0 && (
-            <section>
-              <h2 className="text-[10px] font-bold text-[#00ff88] tracking-wider mb-2 uppercase">On Sale Now</h2>
-              {onSale.length <= 4 ? (
-                <div className="space-y-2">
-                  {onSale.map((game) => (
-                    <GameCard
-                      key={game.id}
-                      game={game}
-                      ownAction={() => handleOwn(game.id)}
-                      justOwned={justOwnedIds.has(game.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto -mx-4 px-4 no-scrollbar mb-2">
-                    <div className="flex gap-3 pb-1">
-                      {onSale.map((game) => (
-                        <GameCardCompact key={game.id} game={game} />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-[#555555]">{onSale.length} of your games are on sale</p>
-                </>
-              )}
-            </section>
-          )}
+          <RadarFeed games={radarFeed} />
 
-          {/* Coming Soon — followed upcoming games, Nintendo first-party and
-              other Tier 1 titles surfaced first. The launch-minute alert is
-              the product's headline differentiator, so an upcoming game you
-              follow earns more prominence here than one you're just
-              watching for a price drop. */}
-          {comingSoon.length > 0 && (
-            <section>
-              <h2 className="text-[10px] font-bold text-[#00aaff] tracking-wider mb-2 uppercase">Coming Soon</h2>
-              <div className="space-y-2">
-                {comingSoon.map((game) => (
-                  <GameCard
-                    key={game.id}
-                    game={game}
-                    ownAction={() => handleOwn(game.id)}
-                    justOwned={justOwnedIds.has(game.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Watching for Deals */}
+          {/* Watching — everything followed that isn't already featured
+              above, on-sale games first since they're the most actionable. */}
           {watching.length > 0 && (
             <section>
-              <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2 uppercase">Watching for Deals</h2>
+              <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-2 uppercase">Watching</h2>
               <div className="space-y-2">
                 {watching.map((game) => (
                   <GameCard

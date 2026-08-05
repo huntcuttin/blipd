@@ -5,6 +5,7 @@
 :root {
   --background: #0a0a0a;
   --foreground: #e0e0e0;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * {
@@ -35,4 +36,89 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Home "Mission Control" status-line dot -- a slow ambient breathing ring
+   signaling "actively watching." Named distinctly from any other
+   radar-ping-style keyframe elsewhere in this file (same @keyframes name
+   declared twice silently lets the later one win for every user) -- this
+   one is scoped to Home's header status line specifically. */
+@keyframes home-radar-ping {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.home-radar-ping {
+  animation: home-radar-ping 1.8s ease-out infinite;
+}
+
+/* Home hero card entrance -- a one-shot native-app-style overshoot on mount,
+   not a repeating loop. */
+@keyframes hero-card-in {
+  0% { opacity: 0; transform: scale(0.94) translateY(6px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.hero-card-in {
+  animation: hero-card-in 0.45s var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-radar-ping,
+  .hero-card-in {
+    animation: none;
+  }
+}
+
+/* One-shot bounce + glow flash for a follow button transitioning to "Following" */
+@keyframes follow-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(0, 255, 136, 0);
+  }
+  40% {
+    transform: scale(1.08);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.15);
+  }
+}
+
+.animate-follow-pulse {
+  animation: follow-pulse 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Slow expanding ring behind the live dot in a "Watching" button — the
+   radar-is-armed signal. Deliberately slow (1.8s) so a list of watched
+   games shimmers gently instead of strobing. */
+@keyframes radar-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.animate-radar-ping {
+  animation: radar-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Undo toast entrance — a hard cut-in reads as a website, not an app */
+@keyframes toast-slide-in {
+  0% {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-toast-in {
+  animation: toast-slide-in 280ms var(--ease-spring);
 }
