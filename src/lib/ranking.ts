@@ -229,6 +229,70 @@ export function isNintendoFirstParty(game: Game): boolean {
   return Boolean(game.franchise && NINTENDO_1ST_PARTY.has(game.franchise));
 }
 
+// ── Nintendo IP tiers ─────────────────────────────────────────
+// Title-pattern matching, NOT franchise tags — franchise tagging is
+// regex-derived at ingest and has real gaps (confirmed live: "Rhythm
+// Heaven Groove" carries franchise: null), so any sort keyed on tags
+// silently skips exactly the games it exists to boost. Titles are the
+// one field Nintendo's own catalog always populates.
+//
+// Tiering follows franchise scale/system-seller weight (units sold,
+// per 2025-26 sales data: Mario ~850M, Pokemon ~481M, Zelda ~131M,
+// Animal Crossing ~95M, Smash ~89M) plus current flagship status
+// (Metroid Prime 4, Splatoon and Pokemon lines carrying the Switch 2
+// lineup). To extend: add a pattern to the right tier — S for
+// system-sellers, A for beloved core IP, and anything else
+// Nintendo-published lands in B automatically via the publisher check.
+const NINTENDO_IP_S_TIER = [
+  /\bmario\b/i, // mainline + Kart/Party/Tennis/Paper/+ Rabbids/& Sonic — all lead with the IP
+  /\bluigi\b/i,
+  /\bzelda\b/i,
+  /\bhyrule\b/i,
+  /\bpok[eé]mon\b/i,
+  /animal crossing/i,
+  /super smash bros/i,
+  /\bsplatoon\b/i,
+  /donkey kong/i,
+  /\bmetroid\b/i,
+];
+
+const NINTENDO_IP_A_TIER = [
+  /\bkirby\b/i,
+  /fire emblem/i,
+  /\bpikmin\b/i,
+  /\bxenoblade\b/i,
+  /\byoshi\b/i,
+  /\bwario\b/i, // WarioWare + Wario Land
+  /rhythm heaven/i,
+  /\bearthbound\b|\bmother\s*[0-9]/i,
+  /kid icarus/i,
+  /punch-?out/i,
+  /golden sun/i,
+  /advance wars/i,
+  /famicom detective/i,
+  /star fox/i,
+  /f-zero/i,
+  /\barms\b/, // case-sensitive: ARMS the game, not "arms" mid-title ("Wild Arms")
+  /astral chain/i,
+  /\bbayonetta\b/i,
+];
+
+/**
+ * 3 = S-tier system-seller IP, 2 = A-tier core Nintendo IP,
+ * 1 = anything else Nintendo publishes, 0 = not Nintendo.
+ * Sort descending on this before any date/hype key when a surface should
+ * lead with Nintendo — it deliberately outranks release recency, since
+ * pure date order buries Nintendo's (comparatively infrequent) releases
+ * under daily third-party volume.
+ */
+export function getNintendoIpTier(game: Game): 0 | 1 | 2 | 3 {
+  const title = game.title ?? "";
+  if (NINTENDO_IP_S_TIER.some((re) => re.test(title))) return 3;
+  if (NINTENDO_IP_A_TIER.some((re) => re.test(title))) return 2;
+  if (game.publisher === "Nintendo" || isNintendoFirstParty(game)) return 1;
+  return 0;
+}
+
 // Edition suffixes to strip when finding duplicate games
 const EDITION_RE = /\s*[-–:]?\s*(Digital\s+)?(Deluxe|Standard|Complete|Ultimate|Gold|Platinum|Collector'?s?|Anniversary|Encore|Special|Limited|Premium|Definitive)\s+Edition\s*$/i;
 const BUNDLE_RE = /\s*[-–:]?\s*Bundle\s*$/i;

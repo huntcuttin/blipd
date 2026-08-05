@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent } from "@/lib/types";
-import { getGameTier, isNintendoFirstParty } from "@/lib/ranking";
+import { getGameTier, isNintendoFirstParty, getNintendoIpTier } from "@/lib/ranking";
 import { PLACEHOLDER_DATES } from "@/lib/format";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -162,14 +162,15 @@ export async function getRecentReleases(supabase: Client): Promise<Game[]> {
     .limit(100);
   if (error) throw error;
   const games = (data ?? []).map(mapGame);
-  // Nintendo first-party leads regardless of exact release date -- pure
-  // recency sort buries Nintendo's own (comparatively infrequent) releases
-  // under the much higher daily volume of third-party/indie launches.
-  // Release date still breaks ties within each group, same pattern as
-  // getUpcomingGamesSoon and getPopularGames.
+  // Tiered Nintendo IP boost (getNintendoIpTier), not the old binary
+  // franchise-tag check -- title-based so it survives the franchise-tag
+  // gaps that let real Nintendo releases slip past the boost entirely,
+  // and tiered so Mario/Zelda/Pokemon-class IP outranks smaller Nintendo
+  // titles instead of tying with them. Release date breaks ties within
+  // each tier.
   return games.sort((a, b) => {
-    const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
-    if (nintendoDiff !== 0) return nintendoDiff;
+    const tierDiff = getNintendoIpTier(b) - getNintendoIpTier(a);
+    if (tierDiff !== 0) return tierDiff;
     return b.releaseDate.localeCompare(a.releaseDate);
   });
 }
@@ -730,10 +731,10 @@ export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
   // still lead (same reasoning as the games-you-own picker), release date
   // still governs the rest so the page stays "what's coming, soonest first."
   return games
-    .filter((g) => isNintendoFirstParty(g) || g.releaseDate <= sixtyDaysOut)
+    .filter((g) => getNintendoIpTier(g) > 0 || g.releaseDate <= sixtyDaysOut)
     .sort((a, b) => {
-      const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
-      if (nintendoDiff !== 0) return nintendoDiff;
+      const tierDiff = getNintendoIpTier(b) - getNintendoIpTier(a);
+      if (tierDiff !== 0) return tierDiff;
       return a.releaseDate.localeCompare(b.releaseDate);
     })
     .slice(0, 30);
@@ -760,12 +761,12 @@ export async function getUnannouncedUpcomingGames(supabase: Client): Promise<Gam
     .limit(60);
   if (error) throw error;
   const games = (data ?? []).map(mapGame);
-  // Same Nintendo-first convention as getUpcomingGamesSoon/getPopularGames;
+  // Same tiered Nintendo-IP-first convention as getUpcomingGamesSoon;
   // hype score is the only remaining signal once there's no date to sort by.
   return games
     .sort((a, b) => {
-      const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
-      if (nintendoDiff !== 0) return nintendoDiff;
+      const tierDiff = getNintendoIpTier(b) - getNintendoIpTier(a);
+      if (tierDiff !== 0) return tierDiff;
       return (b.igdbHype ?? 0) - (a.igdbHype ?? 0);
     })
     .slice(0, 20);
