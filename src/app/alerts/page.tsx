@@ -319,7 +319,7 @@ export default function AlertsPage() {
             {user && <span className="absolute inset-0 m-auto w-8 h-8 rounded-full animate-radar-ping bg-[#444444]/20" aria-hidden="true" />}
           </div>
           <h2 className="text-lg font-semibold text-white mb-2">
-            {user ? "All quiet — we&apos;re watching" : "No alerts yet"}
+            {user ? "All quiet. We're watching" : "No alerts yet"}
           </h2>
           <p className="text-[#555555] text-sm text-center max-w-[260px]">
             {user

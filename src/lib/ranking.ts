@@ -264,6 +264,7 @@ const NINTENDO_IP_A_TIER = [
   /\byoshi\b/i,
   /\bwario\b/i, // WarioWare + Wario Land
   /rhythm heaven/i,
+  /tomodachi life/i,
   /\bearthbound\b|\bmother\s*[0-9]/i,
   /kid icarus/i,
   /punch-?out/i,

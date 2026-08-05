@@ -157,8 +157,13 @@ export default function GameDetailClient({ slug }: { slug: string }) {
         {/* Price section */}
         <div className="py-4 border-b border-[#222222]">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-3xl font-bold text-white">
-              {game.currentPrice === 0 && game.originalPrice === 0 ? "Free" : formatPrice(game.currentPrice)}
+            <span className={`font-mono text-3xl font-bold ${game.currentPrice === 0 && game.originalPrice === 0 && game.releaseStatus !== "released" ? "text-[#666666] text-xl" : "text-white"}`}>
+              {game.currentPrice === 0 && game.originalPrice === 0
+                // An unreleased listing with no price data isn't "Free" --
+                // it just has no price yet (confirmed live: Fortune's Weave,
+                // a $0/$0 preorder row, read as a free game).
+                ? (game.releaseStatus === "released" ? "Free" : "Price TBA")
+                : formatPrice(game.currentPrice)}
             </span>
             {game.isOnSale && (
               <>
@@ -241,9 +246,12 @@ export default function GameDetailClient({ slug }: { slug: string }) {
           {game.releaseStatus === "upcoming" && !placeholderDate && !isYearOnlyDate(game.releaseDate) && (
             <a
               href={`/games/${game.slug}/release-time`}
-              className="inline-block mt-1.5 text-[#00aaff] text-xs font-medium hover:underline"
+              className="inline-flex items-center gap-1.5 mt-2.5 min-h-[44px] px-4 rounded-full bg-transparent border border-[#00aaff]/50 text-[#00aaff] text-xs font-bold hover:border-[#00aaff] active:scale-95 transition-all"
             >
-              What time does it launch? →
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              What time does it launch?
             </a>
           )}
           <p className="text-[#555555] text-[11px] mt-2">{formatFreshness(lastChecked)}</p>
@@ -273,7 +281,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
               <FollowButton gameId={game.id} size="large" />
               <button
                 onClick={handleLibraryToggle}
-                className="w-full mt-2 py-1.5 text-[11px] text-[#555555] hover:text-[#a78bfa] transition-colors"
+                className="w-full mt-2 min-h-[44px] flex items-center justify-center rounded-full bg-transparent border border-[#2a2a2a] text-xs font-bold text-[#888888] hover:border-[#3a3a3a] hover:text-white active:scale-95 transition-all"
               >
                 {justAdded ? "Added to library!" : "I own this game"}
               </button>
@@ -318,8 +326,8 @@ export default function GameDetailClient({ slug }: { slug: string }) {
             onClick={async () => {
               const url = `https://www.blippd.app/game/${game.slug}`;
               const text = game.isOnSale
-                ? `${game.title} is ${game.discount}% off — ${formatPrice(game.currentPrice)} on Nintendo eShop`
-                : `${game.title} on Nintendo eShop — ${formatPrice(game.currentPrice)}`;
+                ? `${game.title} is ${game.discount}% off: ${formatPrice(game.currentPrice)} on Nintendo eShop`
+                : `${game.title} on Nintendo eShop: ${formatPrice(game.currentPrice)}`;
               if (navigator.share) {
                 try { await navigator.share({ title: text, url }); } catch { /* cancelled */ }
               } else {

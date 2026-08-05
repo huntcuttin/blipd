@@ -15,6 +15,7 @@ import {
   getUnannouncedUpcomingGames,
 } from "@/lib/queries";
 import { isPlaceholderDate, isYearOnlyDate, isMonthOnlyDate, getDaysUntil } from "@/lib/format";
+import { getNintendoIpTier } from "@/lib/ranking";
 import type { Game } from "@/lib/types";
 
 export default function UpcomingPage() {
@@ -84,17 +85,38 @@ function UpcomingContent() {
     (g) => g.coverArt
   ).slice(0, 12);
 
+  // The Nintendo slate leads the whole page (founder direction 2026-08-05:
+  // "the upcoming Nintendo first-party slate needs to be top of mind").
+  // Pulls Nintendo IP from BOTH the dated pool and the no-date-yet pool so
+  // a TBA Splatoon still makes the slate, ordered flagship-first
+  // (getNintendoIpTier), dated titles before TBA within a tier. Slate
+  // members are excluded from the date buckets below so nothing shows twice.
+  const nintendoSlate = [...comingSoon, ...onTheHorizon]
+    .filter((g, i, arr) => getNintendoIpTier(g) > 0 && arr.findIndex((x) => x.id === g.id) === i)
+    .sort((a, b) => {
+      const tierDiff = getNintendoIpTier(b) - getNintendoIpTier(a);
+      if (tierDiff !== 0) return tierDiff;
+      const aTba = !a.releaseDate || isPlaceholderDate(a.releaseDate);
+      const bTba = !b.releaseDate || isPlaceholderDate(b.releaseDate);
+      if (aTba !== bTba) return aTba ? 1 : -1;
+      return (a.releaseDate ?? "").localeCompare(b.releaseDate ?? "");
+    })
+    .slice(0, 10);
+  const slateIds = new Set(nintendoSlate.map((g) => g.id));
+
   const thisWeek: Game[] = [];
   const thisMonth: Game[] = [];
   const later: Game[] = [];
   const tbaDated: Game[] = [];
   for (const game of comingSoon) {
+    if (slateIds.has(game.id)) continue;
     const bucket = getComingSoonBucket(game.releaseDate);
     if (bucket === "this_week") thisWeek.push(game);
     else if (bucket === "this_month") thisMonth.push(game);
     else if (bucket === "later") later.push(game);
     else tbaDated.push(game);
   }
+  const horizonRest = onTheHorizon.filter((g) => !slateIds.has(g.id));
   const hasComingSoon = comingSoon.length > 0 || onTheHorizon.length > 0;
 
   const loading = releasesLoading && upcomingLoading && unannouncedLoading;
@@ -127,6 +149,23 @@ function UpcomingContent() {
         </>
       ) : (
         <>
+          {/* Nintendo slate: the page's headline section */}
+          {nintendoSlate.length > 0 && (
+            <section className="mb-6">
+              <h2 className="text-[10px] font-bold tracking-wider mb-3 uppercase text-white flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#e60012]" aria-hidden="true" />
+                Nintendo
+              </h2>
+              <div className="overflow-x-auto -mx-4 px-4 no-scrollbar">
+                <div className="flex gap-3 pb-1">
+                  {nintendoSlate.map((game) => (
+                    <GameCardCompact key={game.id} game={game} />
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Out Now section */}
           {outNow.length > 0 && (
             <section className="mb-6">
@@ -179,7 +218,7 @@ function UpcomingContent() {
                   </div>
                 )}
 
-                {(tbaDated.length > 0 || onTheHorizon.length > 0) && (
+                {(tbaDated.length > 0 || horizonRest.length > 0) && (
                   <div>
                     <h3 className="text-[13px] font-semibold text-white mb-2">TBA</h3>
 
@@ -191,11 +230,11 @@ function UpcomingContent() {
                       </div>
                     )}
 
-                    {onTheHorizon.length > 0 && (
+                    {horizonRest.length > 0 && (
                       <div>
                         <h4 className="text-[11px] font-medium text-[#666666] mb-2">On the Horizon</h4>
                         <div className="space-y-2">
-                          {onTheHorizon.map((game) => (
+                          {horizonRest.map((game) => (
                             <OnTheHorizonCard key={game.id} game={game} />
                           ))}
                         </div>
@@ -243,7 +282,7 @@ function OnTheHorizonCard({ game }: { game: Game }) {
           <h3 className="font-semibold text-white text-[13px] leading-snug line-clamp-2">{game.title}</h3>
           <p className="text-[#555555] text-[11px] mt-0.5 truncate">{game.publisher}</p>
           <p className="text-[#666666] text-[11px] mt-1 leading-snug">
-            No date yet — follow to know the minute it gets one, and the minute it launches.
+            No date yet. Follow to know the minute it gets one, and the minute it launches.
           </p>
         </div>
         <div className="shrink-0">

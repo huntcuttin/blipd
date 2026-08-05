@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { isPlaceholderDate } from "@/lib/format";
 import ReleaseTimeClient from "./ReleaseTimeClient";
+import ReleaseTimeCta from "@/components/ReleaseTimeCta";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Game Not Found | Blippd" };
   }
 
-  const title = `When Does ${game.title} Release? — Exact Launch Time | Blippd`;
+  const title = `When Does ${game.title} Release? · Exact Launch Time | Blippd`;
   const description = `Find out exactly when ${game.title} launches on Nintendo eShop. Get the release time in your timezone and set up alerts so you don't miss it.`;
 
   return {
@@ -196,7 +197,7 @@ export default async function ReleaseTimePage({ params }: Props) {
           </h2>
           <p className="text-[#888888] text-sm mb-3 leading-relaxed">
             Nintendo doesn&apos;t publish exact launch times, so this is our best
-            estimate based on historical patterns — not officially confirmed.
+            estimate based on historical patterns, not officially confirmed.
           </p>
           <div className="bg-[#111111] rounded-xl border border-[#222222] p-4">
             <div className="flex items-center justify-between mb-1">
@@ -208,23 +209,15 @@ export default async function ReleaseTimePage({ params }: Props) {
         </div>
       )}
 
-      {/* CTA */}
-      <div className="bg-[#111111] rounded-xl border border-[#00ff88]/20 p-5 text-center">
-        <h3 className="text-white font-bold text-base mb-2">
-          {isReleased ? "Track price drops" : "Don't miss the launch"}
-        </h3>
-        <p className="text-[#888888] text-sm mb-4">
-          {isReleased
-            ? `Get notified when ${game.title} goes on sale.`
-            : `Watch ${game.title} on Blippd to get an alert the moment it's available.`}
-        </p>
-        <Link
-          href={`/game/${game.slug}`}
-          className="inline-block px-7 py-3 rounded-full bg-[#00ff88] text-[#0a0a0a] text-sm font-bold hover:bg-[#00dd77] active:scale-95 transition-all"
-        >
-          {isReleased ? "View Game" : "Watch & Get Notified"}
-        </Link>
-      </div>
+      {/* CTA (client component: reads follow state so an already-watching
+          user sees their Watching status, not a "Watch & Get Notified"
+          pitch for something they've already done) */}
+      <ReleaseTimeCta
+        gameId={game.id}
+        gameSlug={game.slug}
+        gameTitle={game.title}
+        isReleased={isReleased}
+      />
 
       {/* Schema.org structured data */}
       <script
