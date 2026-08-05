@@ -271,21 +271,32 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     trustedDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status, release_date_source: g.release_date_source });
   }
 
-  // Find which games already exist (by nsuid) so we don't overwrite their prices
+  // Find which games already exist (by nsuid) so we don't overwrite their
+  // prices. MUST be paginated: PostgREST caps an unbounded select at 1,000
+  // rows, and with ~2,800+ games these sets silently held only the first
+  // 1,000 -- so every catalog sync misclassified the other ~1,800 games as
+  // "new" and upserted them WITH Algolia-derived price fields, clobbering
+  // real polled prices (msrp ?? 0 -- $0/$0 for titles whose Algolia record
+  // has no msrp, e.g. Switch 2 listings) and resetting price_history to a
+  // fresh single-bucket entry. Confirmed live 2026-08-04: this, not
+  // Nintendo API flakiness, was the actual mechanism behind the recurring
+  // "$0 price corruption" waves -- each wave started minutes after a
+  // catalog sync run. Same PostgREST-cap bug class already fixed in the
+  // sitemap and weekly-digest.
   const existingNsuids = new Set<string>();
   const existingSlugs = new Set<string>();
-  const { data: existingByNsuid } = await supabase
-    .from("games")
-    .select("nsuid")
-    .not("nsuid", "is", null);
-  for (const g of existingByNsuid ?? []) {
-    if (g.nsuid) existingNsuids.add(g.nsuid);
-  }
-  const { data: existingBySlug } = await supabase
-    .from("games")
-    .select("slug");
-  for (const g of existingBySlug ?? []) {
-    existingSlugs.add(g.slug);
+  const EXISTING_PAGE = 1000;
+  for (let from = 0; ; from += EXISTING_PAGE) {
+    const { data } = await supabase
+      .from("games")
+      .select("nsuid, slug")
+      .range(from, from + EXISTING_PAGE - 1);
+    if (!data || data.length === 0) break;
+    for (const g of data) {
+      if (g.nsuid) existingNsuids.add(g.nsuid);
+      if (g.slug) existingSlugs.add(g.slug);
+    }
+    if (data.length < EXISTING_PAGE) break;
   }
 
   // Strip price fields from rows that already exist in DB
