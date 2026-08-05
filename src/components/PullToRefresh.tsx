@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState, useEffect } from "react";
+import RadarSpinner from "@/components/RadarSpinner";
 
 const THRESHOLD = 80;
 
@@ -79,17 +80,21 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
           style={{ top: `calc(env(safe-area-inset-top, 0px) + ${pullDistance}px)` }}
         >
           <div
-            className={`w-7 h-7 rounded-full bg-[#111111] border border-[#333333] flex items-center justify-center shadow-lg ${
-              refreshing ? "animate-spin" : ""
-            }`}
+            className="w-7 h-7 rounded-full bg-[#111111] border border-[#333333] flex items-center justify-center shadow-lg"
             style={{ opacity: Math.min(pullDistance / 30, 1) }}
           >
-            <div
-              className="w-4 h-4 border-2 border-[#00ff88] border-t-transparent rounded-full"
-              style={{
-                transform: refreshing ? undefined : `rotate(${pullDistance * 4}deg)`,
-              }}
-            />
+            {refreshing ? (
+              // Actually loading — the branded mark, not the drag preview below.
+              <RadarSpinner size={16} />
+            ) : (
+              // Pre-threshold preview: rotates with how far the user has
+              // pulled (not a loading state), so it keeps its own manually
+              // driven arc rather than the spinner's fixed sweep.
+              <div
+                className="w-4 h-4 border-2 border-[#00ff88] border-t-transparent rounded-full"
+                style={{ transform: `rotate(${pullDistance * 4}deg)` }}
+              />
+            )}
           </div>
         </div>
       )}

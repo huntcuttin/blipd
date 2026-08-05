@@ -366,17 +366,33 @@ export async function getFranchiseByName(supabase: Client, name: string): Promis
 export async function getAlerts(supabase: Client, userId?: string): Promise<GameAlert[]> {
   // If user is logged in, only show alerts for games they follow
   let followedGameIds: Set<string> | null = null;
+  // Followed franchise names, lowercased — batched once here (not per alert)
+  // so "why am I seeing this" can be answered for franchise-sourced alerts
+  // below without an N+1 query per row.
+  let followedFranchiseNames: Set<string> | null = null;
   if (userId) {
     const { data: follows } = await supabase
       .from("user_game_follows")
       .select("game_id")
       .eq("user_id", userId);
     followedGameIds = new Set((follows ?? []).map((f: { game_id: string }) => f.game_id));
+
+    const { data: franchiseFollows } = await supabase
+      .from("user_franchise_follows")
+      .select("franchises ( name )")
+      .eq("user_id", userId);
+    followedFranchiseNames = new Set(
+      (franchiseFollows ?? [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((f: any) => f.franchises?.name as string | undefined)
+        .filter((n: string | undefined): n is string => !!n)
+        .map((n: string) => n.toLowerCase())
+    );
   }
 
   let query = supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art, slug )")
+    .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art, slug, franchise )")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -413,20 +429,34 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
   return (data ?? [])
     .filter((row: { id: string }) => !dismissedSet.has(row.id))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((row: any) => ({
-      id: row.id,
-      gameId: row.game_id,
-      gameTitle: row.games.title,
-      gameCoverArt: row.games.cover_art,
-      gameSlug: row.games.slug,
-      type: row.type,
-      headline: row.headline,
-      subtext: row.subtext,
-      createdAt: row.created_at,
-      timestampGroup: computeTimestampGroup(row.created_at),
-      timestamp: formatTimestamp(row.created_at),
-      read: readMap.get(row.id) ?? false,
-    }));
+    .map((row: any) => {
+      // Direct follow wins over franchise follow (a user can follow both the
+      // game and its franchise) — "Watching" is the obvious default and the
+      // UI renders nothing for it; only the franchise case is worth a chip.
+      let sourceLabel: string | null = null;
+      if (userId) {
+        if (followedGameIds?.has(row.game_id)) {
+          sourceLabel = "Watching";
+        } else if (row.games.franchise && followedFranchiseNames?.has(String(row.games.franchise).toLowerCase())) {
+          sourceLabel = row.games.franchise;
+        }
+      }
+      return {
+        id: row.id,
+        gameId: row.game_id,
+        gameTitle: row.games.title,
+        gameCoverArt: row.games.cover_art,
+        gameSlug: row.games.slug,
+        type: row.type,
+        headline: row.headline,
+        subtext: row.subtext,
+        createdAt: row.created_at,
+        timestampGroup: computeTimestampGroup(row.created_at),
+        timestamp: formatTimestamp(row.created_at),
+        read: readMap.get(row.id) ?? false,
+        sourceLabel,
+      };
+    });
 }
 
 export async function getAlertsForGame(supabase: Client, gameId: string): Promise<GameAlert[]> {

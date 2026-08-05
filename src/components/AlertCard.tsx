@@ -167,6 +167,16 @@ export default function AlertCard({
             >
               {config.label}
             </span>
+            {/* Only the franchise-follow case answers "why am I seeing
+                this" — a direct follow ("Watching") is the obvious default
+                and stays unlabeled so this chip doesn't compete with the
+                alert content. Absent entirely for older callers that never
+                computed sourceLabel (e.g. game-detail's alert list). */}
+            {alert.sourceLabel && alert.sourceLabel !== "Watching" && (
+              <span className="max-w-[40%] truncate text-[10px] text-[#999999] bg-[#ffffff0d] px-2 py-0.5 rounded-full">
+                via {alert.sourceLabel}
+              </span>
+            )}
             <span className="text-[#555555] text-[10px] ml-auto shrink-0">
               {alert.timestamp}
             </span>

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import RadarSpinner from "@/components/RadarSpinner";
 
 export default function UpcomingRedirect() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function UpcomingRedirect() {
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="w-5 h-5 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
+      <RadarSpinner size={20} />
     </div>
   );
 }

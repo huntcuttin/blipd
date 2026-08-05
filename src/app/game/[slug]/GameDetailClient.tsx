@@ -9,6 +9,7 @@ import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
 import TargetPriceInput from "@/components/TargetPriceInput";
 import QueryError from "@/components/QueryError";
 import GameCoverImage from "@/components/GameCoverImage";
+import RadarSpinner from "@/components/RadarSpinner";
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
@@ -50,7 +51,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
   if (gameLoading) {
     return (
       <div className="px-4 py-20 text-center">
-        <div className="w-8 h-8 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin mx-auto" />
+        <RadarSpinner size={32} className="mx-auto" />
       </div>
     );
   }

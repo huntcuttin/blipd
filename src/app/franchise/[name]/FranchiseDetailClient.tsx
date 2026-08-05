@@ -7,6 +7,7 @@ import GameCard from "@/components/GameCard";
 import FranchiseFollowButton from "@/components/FranchiseFollowButton";
 import NotifyPrefsPanel from "@/components/NotifyPrefsPanel";
 import QueryError from "@/components/QueryError";
+import RadarSpinner from "@/components/RadarSpinner";
 import { useFollow } from "@/lib/FollowContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getFranchiseByName, getGamesByFranchise } from "@/lib/queries";
@@ -30,7 +31,7 @@ export default function FranchiseDetailClient({ name }: { name: string }) {
   if (loading) {
     return (
       <div className="px-4 py-20 text-center">
-        <div className="w-8 h-8 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin mx-auto" />
+        <RadarSpinner size={32} className="mx-auto" />
       </div>
     );
   }

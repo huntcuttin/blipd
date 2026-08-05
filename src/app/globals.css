@@ -122,3 +122,86 @@ body {
 .animate-toast-in {
   animation: toast-slide-in 280ms var(--ease-spring);
 }
+
+/* RadarSpinner — the branded loading mark (see components/RadarSpinner.tsx):
+   a dim outer ring (matches RadarIcon's ring), a bright quarter-wedge that
+   sweeps around it, and a center dot that breathes. Ring/sweep sizing is
+   done in % so the same rules work at any `size` the component is given. */
+.radar-spinner {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.radar-spinner__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgba(0, 255, 136, 0.18);
+}
+
+.radar-spinner__sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, #00ff88 0deg, #00ff88 90deg, transparent 90deg, transparent 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation: radar-spinner-sweep 1.2s linear infinite;
+}
+
+.radar-spinner__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24%;
+  height: 24%;
+  border-radius: 9999px;
+  background: #00ff88;
+  transform: translate(-50%, -50%);
+  animation: radar-spinner-dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes radar-spinner-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes radar-spinner-dot-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radar-spinner__sweep {
+    animation: none;
+    opacity: 0;
+  }
+  .radar-spinner__dot {
+    animation: none;
+  }
+  .radar-spinner {
+    animation: radar-spinner-reduced-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes radar-spinner-reduced-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}

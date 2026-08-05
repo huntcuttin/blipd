@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUserProfile } from "@/lib/queries";
+import RadarSpinner from "@/components/RadarSpinner";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function AuthCallbackPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
       <div className="text-center">
-        <div className="w-8 h-8 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <RadarSpinner size={32} className="mx-auto mb-4" />
         <p className="text-[#666666] text-sm">Signing you in...</p>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/format";
 import BackButton from "@/components/BackButton";
 import GameCoverImage from "@/components/GameCoverImage";
 import Logo from "@/components/Logo";
+import RadarSpinner from "@/components/RadarSpinner";
 
 type Step = "console" | "retro" | "games" | "done";
 
@@ -166,7 +167,7 @@ export default function OnboardingPage() {
   if (authLoading || checking) {
     return (
       <div className="flex items-center justify-center min-h-[80vh]">
-        <div className="w-8 h-8 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
+        <RadarSpinner size={32} />
       </div>
     );
   }

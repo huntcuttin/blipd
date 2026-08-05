@@ -98,4 +98,9 @@ export interface GameAlert {
   timestamp: string;
   timestampGroup: "today" | "yesterday" | "this_week" | "earlier";
   read: boolean;
+  // "Why am I seeing this" (Product Bible: never obscure why an alert
+  // fired). "Watching" = direct game follow, a franchise name = sourced via
+  // franchise follow, null/undefined = unknown (e.g. logged-out preview, or
+  // callers like getAlertsForGame that don't compute this).
+  sourceLabel?: string | null;
 }

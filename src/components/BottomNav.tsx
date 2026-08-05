@@ -34,11 +34,11 @@ export default function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`relative flex flex-col items-center gap-1 px-4 py-2 transition-all ${
+              className={`relative flex flex-col items-center gap-1 px-4 py-2 transition-colors duration-300 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${
                 isActive ? "text-white" : "text-[#444444]"
               }`}
             >
-              <div className="relative">
+              <div className={`relative active:scale-90 transition-transform duration-300 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${isActive ? "scale-110" : "scale-100"}`}>
                 <tab.icon className="w-6 h-6" />
                 {typeof tab.badge === "number" && tab.badge > 0 && (
                   <span className="absolute -top-1.5 -right-2.5 min-w-[20px] h-[20px] flex items-center justify-center rounded-full bg-[#00ff88] text-[#0a0a0a] text-[10px] font-bold px-1.5 leading-none">
@@ -49,9 +49,11 @@ export default function BottomNav() {
               <span className="text-[10px] font-medium">
                 {tab.label}
               </span>
-              {isActive && (
-                <div className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-white rounded-full" />
-              )}
+              <div
+                className={`absolute -top-px left-1/2 -translate-x-1/2 h-0.5 bg-white rounded-full transition-all duration-300 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)] ${
+                  isActive ? "w-8 opacity-100" : "w-0 opacity-0"
+                }`}
+              />
             </Link>
           );
         })}

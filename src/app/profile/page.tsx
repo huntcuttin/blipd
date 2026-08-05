@@ -9,6 +9,40 @@ import { createClient } from "@/lib/supabase/client";
 import { getGamesByIds, getAllFranchises, getAlerts } from "@/lib/queries";
 import type { Game, Franchise, GameAlert } from "@/lib/types";
 import GameCard from "@/components/GameCard";
+import RadarSpinner from "@/components/RadarSpinner";
+
+const SAVINGS_COUNT_UP_MS = 800;
+
+/** Counts a dollar value up from 0 to `target` on mount, easeOut. Skips
+ * straight to the final value for prefers-reduced-motion or a $0 target
+ * (nothing to animate, and avoids a pointless rAF loop). */
+function useCountUp(target: number, durationMs = SAVINGS_COUNT_UP_MS): number {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (target <= 0) {
+      setValue(target);
+      return;
+    }
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setValue(target);
+      return;
+    }
+    let frame: number;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(1, elapsed / durationMs);
+      const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+      setValue(target * eased);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, durationMs]);
+
+  return value;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -20,6 +54,14 @@ export default function ProfilePage() {
   const [franchises, setFranchises] = useState<Franchise[]>([]);
   const [alerts, setAlerts] = useState<GameAlert[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+
+  // Estimated savings: owned games currently on sale. Computed above the
+  // early-return below (and useCountUp called here) since hooks can't
+  // follow a conditional return.
+  const estimatedSavings = ownedGames
+    .filter((g) => g.isOnSale)
+    .reduce((sum, g) => sum + Math.max(0, g.originalPrice - g.currentPrice), 0);
+  const displayedSavings = useCountUp(estimatedSavings);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -58,7 +100,7 @@ export default function ProfilePage() {
   if (authLoading || !user) {
     return (
       <div className="px-4 py-6 min-h-[calc(100svh-80px)] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
+        <RadarSpinner size={24} />
       </div>
     );
   }
@@ -66,11 +108,6 @@ export default function ProfilePage() {
   const username = user.email?.split("@")[0] ?? "user";
   const initial = username[0]?.toUpperCase() ?? "?";
   const alertCount = alerts.length;
-
-  // Estimated savings: owned games currently on sale
-  const estimatedSavings = ownedGames
-    .filter((g) => g.isOnSale)
-    .reduce((sum, g) => sum + Math.max(0, g.originalPrice - g.currentPrice), 0);
 
   const consoleName =
     consolePreference === "switch2" ? "Nintendo Switch 2" :
@@ -129,7 +166,7 @@ export default function ProfilePage() {
           </svg>
         </div>
         <div>
-          <p className="font-mono text-[#00ff88] text-lg font-bold">${estimatedSavings.toFixed(2)}</p>
+          <p className="font-mono text-[#00ff88] text-lg font-bold">${displayedSavings.toFixed(2)}</p>
           <p className="text-[#555555] text-xs">
             {estimatedSavings > 0 ? "saved on owned games currently on sale" : "savings tracked here as you buy games on sale"}
           </p>
