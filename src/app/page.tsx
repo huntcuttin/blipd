@@ -37,7 +37,7 @@ export default async function LandingPage() {
       </h1>
 
       <p className="text-[#888888] text-base max-w-[300px] mb-8 leading-relaxed">
-        Track eShop prices, set your target price, and get alerted the moment games drop.
+        Watch eShop prices, set your target price, and get alerted the moment games drop.
       </p>
 
       {/* Live stats */}
@@ -53,17 +53,22 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      {/* CTAs */}
+      {/* CTAs — outlined pill language: one solid-green primary, transparent
+          hairline-border secondary (see FollowButton.tsx for the canonical
+          pattern this mirrors). */}
       <div className="flex flex-col gap-3 w-full max-w-[280px]">
         <Link
           href="/login"
-          className="w-full py-3.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm text-center hover:shadow-[0_0_20px_#00ff8855] transition-all active:scale-[0.98]"
+          className="w-full py-3.5 rounded-full bg-[#00ff88] text-[#0a0a0a] font-bold text-sm text-center hover:shadow-[0_0_20px_#00ff8855] transition-all active:scale-95"
         >
           Get started — it&apos;s free
         </Link>
+        {/* Was /home — post-restructure /home is the signed-in personal
+            dashboard (empty for a signed-out visitor), not a deals browser.
+            /deals is the actual public SSR page this CTA's label promises. */}
         <Link
-          href="/home"
-          className="w-full py-3.5 rounded-xl bg-[#111111] border border-[#222222] text-[#888888] font-medium text-sm text-center hover:border-[#333333] hover:text-white transition-all"
+          href="/deals"
+          className="w-full py-3.5 rounded-full bg-transparent border border-[#3a3a3a] text-white font-bold text-sm text-center hover:border-white transition-all active:scale-95"
         >
           Browse deals
         </Link>

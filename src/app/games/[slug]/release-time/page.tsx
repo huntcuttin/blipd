@@ -182,7 +182,7 @@ export default async function ReleaseTimePage({ params }: Props) {
             <div className="text-[#ffbd3f] text-xs font-bold tracking-wider mb-1">TBA</div>
             <p className="text-white text-lg font-bold">Release date not yet announced</p>
             <p className="text-[#888888] text-sm mt-1">
-              Follow {game.title} on Blippd to get notified the moment a release date is confirmed.
+              Watch {game.title} on Blippd to get notified the moment a release date is confirmed.
             </p>
           </>
         )}
@@ -216,13 +216,13 @@ export default async function ReleaseTimePage({ params }: Props) {
         <p className="text-[#888888] text-sm mb-4">
           {isReleased
             ? `Get notified when ${game.title} goes on sale.`
-            : `Follow ${game.title} on Blippd to get an alert the moment it's available.`}
+            : `Watch ${game.title} on Blippd to get an alert the moment it's available.`}
         </p>
         <Link
           href={`/game/${game.slug}`}
-          className="inline-block px-6 py-3 rounded-xl bg-[#00ff88] text-[#0a0a0a] text-sm font-bold hover:bg-[#00dd77] transition-colors"
+          className="inline-block px-7 py-3 rounded-full bg-[#00ff88] text-[#0a0a0a] text-sm font-bold hover:bg-[#00dd77] active:scale-95 transition-all"
         >
-          {isReleased ? "View Game" : "Follow & Get Notified"}
+          {isReleased ? "View Game" : "Watch & Get Notified"}
         </Link>
       </div>
 

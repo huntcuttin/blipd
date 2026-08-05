@@ -245,9 +245,9 @@ function ConsoleStep({ saving, onSelect }: { saving: boolean; onSelect: (p: Cons
         <button
           onClick={() => onSelect("switch")}
           disabled={saving}
-          className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#444444] transition-all active:scale-[0.98]"
+          className="flex items-center gap-4 p-5 bg-transparent rounded-full border border-[#3a3a3a] hover:border-white transition-all active:scale-95"
         >
-          <div className="w-12 h-12 rounded-xl bg-[#ff4444]/15 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-full bg-[#ff4444]/15 flex items-center justify-center shrink-0">
             <svg className="w-7 h-7 text-[#ff4444]" viewBox="0 0 24 24" fill="currentColor">
               <path d="M7.5 2C5.01 2 3 4.01 3 6.5v11C3 19.99 5.01 22 7.5 22H11V2H7.5zM7 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
               <path d="M16.5 2H13v20h3.5c2.49 0 4.5-2.01 4.5-4.5v-11C21 4.01 18.99 2 16.5 2zM17 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
@@ -262,9 +262,9 @@ function ConsoleStep({ saving, onSelect }: { saving: boolean; onSelect: (p: Cons
         <button
           onClick={() => onSelect("switch2")}
           disabled={saving}
-          className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#444444] transition-all active:scale-[0.98]"
+          className="flex items-center gap-4 p-5 bg-transparent rounded-full border border-[#3a3a3a] hover:border-white transition-all active:scale-95"
         >
-          <div className="w-12 h-12 rounded-xl bg-[#00aaff]/15 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-full bg-[#00aaff]/15 flex items-center justify-center shrink-0">
             <svg className="w-7 h-7 text-[#00aaff]" viewBox="0 0 24 24" fill="currentColor">
               <path d="M7.5 2C5.01 2 3 4.01 3 6.5v11C3 19.99 5.01 22 7.5 22H11V2H7.5zM7 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
               <path d="M16.5 2H13v20h3.5c2.49 0 4.5-2.01 4.5-4.5v-11C21 4.01 18.99 2 16.5 2zM17 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
@@ -279,9 +279,9 @@ function ConsoleStep({ saving, onSelect }: { saving: boolean; onSelect: (p: Cons
         <button
           onClick={() => onSelect("both")}
           disabled={saving}
-          className="flex items-center gap-4 p-5 bg-[#111111] rounded-2xl border border-[#222222] hover:border-[#444444] transition-all active:scale-[0.98]"
+          className="flex items-center gap-4 p-5 bg-transparent rounded-full border border-[#3a3a3a] hover:border-white transition-all active:scale-95"
         >
-          <div className="w-12 h-12 rounded-xl bg-[#888888]/15 flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-full bg-[#888888]/15 flex items-center justify-center shrink-0">
             <svg className="w-7 h-7 text-[#888888]" viewBox="0 0 24 24" fill="currentColor">
               <path d="M7.5 2C5.01 2 3 4.01 3 6.5v11C3 19.99 5.01 22 7.5 22H11V2H7.5zM7 14.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
               <path d="M16.5 2H13v20h3.5c2.49 0 4.5-2.01 4.5-4.5v-11C21 4.01 18.99 2 16.5 2zM17 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" />
@@ -328,15 +328,13 @@ function RetroConsoleStep({
             <button
               key={c.id}
               onClick={() => onToggle(c.id)}
-              className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all active:scale-[0.97] ${
+              className={`flex flex-col items-center justify-center px-3 py-3 rounded-full border font-bold text-sm transition-all active:scale-95 ${
                 active
-                  ? "border-[#ffaa00] bg-[#ffaa00]/10"
-                  : "border-[#222222] hover:border-[#333333]"
+                  ? "border-[#ffaa00] bg-transparent text-[#ffaa00]"
+                  : "border-[#3a3a3a] bg-transparent text-[#888888] hover:border-white hover:text-white"
               }`}
             >
-              <span className={`text-sm font-bold ${active ? "text-[#ffaa00]" : "text-[#888888]"}`}>
-                {c.label}
-              </span>
+              {c.label}
             </button>
           );
         })}
@@ -346,14 +344,14 @@ function RetroConsoleStep({
         <button
           onClick={onNext}
           disabled={saving}
-          className="w-full py-3.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844] disabled:opacity-50 active:scale-[0.98]"
+          className="w-full py-3.5 rounded-full bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844] disabled:opacity-50 active:scale-95"
         >
           {saving ? "Saving..." : selected.size > 0 ? `Continue with ${selected.size} console${selected.size !== 1 ? "s" : ""}` : "Continue"}
         </button>
         <button
           onClick={onSkip}
           disabled={saving}
-          className="w-full py-3 text-[#666666] text-sm hover:text-white transition-colors"
+          className="w-full py-3 rounded-full border border-[#3a3a3a] bg-transparent text-[#888888] text-sm font-medium hover:border-white hover:text-white transition-all active:scale-95"
         >
           Skip
         </button>
@@ -407,45 +405,15 @@ function GamePickerStep({
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-3 w-full max-w-md overflow-y-auto max-h-[50vh] pr-1">
-          {games.map((game) => {
-            const selected = selectedIds.has(game.id);
-            return (
-              <button
-                key={game.id}
-                onClick={() => onToggle(game.id)}
-                className={`text-left rounded-xl border-2 p-1.5 transition-all active:scale-[0.97] ${
-                  selected
-                    ? selectedIds.size > 5
-                      ? "border-[#ffaa00] bg-[#ffaa00]/5"
-                      : "border-[#00ff88] bg-[#00ff88]/5"
-                    : "border-[#1a1a1a] hover:border-[#333333]"
-                }`}
-              >
-                <div className="relative">
-                  <GameCoverImage
-                    src={game.coverArt}
-                    alt={game.title}
-                    className={`w-full aspect-[16/10] rounded-lg bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
-                  />
-                  {selected && (
-                    <div className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center ${selectedIds.size > 5 ? "bg-[#ffaa00]" : "bg-[#00ff88]"}`}>
-                      <svg className="w-3 h-3 text-[#0a0a0a]" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <p className="text-white text-[11px] font-medium mt-1.5 leading-tight line-clamp-2 px-0.5">
-                  {game.title}
-                </p>
-                {game.currentPrice > 0 && (
-                  <p className="text-[#555555] text-[10px] mt-0.5 px-0.5 font-mono">
-                    {formatPrice(game.currentPrice)}
-                  </p>
-                )}
-              </button>
-            );
-          })}
+          {games.map((game) => (
+            <GameOwnCard
+              key={game.id}
+              game={game}
+              selected={selectedIds.has(game.id)}
+              overLimit={selectedIds.size > 5}
+              onToggle={() => onToggle(game.id)}
+            />
+          ))}
         </div>
       )}
 
@@ -454,19 +422,82 @@ function GamePickerStep({
         <button
           onClick={onFinish}
           disabled={saving}
-          className="w-full py-3.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844] disabled:opacity-50 active:scale-[0.98]"
+          className="w-full py-3.5 rounded-full bg-[#00ff88] text-[#0a0a0a] font-semibold text-sm transition-all shadow-[0_0_12px_#00ff88,0_0_24px_#00ff8844] hover:shadow-[0_0_16px_#00ff88,0_0_32px_#00ff8844] disabled:opacity-50 active:scale-95"
         >
           {saving ? "Saving..." : selectedIds.size > 0 ? `Continue with ${selectedIds.size} game${selectedIds.size !== 1 ? "s" : ""}` : "Continue"}
         </button>
         <button
           onClick={onSkip}
           disabled={saving}
-          className="w-full py-3 text-[#666666] text-sm hover:text-white transition-colors"
+          className="w-full py-3 rounded-full border border-[#3a3a3a] bg-transparent text-[#888888] text-sm font-medium hover:border-white hover:text-white transition-all active:scale-95"
         >
           Skip for now
         </button>
       </div>
     </>
+  );
+}
+
+// Individual game-you-own card. Owns a local "just selected" pulse flag
+// (mirrors FollowButton's pattern) so the checkmark badge gets a one-shot
+// spring bounce via the existing .animate-follow-pulse keyframe instead of
+// snapping in -- reuses --ease-spring's cubic-bezier(0.34,1.56,0.64,1),
+// not a new animation.
+function GameOwnCard({
+  game,
+  selected,
+  overLimit,
+  onToggle,
+}: {
+  game: Game;
+  selected: boolean;
+  overLimit: boolean;
+  onToggle: () => void;
+}) {
+  const [pulse, setPulse] = useState(false);
+
+  function handleClick() {
+    if (!selected) setPulse(true);
+    onToggle();
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`text-left rounded-xl border-2 p-1.5 transition-all active:scale-[0.97] ${
+        selected
+          ? overLimit
+            ? "border-[#ffaa00] bg-[#ffaa00]/5"
+            : "border-[#00ff88] bg-[#00ff88]/5"
+          : "border-[#1a1a1a] hover:border-[#333333]"
+      }`}
+    >
+      <div className="relative">
+        <GameCoverImage
+          src={game.coverArt}
+          alt={game.title}
+          className={`w-full aspect-[16/10] rounded-lg bg-[#1a1a1a] ${game.coverArt?.includes("igdb.com") ? "object-contain p-1" : "object-cover"}`}
+        />
+        {selected && (
+          <div
+            onAnimationEnd={() => setPulse(false)}
+            className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center ${overLimit ? "bg-[#ffaa00]" : "bg-[#00ff88]"} ${pulse ? "animate-follow-pulse" : ""}`}
+          >
+            <svg className="w-3 h-3 text-[#0a0a0a]" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+          </div>
+        )}
+      </div>
+      <p className="text-white text-[11px] font-medium mt-1.5 leading-tight line-clamp-2 px-0.5">
+        {game.title}
+      </p>
+      {game.currentPrice > 0 && (
+        <p className="text-[#555555] text-[10px] mt-0.5 px-0.5 font-mono">
+          {formatPrice(game.currentPrice)}
+        </p>
+      )}
+    </button>
   );
 }
 

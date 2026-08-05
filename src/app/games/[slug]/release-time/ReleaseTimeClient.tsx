@@ -145,10 +145,10 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle: _gam
         </div>
       </div>
 
-      {/* Inline follow CTA */}
+      {/* Inline watch CTA */}
       <div className="flex items-center gap-3 bg-[#0a0a0a] rounded-xl border border-[#1a1a1a] p-4">
         <div className="flex-1 min-w-0">
-          <p className="text-white text-sm font-medium">Get notified when it launches</p>
+          <p className="text-white text-sm font-medium">Watch this game to get notified when it launches</p>
           <p className="text-[#555555] text-xs mt-0.5">Real-time alert, not an estimate</p>
         </div>
         <div className="shrink-0">
@@ -158,7 +158,7 @@ export default function ReleaseTimeClient({ releaseDate, gameId, gameTitle: _gam
 
       <p className="text-[#444444] text-[11px] leading-relaxed text-center">
         Times estimated from the most common eShop pattern (9:00 AM PT for digital-only).
-        Actual launch may vary. Follow for a real-time alert.
+        Actual launch may vary. Watch for a real-time alert.
       </p>
     </div>
   );

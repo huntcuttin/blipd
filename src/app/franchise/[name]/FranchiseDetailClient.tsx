@@ -109,7 +109,7 @@ export default function FranchiseDetailClient({ name }: { name: string }) {
       </div>
 
       <div className="px-4">
-        {/* Follow button */}
+        {/* Watch button */}
         <div className="py-4 border-b border-[#222222]">
           <FranchiseFollowButton franchiseId={franchise.id} size="large" />
         </div>
