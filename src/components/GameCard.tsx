@@ -273,11 +273,15 @@ function getReleaseLabel(game: Game, daysUntil: number): string | null {
     if (!game.releaseDate || isPlaceholderDate(game.releaseDate)) return "TBA";
     if (daysUntil === 0) return "Releases today";
     if (daysUntil === 1) return "Out tomorrow";
-    if (daysUntil <= 7) return `Out in ${daysUntil} days`;
+    // A month of countdown, matching the feed page's This Week/This Month
+    // buckets -- a game 9 days out labeled only "2026" inside a section
+    // titled "This Month" read as a bug, not restraint.
+    if (daysUntil <= 30) return `Out in ${daysUntil} days`;
     // Beyond the near-term window, show just the year rather than a specific
     // month/day -- release-date precision this far out is often no more
     // reliable than a placeholder guess anyway (see CLAUDE.md session log
     // 2026-08-03), so a confident "Sep 17" reads as more certain than it is.
+    // Year-only for far-out dates is the founder's explicit request -- keep.
     return new Date(game.releaseDate + "T12:00:00").getFullYear().toString();
   }
   return null;
