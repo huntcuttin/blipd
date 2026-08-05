@@ -153,7 +153,13 @@ async function searchIGDB(
       Authorization: `Bearer ${token}`,
       "Content-Type": "text/plain",
     },
-    body: `fields date,platform,human; where game = ${bestMatch.id} & platform = (${SWITCH_PLATFORM_IDS}); limit 1;`,
+    // Earliest date across both platforms, NOT limit-1-arbitrary: a game can
+    // carry several Switch-family release_dates rows (original launch, a
+    // Switch 2 Edition, a re-release) and an arbitrary pick returned the
+    // re-release for long-out games — confirmed live 2026-08-04 when a bulk
+    // date correction "resolved" DRAGON QUEST XI S (out 2019) to its 2026
+    // Switch 2 Edition date and wrongly flipped it back to upcoming.
+    body: `fields date,platform,human; where game = ${bestMatch.id} & platform = (${SWITCH_PLATFORM_IDS}) & date != null; sort date asc; limit 10;`,
   });
 
   if (!rdRes.ok) return null;
