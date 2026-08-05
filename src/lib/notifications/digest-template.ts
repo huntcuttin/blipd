@@ -53,7 +53,7 @@ export function weeklyDigest(data: DigestData): { subject: string; html: string 
   const { salesCount, games, totalFollowed } = data;
 
   const subject = salesCount > 0
-    ? `📊 Your weekly roundup — ${salesCount} game${salesCount !== 1 ? "s" : ""} you follow ${salesCount !== 1 ? "are" : "is"} on sale`
+    ? `📊 Your weekly roundup: ${salesCount} game${salesCount !== 1 ? "s" : ""} you follow ${salesCount !== 1 ? "are" : "is"} on sale`
     : `📊 Your weekly roundup from Blippd`;
 
   const gameRows = games.map(gameRow).join("");

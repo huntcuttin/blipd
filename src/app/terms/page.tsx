@@ -26,7 +26,7 @@ export default function TermsPage() {
           <h2 className="text-white font-semibold text-base mb-2">Pricing</h2>
           <p>
             Blippd is free forever. Unlimited game follows, email alerts, push notifications,
-            and all features — no paywall, no premium tier.
+            and all features, no paywall, no premium tier.
           </p>
         </section>
 

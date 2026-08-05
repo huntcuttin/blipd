@@ -234,7 +234,7 @@ export default function SalesPage() {
               </h2>
               <p className="text-[#666666] text-sm text-center max-w-[260px]">
                 {activeEventId
-                  ? "This sale may have ended — clear the filter to see all deals."
+                  ? "This sale may have ended. Clear the filter to see all deals."
                   : genreFilter !== "All" ? "Try a different genre or check back later" : "Check back later for new deals"}
               </p>
               {activeEventId ? (

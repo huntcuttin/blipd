@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Blippd vs NT Deals — Nintendo eShop Price Alerts Compared",
+  title: "Blippd vs NT Deals · Nintendo eShop Price Alerts Compared",
   description:
     "Honest comparison of Blippd and NT Deals for Nintendo Switch price alerts. See how features, pricing, and reliability stack up.",
   alternates: { canonical: "/vs/nt-deals" },
   openGraph: {
-    title: "Blippd vs NT Deals — Nintendo eShop Price Alerts Compared",
+    title: "Blippd vs NT Deals · Nintendo eShop Price Alerts Compared",
     description:
       "Honest comparison of Blippd and NT Deals for Nintendo Switch price alerts.",
     type: "website",
@@ -71,7 +71,7 @@ export default function VsNtDealsPage() {
         </h1>
         <p className="text-[#888888] text-sm mt-2 leading-relaxed">
           An honest comparison. We built Blippd because we wanted something better
-          for tracking Nintendo eShop prices — here&apos;s how the two stack up.
+          for tracking Nintendo eShop prices. Here&apos;s how the two stack up.
         </p>
       </div>
 
@@ -116,7 +116,7 @@ export default function VsNtDealsPage() {
           <p className="text-[#888888] text-sm leading-relaxed">
             NT Deals has nearly a decade of price history data and an iOS app.
             If historical price depth is your top priority, they have more data today.
-            We&apos;re building our own history and will get there — but we won&apos;t pretend we&apos;re there yet.
+            We&apos;re building our own history and will get there, but we won&apos;t pretend we&apos;re there yet.
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export default function VsNtDealsPage() {
             </li>
             <li>
               <span className="text-white font-medium">No ads, ever.</span>{" "}
-              NT Deals shows ads triggered by search — you have to pay to escape them.
+              NT Deals shows ads triggered by search. You have to pay to escape them.
               Blippd is ad-free for everyone.
             </li>
             <li>
@@ -147,7 +147,7 @@ export default function VsNtDealsPage() {
 
         <div className="text-center py-4">
           <p className="text-[#666666] text-xs">
-            Last updated August 2026. We keep this page honest — if something changes, we update it.
+            Last updated August 2026. We keep this page honest: if something changes, we update it.
           </p>
         </div>
       </div>

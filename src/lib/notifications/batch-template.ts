@@ -57,7 +57,7 @@ export function batchedAlerts(games: BatchAlertGame[]): { subject: string; html:
     .map(gameRow)
     .join("");
 
-  const moreText = count > 15 ? `<p style="color:#666666;font-size:13px;text-align:center;margin:12px 0 0;">+ ${count - 15} more — view all on Blippd</p>` : "";
+  const moreText = count > 15 ? `<p style="color:#666666;font-size:13px;text-align:center;margin:12px 0 0;">+ ${count - 15} more, view all on Blippd</p>` : "";
 
   const html = `<!DOCTYPE html>
 <html lang="en">

@@ -81,13 +81,13 @@ export function priceDrop(payload: AlertPayload): { subject: string; html: strin
     <a href="${gameLink(payload)}" style="display:inline-block;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #00ff88;color:#00ff88;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">View on Blippd</a>
     <a href="${eshopLink(payload)}" style="display:inline-block;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #333333;color:#999999;margin-left:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Find on eShop</a>
   </div>`,
-  `${payload.gameTitle} is now ${formatPrice(payload.newPrice, "")} — save ${saved}`),
+  `${payload.gameTitle} is now ${formatPrice(payload.newPrice, "")}, save ${saved}`),
   };
 }
 
 export function allTimeLow(payload: AlertPayload): { subject: string; html: string } {
   return {
-    subject: `🔔 ${payload.gameTitle} — ALL TIME LOW ${formatPrice(payload.newPrice, "")}`,
+    subject: `🔔 ${payload.gameTitle}: ALL TIME LOW ${formatPrice(payload.newPrice, "")}`,
     html: layout(`
   <div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:20px;">
     <div style="display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,255,136,0.15);color:#00ff88;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">ALL TIME LOW</div>
@@ -110,7 +110,7 @@ export function saleStarted(payload: AlertPayload): { subject: string; html: str
   const discountStr = payload.discount ? `${payload.discount}%` : "";
 
   return {
-    subject: `🔔 ${payload.gameTitle} is on sale${discountStr ? ` — ${discountStr} off` : ""}`,
+    subject: `🔔 ${payload.gameTitle} is on sale${discountStr ? `: ${discountStr} off` : ""}`,
     html: layout(`
   <div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:20px;">
     <div style="display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:rgba(255,170,0,0.15);color:#ffaa00;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">SALE${discountStr ? ` · ${discountStr} OFF` : ""}</div>
@@ -122,7 +122,7 @@ export function saleStarted(payload: AlertPayload): { subject: string; html: str
     <a href="${gameLink(payload)}" style="display:inline-block;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #00ff88;color:#00ff88;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">View on Blippd</a>
     <a href="${eshopLink(payload)}" style="display:inline-block;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #333333;color:#999999;margin-left:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Find on eShop</a>
   </div>`,
-  `${payload.gameTitle} is ${discountStr} off — now ${formatPrice(payload.newPrice, "")}`),
+  `${payload.gameTitle} is ${discountStr} off, now ${formatPrice(payload.newPrice, "")}`),
   };
 }
 
@@ -158,7 +158,7 @@ export function saleEnding(payload: AlertPayload): { subject: string; html: stri
       <span style="font-size:28px;font-weight:700;color:#ff6874;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${formatPrice(payload.newPrice, "")}</span>
       <span style="font-size:14px;color:#666666;text-decoration:line-through;margin-left:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${formatPrice(payload.oldPrice, "")}</span>
     </div>
-    <p style="color:#ff6874;font-size:13px;font-weight:600;margin:0 0 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Sale ends ${endStr} — don't miss it</p>
+    <p style="color:#ff6874;font-size:13px;font-weight:600;margin:0 0 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Sale ends ${endStr}. Don't miss it</p>
     <a href="${gameLink(payload)}" style="display:inline-block;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #00ff88;color:#00ff88;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">View on Blippd</a>
     <a href="${eshopLink(payload)}" style="display:inline-block;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #333333;color:#999999;margin-left:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Find on eShop</a>
   </div>`,
@@ -168,7 +168,7 @@ export function saleEnding(payload: AlertPayload): { subject: string; html: stri
 
 export function switch2Edition(payload: AlertPayload): { subject: string; html: string } {
   return {
-    subject: `🔔 ${payload.gameTitle} — Switch 2 Edition announced`,
+    subject: `🔔 ${payload.gameTitle}: Switch 2 Edition announced`,
     html: layout(`
   <div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:20px;">
     <div style="display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,170,255,0.15);color:#00aaff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">SWITCH 2 EDITION</div>
@@ -183,7 +183,7 @@ export function switch2Edition(payload: AlertPayload): { subject: string; html: 
 
 export function announced(payload: AlertPayload): { subject: string; html: string } {
   return {
-    subject: `🔔 ${payload.gameTitle} — New announcement`,
+    subject: `🔔 ${payload.gameTitle}: New announcement`,
     html: layout(`
   <div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:20px;">
     <div style="display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:rgba(155,89,182,0.15);color:#9B59B6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">ANNOUNCEMENT</div>
@@ -192,7 +192,7 @@ export function announced(payload: AlertPayload): { subject: string; html: strin
     <a href="${gameLink(payload)}" style="display:inline-block;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #00ff88;color:#00ff88;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">View on Blippd</a>
     <a href="${eshopLink(payload)}" style="display:inline-block;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #333333;color:#999999;margin-left:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Find on eShop</a>
   </div>`,
-  `${payload.gameTitle} — ${payload.headline}`),
+  `${payload.gameTitle}: ${payload.headline}`),
   };
 }
 
@@ -203,7 +203,7 @@ export function namedSaleEvent(
 ): { subject: string; html: string } {
   const endStr = saleEndDate ? ` · Ends ${formatShortDate(saleEndDate)}` : "";
   return {
-    subject: `🔔 ${eventName} — ${totalGames} games on sale now`,
+    subject: `🔔 ${eventName}: ${totalGames} games on sale now`,
     html: layout(`
   <div style="background:#111111;border:1px solid #222222;border-radius:12px;padding:20px;">
     <div style="display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:rgba(255,170,0,0.15);color:#ffaa00;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">SALE EVENT</div>
@@ -211,7 +211,7 @@ export function namedSaleEvent(
     <p style="font-size:14px;color:#999999;margin:0 0 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${totalGames} games on sale now, including ones you're watching${endStr}</p>
     <a href="${APP_URL}/sales" style="display:inline-block;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;background:#111111;border:1px solid #00ff88;color:#00ff88;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">See all deals →</a>
   </div>`,
-    `${eventName} is live — ${totalGames} games on sale on Nintendo eShop${endStr}`),
+    `${eventName} is live, ${totalGames} games on sale on Nintendo eShop${endStr}`),
   };
 }
 

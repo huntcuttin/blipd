@@ -35,11 +35,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const title = `${game.title} — Price & Alerts | Blippd`;
+  const title = `${game.title} · Price & Alerts | Blippd`;
 
   let description: string;
   if (game.is_on_sale && game.discount) {
-    description = `${game.title} is ${game.discount}% off — now ${formatMetaPrice(game.current_price)} (was ${formatMetaPrice(game.original_price)}). Get price drop alerts on Blippd.`;
+    description = `${game.title} is ${game.discount}% off, now ${formatMetaPrice(game.current_price)} (was ${formatMetaPrice(game.original_price)}). Get price drop alerts on Blippd.`;
   } else if (game.release_status === "upcoming") {
     description = `${game.title} is coming soon. Follow on Blippd to get notified when it releases or goes on sale.`;
   } else {

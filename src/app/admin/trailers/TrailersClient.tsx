@@ -219,7 +219,7 @@ function TrailerCard({
             </p>
           )}
           {!hasGameInDB && d.matched_game_title && (
-            <p className="text-xs text-yellow-400">Game not found in DB — use override below</p>
+            <p className="text-xs text-yellow-400">Game not found in DB: use override below</p>
           )}
           {d.claude_reasoning && (
             <p className="text-xs text-[#666] italic">{d.claude_reasoning}</p>

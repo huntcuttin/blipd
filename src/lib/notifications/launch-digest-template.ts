@@ -53,7 +53,7 @@ export function launchDigest(games: LaunchDigestGame[]): { subject: string; html
   const hidden = count - MAX_LAUNCH_ROWS;
   const note =
     hidden > 0
-      ? `<p style="color:#666666;font-size:13px;text-align:center;margin:12px 0 0;">+ ${hidden} more — view all on Blippd</p>`
+      ? `<p style="color:#666666;font-size:13px;text-align:center;margin:12px 0 0;">+ ${hidden} more, view all on Blippd</p>`
       : "";
 
   const html = renderDigestShell({

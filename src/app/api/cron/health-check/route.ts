@@ -292,7 +292,7 @@ async function sendAlertEmail(problems: string[]): Promise<void> {
   const { error } = await resend.emails.send({
     from: "Blippd <alerts@blippd.app>",
     to: adminEmail,
-    subject: `Blippd pipeline health check — ${problems.length} issue${problems.length === 1 ? "" : "s"} found`,
+    subject: `Blippd pipeline health check: ${problems.length} issue${problems.length === 1 ? "" : "s"} found`,
     text: problems.map((p) => `- ${p}`).join("\n"),
   });
   if (error) console.error("Failed to send health-check alert email:", error.message);

@@ -391,7 +391,7 @@ function GamePickerStep({
         5, but add as many as you like.
       </p>
       <p className={`text-xs mb-6 ${selectedIds.size > 5 ? "text-[#ffaa00]" : "text-[#555555]"}`}>
-        {selectedIds.size} selected{selectedIds.size > 5 ? " — nice library!" : selectedIds.size < 5 ? ` (${5 - selectedIds.size} more recommended)` : ""}
+        {selectedIds.size} selected{selectedIds.size > 5 ? " · nice library!" : selectedIds.size < 5 ? ` (${5 - selectedIds.size} more recommended)` : ""}
       </p>
 
       {loading ? (

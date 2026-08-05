@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Franchise Not Found | Blippd" };
   }
 
-  const title = `${franchise.name} Games — Prices & Alerts | Blippd`;
+  const title = `${franchise.name} Games · Prices & Alerts | Blippd`;
   const description = `Track prices for all ${franchise.game_count} ${franchise.name} games on Nintendo eShop. Get alerts when any ${franchise.name} game goes on sale.`;
 
   return {

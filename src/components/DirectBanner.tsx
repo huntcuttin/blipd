@@ -52,7 +52,7 @@ export default function DirectBanner() {
             {direct.title || "Nintendo Direct is LIVE"}
           </p>
           <p className="text-[#999999] text-xs mt-0.5">
-            Price drops may follow — we&apos;re watching for deals
+            Price drops may follow. We&apos;re watching for deals
           </p>
           <a
             href={youtubeUrl}

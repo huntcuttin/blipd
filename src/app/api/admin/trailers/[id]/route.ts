@@ -103,7 +103,7 @@ export async function POST(
     .insert({
       game_id: game.id,
       type: "announced",
-      headline: `${game.title} — new trailer`,
+      headline: `${game.title}: new trailer`,
       subtext: detection.title,
     })
     .select("id")

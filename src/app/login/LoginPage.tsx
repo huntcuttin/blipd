@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/AuthContext";
 const ERROR_MESSAGES: Record<string, string> = {
   otp_expired: "That sign-in link expired or was already used. Enter your email below to get a new one.",
   access_denied: "That sign-in link is no longer valid. Enter your email below to get a new one.",
-  link_expired: "That sign-in link expired, or was opened in an app (like your email app) that couldn't finish signing you in — try opening it in your regular browser instead. Enter your email below to get a new one.",
+  link_expired: "That sign-in link expired, or was opened in an app (like your email app) that couldn't finish signing you in. Try opening it in your regular browser instead. Enter your email below to get a new one.",
   auth_failed: "We couldn't sign you in with that link. Enter your email below to get a new one.",
 };
 

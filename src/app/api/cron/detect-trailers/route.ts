@@ -194,7 +194,7 @@ async function autoPublishAlert(
     .insert({
       game_id: game.id,
       type: "announced",
-      headline: `${game.title} — new trailer`,
+      headline: `${game.title}: new trailer`,
       subtext: videoTitle,
     })
     .select("id")
@@ -287,7 +287,7 @@ export async function GET(request: Request) {
           published_at: entry.published,
           thumbnail_url: entry.thumbnailUrl,
           status: "pending",
-          claude_reasoning: "Claude API error — manual review required",
+          claude_reasoning: "Claude API error: manual review required",
         });
         results.pending++;
         continue;

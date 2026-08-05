@@ -61,7 +61,7 @@ export default async function LandingPage() {
           href="/login"
           className="w-full py-3.5 rounded-full bg-[#00ff88] text-[#0a0a0a] font-bold text-sm text-center hover:shadow-[0_0_20px_#00ff8855] transition-all active:scale-95"
         >
-          Get started — it&apos;s free
+          Get started · it&apos;s free
         </Link>
         {/* Was /home — post-restructure /home is the signed-in personal
             dashboard (empty for a signed-out visitor), not a deals browser.

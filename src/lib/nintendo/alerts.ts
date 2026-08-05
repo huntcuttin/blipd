@@ -142,7 +142,7 @@ export async function generateAllTimeLowAlert(
   price: number
 ): Promise<boolean> {
   return insertAndDispatch(supabase, game, "all_time_low", {
-    headline: `${game.title} — ALL TIME LOW`,
+    headline: `${game.title}: ALL TIME LOW`,
     subtext: `${formatPrice(price, "")} · Lowest price ever recorded`,
     new_price: price,
   });
@@ -208,7 +208,7 @@ export async function generateSaleStartedAlert(
     ? ` · Ends ${formatShortDate(saleEndDate)}`
     : "";
   return insertAndDispatch(supabase, game, "sale_started", {
-    headline: `${game.title} sale — ${discount}% off`,
+    headline: `${game.title} sale: ${discount}% off`,
     subtext: `${formatPrice(salePrice, "")}${endStr}`,
     new_price: salePrice,
     discount,
@@ -221,7 +221,7 @@ export async function generateSwitch2EditionAlert(
   game: GameRef
 ): Promise<boolean> {
   return insertAndDispatch(supabase, game, "switch2_edition_announced", {
-    headline: `${game.title} — Switch 2 Edition announced`,
+    headline: `${game.title}: Switch 2 Edition announced`,
     subtext: "A Nintendo Switch 2 version is now available",
   });
 }
@@ -240,7 +240,7 @@ export async function generateSaleEndingAlert(
   const urgency = daysLeft <= 1 ? "ends today" : `ends in ${daysLeft} days`;
   return insertAndDispatch(supabase, game, "sale_ending", {
     headline: `${game.title} sale ${urgency}`,
-    subtext: `${formatPrice(currentPrice, "")} (${discount}% off) — was ${formatPrice(originalPrice, "")}`,
+    subtext: `${formatPrice(currentPrice, "")} (${discount}% off), was ${formatPrice(originalPrice, "")}`,
     new_price: currentPrice,
     old_price: originalPrice,
     discount,
