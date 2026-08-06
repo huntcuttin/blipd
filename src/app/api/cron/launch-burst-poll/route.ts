@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { fetchPrices } from "@/lib/nintendo/client";
 import { generateReleaseAlert } from "@/lib/nintendo/alerts";
+import { dispatchRecentAlerts } from "@/lib/notifications/dispatch";
 import { predictLaunchInstant, isWithinBurstWindow, isLiveOnEshop } from "@/lib/nintendo/launch-window";
 
 export const runtime = "nodejs";
@@ -95,6 +96,24 @@ export async function GET(request: Request) {
 
     if (await generateReleaseAlert(supabase, { id: game.id, title: game.title }, "out_now", newPrice)) {
       released++;
+    }
+  }
+
+  // The launch-minute promise: insertAndDispatch only inserts rows — actual
+  // delivery normally waits for the 10-min dispatch-notifications cron, so
+  // a launch this poller caught in ~2 min could still sit ~10 more before
+  // the email went out. Dispatch inline in the same request instead.
+  // dispatchRecentAlerts is durable/idempotent by construction
+  // (dispatched_at IS NULL + per-user alreadySentPairs dedup), so an
+  // overlap with the scheduled cron run resolves to one send.
+  if (released > 0) {
+    try {
+      const sent = await dispatchRecentAlerts();
+      console.log(`  Launch burst: dispatched ${sent} notification(s) inline`);
+    } catch (e) {
+      // The 10-min cron picks these up regardless — never let inline
+      // dispatch turn a caught launch into a failed poll run.
+      console.error("  Launch burst: inline dispatch failed, cron will retry:", e instanceof Error ? e.message : e);
     }
   }
 
