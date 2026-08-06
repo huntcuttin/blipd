@@ -135,11 +135,14 @@ export default function OnboardingPage() {
         markGameOwned(supabase, user.id, gameId)
       );
       await Promise.allSettled(promises);
-      // Mark onboarding complete
-      await supabase
+      // Mark onboarding complete. Surface the error: this exact write
+      // failing silently (missing column, then missing CHECK value) is
+      // what looped every user back to onboarding for 5 months.
+      const { error: completeError } = await supabase
         .from("user_profiles")
         .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
         .eq("user_id", user.id);
+      if (completeError) console.error("Failed to mark onboarding complete:", completeError.message);
       setStep("done");
       // Brief pause on the done screen then redirect
       setTimeout(() => router.replace("/home"), 1500);
@@ -154,10 +157,11 @@ export default function OnboardingPage() {
     setSaving(true);
     try {
       const supabase = createClient();
-      await supabase
+      const { error: skipError } = await supabase
         .from("user_profiles")
         .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
         .eq("user_id", user.id);
+      if (skipError) console.error("Failed to mark onboarding complete on skip:", skipError.message);
     } catch {
       // continue anyway
     }

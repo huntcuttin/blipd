@@ -119,7 +119,10 @@ function UpcomingContent() {
   const horizonRest = onTheHorizon.filter((g) => !slateIds.has(g.id));
   const hasComingSoon = comingSoon.length > 0 || onTheHorizon.length > 0;
 
-  const loading = releasesLoading && upcomingLoading && unannouncedLoading;
+  // || not &&: with && the page left its loading state as soon as ONE of
+  // the three queries resolved, popping sections in staggered and flashing
+  // the full-page empty state mid-load (2026-08-05 audit).
+  const loading = releasesLoading || upcomingLoading || unannouncedLoading;
 
   return (
     <div className="px-4">

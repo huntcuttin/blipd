@@ -334,7 +334,16 @@ export async function getLastPriceCheckTimestamp(supabase: Client): Promise<stri
 }
 
 export async function getGamesByFranchise(supabase: Client, franchiseName: string): Promise<Game[]> {
-  const { data, error } = await supabase.from("games").select("*").eq("franchise", franchiseName);
+  // Junk-filtered like every other discovery surface: franchise pages were
+  // the one place still rendering suppressed DLC kits/bundles (2026-08-05
+  // audit). A followed junk game stays visible in the user's own watchlist
+  // and alerts either way -- this only affects the franchise listing.
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("franchise", franchiseName)
+    .eq("is_suppressed", false)
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)");
   if (error) throw error;
   return (data ?? []).map(mapGame);
 }
@@ -355,8 +364,11 @@ export async function getAllFranchises(supabase: Client): Promise<Franchise[]> {
 }
 
 export async function getFranchiseByName(supabase: Client, name: string): Promise<Franchise | null> {
-  // Try exact match first, then case-insensitive
-  const { data, error } = await supabase.from("franchises").select("*").ilike("name", name).maybeSingle();
+  // Escape ilike wildcards -- this receives a raw URL segment, and an
+  // unescaped % or _ could match the wrong franchise (same bug class as
+  // audit #29's detect-trailers fix).
+  const escaped = name.replace(/[%_]/g, (m) => "\\" + m);
+  const { data, error } = await supabase.from("franchises").select("*").ilike("name", escaped).maybeSingle();
   if (error || !data) return null;
   return mapFranchise(data);
 }
@@ -521,11 +533,20 @@ export async function dismissAlerts(supabase: Client, userId: string, alertIds: 
 // ── User profile queries ──────────────────────────────────────
 
 export async function getUserProfile(supabase: Client, userId: string): Promise<{ consolePreference: ConsolePreference | null; onboardingCompleted: boolean }> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("user_profiles")
     .select("console_preference, onboarding_completed")
     .eq("user_id", userId)
     .maybeSingle();
+  if (error) {
+    // Loud, and biased toward "already onboarded": silently defaulting to
+    // false on a transient failure bounced real, onboarded users back into
+    // onboarding (2026-08-05 audit; same silent-error class that hid the
+    // missing onboarding_completed column for 5 months). A genuinely new
+    // user has data=null with NO error, which still returns false below.
+    console.error("getUserProfile failed:", error.message);
+    return { consolePreference: null, onboardingCompleted: true };
+  }
   return {
     consolePreference: data?.console_preference ?? null,
     onboardingCompleted: data?.onboarding_completed ?? false,

@@ -271,6 +271,10 @@ function getReleaseLabel(game: Game, daysUntil: number): string | null {
   if (game.releaseStatus === "out_today") return "Out Now";
   if (game.releaseStatus === "upcoming") {
     if (!game.releaseDate || isPlaceholderDate(game.releaseDate)) return "TBA";
+    // A still-"upcoming" game with a past date is stale status data (the
+    // release-status cron will correct it within a cycle) -- showing
+    // nothing beats "Out in -3 days".
+    if (daysUntil < 0) return null;
     if (daysUntil === 0) return "Releases today";
     if (daysUntil === 1) return "Out tomorrow";
     // A month of countdown, matching the feed page's This Week/This Month

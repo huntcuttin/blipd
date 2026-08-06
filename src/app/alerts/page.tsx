@@ -314,7 +314,7 @@ export default function AlertsPage() {
         </div>
       </div>
 
-      {alertsLoading ? (
+      {authLoading || alertsLoading ? (
         <div className="space-y-4 pt-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex gap-3 p-3 bg-[#111111] rounded-xl border border-[#222222] animate-pulse">
