@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import AlertCard from "@/components/AlertCard";
 import UndoToast from "@/components/UndoToast";
@@ -77,22 +77,37 @@ export default function AlertsPage() {
     if (fetchedAlerts) setLocalAlerts(fetchedAlerts);
   }, [fetchedAlerts]);
 
-  useEffect(() => {
-    return () => {
-      if (pendingTimer.current) clearTimeout(pendingTimer.current);
-    };
-  }, []);
+  // Refs mirror `user` and the pending alerts so the unmount cleanup can
+  // commit with current values despite its empty dependency array.
+  const userRef = useRef(user);
+  userRef.current = user;
+  const pendingAlertsRef = useRef<GameAlert[]>([]);
 
-  const commitPending = async (alertsToDismiss: GameAlert[]) => {
-    if (!user || alertsToDismiss.length === 0) return;
+  const commitPending = useCallback(async (alertsToDismiss: GameAlert[]) => {
+    const userId = userRef.current?.id;
+    if (!userId || alertsToDismiss.length === 0) return;
     try {
       const supabase = createClient();
-      await dismissAlerts(supabase, user.id, alertsToDismiss.map((a) => a.id));
+      await dismissAlerts(supabase, userId, alertsToDismiss.map((a) => a.id));
     } catch {
       // Already removed from view; a failed write just means it may
       // reappear next refresh. Not worth a rollback UX for this action.
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      // Unmounting mid-undo-window (user tapped an alert, switched tabs)
+      // must commit the pending dismissal, not drop it — clearing the
+      // timer alone silently undid the user's action on next load
+      // (2026-08-05 audit C4).
+      if (pendingTimer.current) {
+        clearTimeout(pendingTimer.current);
+        pendingTimer.current = null;
+        void commitPending(pendingAlertsRef.current);
+      }
+    };
+  }, [commitPending]);
 
   const dismissWithUndo = (alertsToDismiss: GameAlert[], message: string) => {
     if (alertsToDismiss.length === 0) return;
@@ -105,9 +120,11 @@ export default function AlertsPage() {
     const dismissIds = new Set(alertsToDismiss.map((a) => a.id));
     setLocalAlerts((prev) => prev.filter((a) => !dismissIds.has(a.id)));
     setPending({ alerts: alertsToDismiss, message });
+    pendingAlertsRef.current = alertsToDismiss;
     pendingTimer.current = setTimeout(() => {
       commitPending(alertsToDismiss);
       setPending(null);
+      pendingAlertsRef.current = [];
       pendingTimer.current = null;
     }, UNDO_WINDOW_MS);
   };
@@ -118,6 +135,7 @@ export default function AlertsPage() {
       clearTimeout(pendingTimer.current);
       pendingTimer.current = null;
     }
+    pendingAlertsRef.current = [];
     setLocalAlerts((prev) =>
       [...prev, ...pending.alerts].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
