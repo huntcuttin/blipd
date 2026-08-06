@@ -1,7 +1,8 @@
 import { getUserNotificationChannels } from "./channels";
 import { sendEmailAlert, logNotification } from "./email";
 import { sendPushToUser } from "./push";
-import type { AlertPayload } from "./types";
+import { isRateLimited } from "./rate-limit";
+import type { AlertPayload, SendOutcome } from "./types";
 
 // .trim() guards against a trailing newline in the env var's stored value
 // (observed live: emailed links rendered as "blippd.app\r\n/game/..." --
@@ -47,17 +48,19 @@ function alertToPushPayload(payload: AlertPayload) {
 
 /**
  * Sends an alert to a user across all their enabled notification channels.
- * Returns true if at least one channel succeeded.
+ * Returns "sent" if at least one channel delivered, "failed" if a send was
+ * genuinely attempted and errored, "skipped" if there was nothing sendable
+ * (see SendOutcome in types.ts for why the split matters).
  */
 export async function sendAlert(
   userId: string,
   payload: AlertPayload
-): Promise<boolean> {
+): Promise<SendOutcome> {
   const channels = await getUserNotificationChannels(userId);
-  if (channels.length === 0) return false;
+  if (channels.length === 0) return "skipped";
 
   const results = await Promise.allSettled(
-    channels.map((channel) => {
+    channels.map((channel): Promise<SendOutcome> => {
       switch (channel) {
         case "email":
           return sendEmailAlert(userId, payload);
@@ -69,53 +72,76 @@ export async function sendAlert(
           // spurious "failed" web_push row to notification_log for every
           // single email-only user on every single alert this whole time.
           // Only log when there was actually something to attempt.
-          return sendPushToUser(userId, alertToPushPayload(payload)).then(async ({ attempted, succeeded }) => {
-            if (attempted === 0) return false;
+          return sendPushToUser(userId, alertToPushPayload(payload)).then(async ({ attempted, succeeded }): Promise<SendOutcome> => {
+            if (attempted === 0) return "skipped";
             const success = succeeded > 0;
             await logNotification(userId, payload.alertId, "web_push", success ? "sent" : "failed");
-            return success;
+            return success ? "sent" : "failed";
           });
         default:
-          return Promise.resolve(false);
+          return Promise.resolve("skipped");
       }
     })
   );
 
-  let anySuccess = false;
+  let anySent = false;
+  let anyFailed = false;
   for (const result of results) {
     if (result.status === "rejected") {
       console.error("Notification channel failed:", result.reason);
-    } else if (result.value === true) {
-      anySuccess = true;
+      anyFailed = true;
+    } else if (result.value === "sent") {
+      anySent = true;
+    } else if (result.value === "failed") {
+      anyFailed = true;
     }
   }
-  return anySuccess;
+  if (anySent) return "sent";
+  return anyFailed ? "failed" : "skipped";
+}
+
+export interface SendToUsersResult {
+  /** Users with at least one successful delivery. */
+  sent: number;
+  /** Users where a send was attempted and errored — retry-worthy. */
+  failed: number;
+  /** True if the run stopped early on the Resend rate-limit/quota breaker;
+   *  users after the stop were never attempted at all. */
+  aborted: boolean;
 }
 
 /**
- * Sends an alert to multiple users. Used by the alert generation pipeline
- * after creating an alert and resolving its affected users.
- * Returns the count of users who received at least one successful notification.
+ * Sends an alert to multiple users. Used by the notification dispatcher.
+ * Checks the shared rate-limit breaker between batches so that once Resend
+ * starts rejecting (burst limit or quota), the remaining users are left
+ * untouched for the next tick instead of burning through guaranteed
+ * failures (2026-08-05 audit C2).
  */
 export async function sendAlertToUsers(
   userIds: string[],
   payload: AlertPayload
-): Promise<number> {
+): Promise<SendToUsersResult> {
   const BATCH_SIZE = 10;
-  let successCount = 0;
+  const result: SendToUsersResult = { sent: 0, failed: 0, aborted: false };
 
   for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+    if (isRateLimited()) {
+      result.aborted = true;
+      break;
+    }
     const batch = userIds.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
+    const outcomes = await Promise.allSettled(
       batch.map((userId) => sendAlert(userId, payload))
     );
-    for (const result of results) {
-      if (result.status === "fulfilled" && result.value) successCount++;
+    for (const outcome of outcomes) {
+      if (outcome.status === "rejected") result.failed++;
+      else if (outcome.value === "sent") result.sent++;
+      else if (outcome.value === "failed") result.failed++;
     }
     // Pause between batches to stay within Resend rate limits
     if (i + BATCH_SIZE < userIds.length) {
       await new Promise((r) => setTimeout(r, 500));
     }
   }
-  return successCount;
+  return result;
 }

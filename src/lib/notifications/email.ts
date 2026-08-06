@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { createAdminClient } from "@/lib/nintendo/admin-client";
 import { getTemplate } from "./templates";
 import { markRateLimited, isResendRateLimitError } from "./rate-limit";
-import type { AlertPayload } from "./types";
+import type { AlertPayload, SendOutcome } from "./types";
 
 const FROM_ADDRESS = "Blippd <alerts@blippd.app>";
 
@@ -71,11 +71,11 @@ export async function logNotification(
 export async function sendEmailAlert(
   userId: string,
   payload: AlertPayload
-): Promise<boolean> {
+): Promise<SendOutcome> {
   const template = getTemplate(payload.alertType);
   if (!template) {
     console.warn(`No email template for alert type: ${payload.alertType}`);
-    return false;
+    return "skipped";
   }
 
   // 24h dedup: check if we already sent this alert type for this game to this user
@@ -93,7 +93,7 @@ export async function sendEmailAlert(
 
     if (recentLogs && recentLogs.length > 0) {
       console.log(`  Skipping duplicate email for alert ${payload.alertId} to user ${userId}`);
-      return false;
+      return "skipped";
     }
   } catch {
     // Non-fatal — proceed with sending
@@ -103,13 +103,13 @@ export async function sendEmailAlert(
   if (!email) {
     console.warn(`No email found for user ${userId}`);
     await logNotification(userId, payload.alertId, "email", "failed", "No email address");
-    return false;
+    return "skipped";
   }
 
   if (await isEmailSuppressed(email)) {
     console.log(`  Skipping suppressed email ${email}`);
     await logNotification(userId, payload.alertId, "email", "failed", "Suppressed (bounce/complaint)");
-    return false;
+    return "skipped";
   }
 
   const { subject, html } = template(payload);
@@ -126,14 +126,14 @@ export async function sendEmailAlert(
       console.error(`Failed to send email to ${email}:`, error.message);
       await logNotification(userId, payload.alertId, "email", "failed", error.message);
       if (isResendRateLimitError(error)) markRateLimited();
-      return false;
+      return "failed";
     }
     await logNotification(userId, payload.alertId, "email", "sent");
-    return true;
+    return "sent";
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     console.error(`Failed to send email to ${email}:`, msg);
     await logNotification(userId, payload.alertId, "email", "failed", msg);
-    return false;
+    return "failed";
   }
 }

@@ -22,5 +22,15 @@ export function resetRateLimitFlag(): void {
 }
 
 export function isResendRateLimitError(error: { name?: string } | null | undefined): boolean {
-  return error?.name === "rate_limit_exceeded";
+  // Quota exhaustion (the 100/day and 3,000/month free-tier caps) must trip
+  // the breaker exactly like a burst rate limit: both mean every further
+  // send this run is guaranteed to fail. Before these two names were
+  // matched, a quota-exhausted day attempted every pending alert, failed
+  // them all, and marked them dispatched — permanently lost (2026-08-05
+  // audit C1).
+  return (
+    error?.name === "rate_limit_exceeded" ||
+    error?.name === "daily_quota_exceeded" ||
+    error?.name === "monthly_quota_exceeded"
+  );
 }

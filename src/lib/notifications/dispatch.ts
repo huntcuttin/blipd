@@ -94,10 +94,11 @@ export async function dispatchRecentAlerts(): Promise<number> {
 
   // Paginated -- PostgREST caps an unbounded select at 1,000 rows.
   const ALERT_PAGE_SIZE = 1000;
-  const ALERT_SELECT = "id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, games!inner ( slug, title, cover_art, nsuid, nintendo_url, franchise, is_suppressed, product_type )";
+  const ALERT_SELECT = "id, game_id, type, headline, subtext, new_price, old_price, discount, sale_end_date, created_at, games!inner ( slug, title, cover_art, nsuid, nintendo_url, franchise, is_suppressed, product_type )";
   type AlertRow = {
     id: string; game_id: string; type: string; headline: string; subtext: string;
     new_price: number | null; old_price: number | null; discount: number | null; sale_end_date: string | null;
+    created_at: string;
     games: unknown;
   };
   const alerts: AlertRow[] = [];
@@ -315,23 +316,30 @@ export async function dispatchRecentAlerts(): Promise<number> {
   const completeWork = (id: string) => remainingWorkForAlert.set(id, (remainingWorkForAlert.get(id) ?? 1) - 1);
 
   // ── Phase 3: Individual sends ──
-  // Rate-limit-aware: once any send this run hits Resend's rate_limit_exceeded,
-  // stop making further calls rather than hammering an already-limited API
-  // through the rest of a potentially large batch. Nothing is lost — alerts
-  // whose work never got attempted this run are never marked dispatched
-  // (see below), so they're picked up again in full on the next tick.
+  // Rate-limit-aware: once any send this run hits Resend's rate limit or
+  // quota errors, stop making further calls rather than hammering an
+  // already-limited API through the rest of a potentially large batch.
+  // completeWork only runs when every user was actually attempted and none
+  // genuinely failed — an aborted or partially-failed alert stays
+  // undispatched and retries whole next tick, where alreadySentPairs keeps
+  // users who did get it from receiving a duplicate (2026-08-05 audit C2:
+  // the old code marked attempted-but-failed sends dispatched, making any
+  // transient failure a permanent per-user miss).
   for (const { payload, userIds } of Array.from(individualByAlert.values())) {
     if (isRateLimited()) {
       console.warn("  Resend rate limit hit — stopping this run, remainder retries next tick");
       break;
     }
     console.log(`  Dispatching "${payload.alertType}" for "${payload.gameTitle}" to ${userIds.length} users`);
-    const sent = await sendAlertToUsers(userIds, payload);
-    dispatched += sent;
-    if (sent < userIds.length) {
-      console.warn(`  ${userIds.length - sent}/${userIds.length} failed for alert ${payload.alertId}`);
+    const result = await sendAlertToUsers(userIds, payload);
+    dispatched += result.sent;
+    if (result.aborted || result.failed > 0) {
+      console.warn(
+        `  Alert ${payload.alertId}: ${result.sent} sent, ${result.failed} failed${result.aborted ? ", aborted on rate limit" : ""} — left undispatched for retry`
+      );
+    } else {
+      completeWork(payload.alertId);
     }
-    completeWork(payload.alertId);
   }
 
   // ── Phase 4: Grouped digests — one email per user per group ──
@@ -344,23 +352,47 @@ export async function dispatchRecentAlerts(): Promise<number> {
     const shortId = job.userId.slice(0, 8);
     console.log(`  Batching ${job.items.length} ${job.group} alerts for user ${shortId}...`);
 
-    const ok =
+    const outcome =
       job.group === "launch"
         ? await sendLaunchDigest(job.userId, job.items.map((pa) => pa.launchGame), alertIds)
         : await sendBatchedDigest(job.userId, job.items.map((pa) => pa.batchGame), alertIds);
 
-    if (ok) dispatched += 1; // One email, not N
-    else console.warn(`  ${job.group} digest failed for user ${shortId}`);
-    for (const id of alertIds) completeWork(id);
+    if (outcome === "sent") dispatched += 1; // One email, not N
+    if (outcome === "failed") {
+      // Genuine send failure: leave this digest's alerts undispatched so
+      // the whole digest retries next tick (its notification_log rows are
+      // "failed", so alreadySentPairs won't block the retry).
+      console.warn(`  ${job.group} digest failed for user ${shortId} — left undispatched for retry`);
+    } else {
+      for (const id of alertIds) completeWork(id);
+    }
   }
 
   // ── Mark dispatched: alerts with zero eligible recipients (nothing to
-  // do at all) plus alerts whose full fanout was actually attempted this
-  // run. Anything left mid-flight (rate-limit stop) stays undispatched and
-  // is re-fetched whole on the next tick. ──
+  // do at all) plus alerts whose full fanout was attempted with no genuine
+  // failures. Anything left mid-flight (rate-limit stop, failed sends)
+  // stays undispatched and is re-fetched whole on the next tick. ──
+  //
+  // Staleness valve: an alert that has been failing/retrying for 72h+ is
+  // given up on (marked dispatched) rather than retried forever. Per the
+  // Bible, an alert that arrives late is worse than no alert — flushing a
+  // week-stale price alert when a monthly quota finally resets would be
+  // worse than dropping it, and the valve also caps the retry set's growth.
+  const GIVE_UP_AFTER_MS = 72 * 60 * 60 * 1000;
+  const giveUpCutoff = Date.now() - GIVE_UP_AFTER_MS;
+  const staleGiveUps = alerts.filter(
+    (a) =>
+      alertIdsWithAnyRecipient.has(a.id) &&
+      (remainingWorkForAlert.get(a.id) ?? 0) > 0 &&
+      new Date(a.created_at).getTime() < giveUpCutoff
+  );
+  if (staleGiveUps.length > 0) {
+    console.warn(`  Giving up on ${staleGiveUps.length} alert(s) older than 72h that never fully sent — too stale to deliver now`);
+  }
+  const staleGiveUpIds = new Set(staleGiveUps.map((a) => a.id));
   const doneIds = alerts
     .map((a) => a.id)
-    .filter((id) => !alertIdsWithAnyRecipient.has(id) || (remainingWorkForAlert.get(id) ?? 0) <= 0);
+    .filter((id) => !alertIdsWithAnyRecipient.has(id) || (remainingWorkForAlert.get(id) ?? 0) <= 0 || staleGiveUpIds.has(id));
 
   if (doneIds.length > 0) {
     // PostgREST .in() has a practical URL-length ceiling -- chunk the update.

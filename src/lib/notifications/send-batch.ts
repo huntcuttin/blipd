@@ -7,6 +7,7 @@ import { isEmailSuppressed } from "./email";
 import { markRateLimited, isResendRateLimitError } from "./rate-limit";
 import type { BatchAlertGame } from "./batch-template";
 import type { LaunchDigestGame } from "./launch-digest-template";
+import type { SendOutcome } from "./types";
 
 const FROM_ADDRESS = "Blippd <alerts@blippd.app>";
 
@@ -29,14 +30,14 @@ async function sendDigest(
   alertIds: string[],
   rendered: { subject: string; html: string },
   label: string
-): Promise<boolean> {
+): Promise<SendOutcome> {
   const supabase = createAdminClient();
 
   const { data: userData } = await supabase.auth.admin.getUserById(userId);
   const email = userData?.user?.email;
   if (!email) {
     console.warn(`No email found for user ${userId}`);
-    return false;
+    return "skipped";
   }
 
   const logRows = (status: "sent" | "failed", error: string | null) =>
@@ -51,7 +52,7 @@ async function sendDigest(
   if (await isEmailSuppressed(email)) {
     console.log(`  Skipping suppressed ${label} digest for ${email}`);
     await supabase.from("notification_log").insert(logRows("failed", "Suppressed (bounce/complaint)"));
-    return false;
+    return "skipped";
   }
 
   try {
@@ -68,12 +69,12 @@ async function sendDigest(
     }
 
     await supabase.from("notification_log").insert(logRows("sent", null));
-    return true;
+    return "sent";
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     console.error(`Failed to send ${label} digest to ${email}:`, msg);
     await supabase.from("notification_log").insert(logRows("failed", msg));
-    return false;
+    return "failed";
   }
 }
 
@@ -85,7 +86,7 @@ export async function sendBatchedDigest(
   userId: string,
   games: BatchAlertGame[],
   alertIds: string[]
-): Promise<boolean> {
+): Promise<SendOutcome> {
   return sendDigest(userId, alertIds, batchedAlerts(games), "price");
 }
 
@@ -98,7 +99,7 @@ export async function sendLaunchDigest(
   userId: string,
   games: LaunchDigestGame[],
   alertIds: string[]
-): Promise<boolean> {
+): Promise<SendOutcome> {
   return sendDigest(userId, alertIds, launchDigest(games), "launch");
 }
 
