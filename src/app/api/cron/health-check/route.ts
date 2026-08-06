@@ -243,6 +243,13 @@ async function checkStuckPlaceholderPricedGames(): Promise<string[]> {
     .from("games")
     .select("title")
     .eq("is_suppressed", false)
+    // Scoped to upcoming/out_today: a released game on a placeholder date
+    // is the known, accepted IGDB-unmatchable residual (~66 rows, cosmetic
+    // TBA display) -- flagging those would page the admin every 30 min
+    // about nothing. A PRICED row still marked upcoming after 7 days is
+    // the genuinely anomalous state (pricedUpcoming clears these within a
+    // cycle unless something is holding them).
+    .in("release_status", ["upcoming", "out_today"])
     .in("release_date", PLACEHOLDER_DATES as unknown as string[])
     .gt("current_price", 0)
     // created_at, not updated_at: price polling bumps updated_at on every
