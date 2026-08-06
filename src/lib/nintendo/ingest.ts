@@ -258,12 +258,14 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
   // back to "upcoming" on every daily sync. Confirmed live 2026-08-02 for
   // "DRAGON QUEST - HD-2D Erdrick Trilogy Collection": Algolia's own record
   // has releaseDateDisplay=null and msrp=null despite the game being real
-  // and out. release_date_source distinguishes three trusted origins here:
-  // "igdb" (the existing sync-release-dates cron), "price-confirmed" (the
-  // pricedUpcoming fallback in runReleaseStatusUpdate below), and "nintendo"
-  // (dates taken from Nintendo's own storefront listings via
-  // fixes/sync_nintendo_first_party_slate.py, 2026-08-05) — all get
-  // restored the same way after the sync potentially clobbers them.
+  // and out. release_date_source distinguishes the trusted origins here:
+  // "igdb" (the sync-release-dates cron), "price-confirmed" (the
+  // pricedUpcoming fallback in runReleaseStatusUpdate below), "nintendo"
+  // (dates from Nintendo's own storefront listings — the 2026-08-05 slate
+  // script plus the March-era db_maintenance scripts, ~390 rows), and
+  // "manual" (one-off session corrections) — all deliberately-set dates
+  // that get restored the same way after the sync potentially clobbers
+  // them.
   // Paginated: this set grows daily as sync-release-dates tags more rows;
   // past PostgREST's 1,000-row cap an unpaginated select would silently
   // drop rows from the restore list and re-open the demotion bug.
@@ -273,7 +275,7 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
     const { data: trustedDates } = await supabase
       .from("games")
       .select("id, release_date, release_status, release_date_source")
-      .in("release_date_source", ["igdb", "price-confirmed", "nintendo"])
+      .in("release_date_source", ["igdb", "price-confirmed", "nintendo", "manual"])
       .range(from, from + TRUSTED_PAGE - 1);
     for (const g of trustedDates ?? []) {
       trustedDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status, release_date_source: g.release_date_source });
