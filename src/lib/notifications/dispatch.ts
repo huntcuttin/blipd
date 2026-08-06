@@ -133,10 +133,29 @@ export async function dispatchRecentAlerts(): Promise<number> {
   const FOLLOW_COLS = "user_id, game_id, notify_sales, notify_all_time_low, notify_releases, notify_announcements";
   const FRANCHISE_FOLLOW_COLS = "user_id, franchise_id, notify_sales, notify_all_time_low, notify_releases, notify_announcements";
 
+  // Sent-pairs is paginated: on a retry-heavy or backlogged run the log
+  // rows for pending alerts can exceed PostgREST's 1,000-row cap, and a
+  // truncated dedup set means duplicate emails — a Bible non-negotiable.
+  const fetchSentLogs = async (): Promise<{ data: { alert_id: string; user_id: string }[]; error: { message: string } | null }> => {
+    const rows: { alert_id: string; user_id: string }[] = [];
+    if (alertIds.length === 0) return { data: rows, error: null };
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from("notification_log")
+        .select("alert_id, user_id")
+        .in("alert_id", alertIds)
+        .eq("status", "sent")
+        .range(from, from + PAGE - 1);
+      if (error) return { data: rows, error };
+      rows.push(...((data ?? []) as { alert_id: string; user_id: string }[]));
+      if (!data || data.length < PAGE) break;
+    }
+    return { data: rows, error: null };
+  };
+
   const [sentLogsResult, gameFollowsResult, franchiseIdsResult] = await Promise.all([
-    alertIds.length > 0
-      ? supabase.from("notification_log").select("alert_id, user_id").in("alert_id", alertIds).eq("status", "sent")
-      : Promise.resolve({ data: [] as { alert_id: string; user_id: string }[], error: null }),
+    fetchSentLogs(),
     gameIds.length > 0
       ? supabase.from("user_game_follows").select(FOLLOW_COLS).in("game_id", gameIds)
       : Promise.resolve({ data: [] as (FollowRow & { game_id: string })[], error: null }),
@@ -152,6 +171,14 @@ export async function dispatchRecentAlerts(): Promise<number> {
   // If game follows query failed, we can't determine who to notify — abort
   if (gameFollowsResult.error) {
     console.error("Aborting dispatch: game follows query failed");
+    return 0;
+  }
+
+  // If the sent-pairs dedup query failed, sending anyway risks duplicates
+  // to users who already got these alerts (undispatched alerts can have
+  // partially-sent fanouts by design). Waiting one tick is the safe side.
+  if (sentLogsResult.error) {
+    console.error("Aborting dispatch: sent-pairs dedup query failed — retrying next tick rather than risking duplicate sends");
     return 0;
   }
 

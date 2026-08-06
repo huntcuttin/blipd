@@ -640,25 +640,26 @@ export async function getUnreadAlertCount(supabase: Client, userId: string): Pro
   const gameIds = (follows ?? []).map((f: { game_id: string }) => f.game_id);
   if (gameIds.length === 0) return 0;
 
-  // Get recent alert IDs for followed games + read statuses in parallel
-  const [alertsRes, statusesRes] = await Promise.all([
-    supabase
-      .from("alerts")
-      .select("id")
-      .in("game_id", gameIds)
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("user_alert_status")
-      .select("alert_id")
-      .eq("user_id", userId)
-      .eq("read", true),
-  ]);
-
-  const alertIds = (alertsRes.data ?? []).map((a: { id: string }) => a.id);
+  const { data: alertRows } = await supabase
+    .from("alerts")
+    .select("id")
+    .in("game_id", gameIds)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const alertIds = (alertRows ?? []).map((a: { id: string }) => a.id);
   if (alertIds.length === 0) return 0;
 
-  const readIds = new Set((statusesRes.data ?? []).map((s: { alert_id: string }) => s.alert_id));
+  // Scoped to the 50 fetched alerts. The old unscoped read-statuses fetch
+  // silently truncated at PostgREST's 1,000-row cap once a user
+  // accumulated that many read rows, making the badge overcount forever.
+  const { data: statuses } = await supabase
+    .from("user_alert_status")
+    .select("alert_id")
+    .eq("user_id", userId)
+    .eq("read", true)
+    .in("alert_id", alertIds);
+
+  const readIds = new Set((statuses ?? []).map((s: { alert_id: string }) => s.alert_id));
   return alertIds.filter((id: string) => !readIds.has(id)).length;
 }
 

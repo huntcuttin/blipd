@@ -264,13 +264,21 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
   // (dates taken from Nintendo's own storefront listings via
   // fixes/sync_nintendo_first_party_slate.py, 2026-08-05) — all get
   // restored the same way after the sync potentially clobbers them.
-  const { data: trustedDates } = await supabase
-    .from("games")
-    .select("id, release_date, release_status, release_date_source")
-    .in("release_date_source", ["igdb", "price-confirmed", "nintendo"]);
+  // Paginated: this set grows daily as sync-release-dates tags more rows;
+  // past PostgREST's 1,000-row cap an unpaginated select would silently
+  // drop rows from the restore list and re-open the demotion bug.
   const trustedDateMap = new Map<string, { release_date: string; release_status: string; release_date_source: string }>();
-  for (const g of trustedDates ?? []) {
-    trustedDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status, release_date_source: g.release_date_source });
+  const TRUSTED_PAGE = 1000;
+  for (let from = 0; ; from += TRUSTED_PAGE) {
+    const { data: trustedDates } = await supabase
+      .from("games")
+      .select("id, release_date, release_status, release_date_source")
+      .in("release_date_source", ["igdb", "price-confirmed", "nintendo"])
+      .range(from, from + TRUSTED_PAGE - 1);
+    for (const g of trustedDates ?? []) {
+      trustedDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status, release_date_source: g.release_date_source });
+    }
+    if (!trustedDates || trustedDates.length < TRUSTED_PAGE) break;
   }
 
   // Find which games already exist (by nsuid) so we don't overwrite their
@@ -474,11 +482,22 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
 
   // Link Switch 2 editions + suppress duplicates
   console.log("Linking Switch 2 editions and suppressing duplicates...");
-  const { data: allDbGames } = await supabase
-    .from("games")
-    .select("id, title, nsuid, current_price, product_type");
+  // Paginated: the catalog is ~2,900 rows, so the old unpaginated select
+  // ran this whole pass against a 1,000-row subset every night — the same
+  // cap bug as the existingNsuids fix 175 lines up (2026-08-05 audit).
+  type DedupGameRow = { id: string; title: string; nsuid: string | null; current_price: number | null; product_type: string | null };
+  const allDbGames: DedupGameRow[] = [];
+  const DEDUP_PAGE = 1000;
+  for (let from = 0; ; from += DEDUP_PAGE) {
+    const { data } = await supabase
+      .from("games")
+      .select("id, title, nsuid, current_price, product_type")
+      .range(from, from + DEDUP_PAGE - 1);
+    allDbGames.push(...((data ?? []) as DedupGameRow[]));
+    if (!data || data.length < DEDUP_PAGE) break;
+  }
 
-  if (allDbGames) {
+  if (allDbGames.length > 0) {
     // Get existing switch2_nsuid values to detect new ones
     const { data: existingLinks } = await supabase
       .from("games")
