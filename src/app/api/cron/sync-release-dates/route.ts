@@ -104,11 +104,18 @@ export async function GET(request: Request) {
     let updated = 0;
     const resolvedIds: string[] = [];
     for (const [gameId, result] of Array.from(results.entries())) {
+      // computeReleaseStatus says "out_today" when the resolved date is
+      // today (Pacific). Writing that here would starve releasingToday's
+      // launch-alert query (it matches status='upcoming' only), silently
+      // skipping the launch alert for a shadow-drop whose date resolved on
+      // launch day (2026-08-05 audit). Leave it "upcoming" -- the next
+      // update-prices tick (<=10 min) flips it AND fires the alert.
+      const computedStatus = computeReleaseStatus(result.releaseDate);
       const { error: updateError } = await supabase
         .from("games")
         .update({
           release_date: result.releaseDate,
-          release_status: computeReleaseStatus(result.releaseDate),
+          release_status: computedStatus === "out_today" ? "upcoming" : computedStatus,
           release_date_source: "igdb",
           updated_at: now,
         })

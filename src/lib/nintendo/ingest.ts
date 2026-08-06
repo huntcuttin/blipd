@@ -22,7 +22,7 @@ import {
   generateRetroGameAlert,
 } from "./alerts";
 import type { AlgoliaHit } from "./types";
-import { isYearOnlyDate, isMonthOnlyDate, getPacificDateStr, PLACEHOLDER_DATES } from "@/lib/format";
+import { isYearOnlyDate, isMonthOnlyDate, getPacificDateStr, getDaysUntil, PLACEHOLDER_DATES } from "@/lib/format";
 import { sendAdminAlert } from "@/lib/notifications/admin-alert";
 
 // Shared PostgREST OR-clause fragment: "not junk", null-lenient.
@@ -824,9 +824,15 @@ export async function runPriceUpdate(options?: {
       if (shouldAlert) {
         const newPrice = update.current_price as number;
         const discount = update.discount as number;
-        const isPriceDrop = newPrice < oldPrice;
+        let isPriceDrop = newPrice < oldPrice;
         let isNewSale = isOnSale && !game.is_on_sale;
-        if (isNewSale && await isDuplicateSaleSignature(supabase, game.id, discount, newPrice)) {
+        if ((isPriceDrop || isNewSale) && await isDuplicateSaleSignature(supabase, game.id, discount, newPrice)) {
+          // Identical discount+price already alerted within the lookback:
+          // the sale is flapping, not new. A flap reads as a price drop
+          // just as easily as a sale start (full-price blip then back to
+          // the promo price), so gate both branches — gating only
+          // isNewSale let the same signature re-fire as price_drop.
+          isPriceDrop = false;
           isNewSale = false;
         }
         if (isPriceDrop || allTimeLow || isNewSale) {
@@ -861,14 +867,14 @@ export async function runPriceUpdate(options?: {
       .not("sale_end_date", "is", null);
 
     if (endingSoon) {
-      const now = Date.now();
-      const fortyEightHours = 48 * 60 * 60 * 1000;
-
+      // Pacific day-anchored: 0 = ends today, 1 = ends tomorrow -- the
+      // "within 48 hours" window. The old UTC-millisecond math parsed the
+      // date-only sale_end_date as UTC midnight, shifting the window (and
+      // the alert copy) up to a day early in every US timezone.
       const due = endingSoon.filter((game) => {
         if (!game.sale_end_date) return false;
-        const endTime = new Date(game.sale_end_date).getTime();
-        const timeLeft = endTime - now;
-        return timeLeft > 0 && timeLeft <= fortyEightHours;
+        const daysLeft = getDaysUntil(game.sale_end_date);
+        return daysLeft >= 0 && daysLeft <= 1;
       });
 
       // Fire alerts concurrently (batched) rather than one at a time — a
@@ -1137,12 +1143,19 @@ export async function runReleaseStatusUpdate(): Promise<number> {
     }
   }
 
-  // Games past their release date still marked upcoming
+  // Games past their release date still marked upcoming.
+  // Placeholder dates are excluded: "2020-01-01" is a sentinel, not a real
+  // past date, and flipping those rows "released" here silently removed
+  // them from pricedUpcoming's reach below (it matches upcoming/out_today
+  // only) -- making its 2020-01-01 arm dead code and skipping the launch
+  // alert it exists to fire (2026-08-05 audit). "2099-12-31" never matches
+  // .lt(today) anyway.
   const { data: pastRelease } = await supabase
     .from("games")
     .select("id")
     .in("release_status", ["upcoming", "out_today"])
-    .lt("release_date", todayStr);
+    .lt("release_date", todayStr)
+    .not("release_date", "in", `(${PLACEHOLDER_DATES.join(",")})`);
 
   if (pastRelease) {
     for (const game of pastRelease) {

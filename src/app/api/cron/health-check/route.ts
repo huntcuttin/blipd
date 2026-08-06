@@ -14,6 +14,7 @@ const STALE_THRESHOLD_MS = 30 * 60 * 1000;
 // paging on — this list intentionally mirrors the crons in CLAUDE.md.
 const MONITORED_CRON_TITLES = new Set([
   "Price Check (base)",
+  "Launch Burst Poll",
   "Dispatch Notifications",
   "Catalog Sync",
   "Sync IGDB Hype",
@@ -244,14 +245,18 @@ async function checkStuckPlaceholderPricedGames(): Promise<string[]> {
     .eq("is_suppressed", false)
     .in("release_date", PLACEHOLDER_DATES as unknown as string[])
     .gt("current_price", 0)
-    .lt("updated_at", staleSince)
+    // created_at, not updated_at: price polling bumps updated_at on every
+    // actively-priced game every few hours, so an updated_at staleness
+    // filter excluded exactly the priced rows this check exists to catch
+    // (2026-08-05 audit) -- the check could never fire for its target.
+    .lt("created_at", staleSince)
     .limit(10);
 
   if (error) return [`Stuck-placeholder check failed: ${error.message}`];
   if (!data || data.length === 0) return [];
 
   const examples = data.slice(0, 5).map((g) => g.title).join(", ");
-  return [`${data.length}+ games have a real price + placeholder release_date, unsuppressed, unchanged for >${STUCK_PLACEHOLDER_DAYS} days -- may be stuck in the event-creation breaker's hold state. Examples: ${examples}`];
+  return [`${data.length}+ games have a real price + placeholder release_date, unsuppressed, older than ${STUCK_PLACEHOLDER_DAYS} days -- may be stuck in the event-creation breaker's hold state. Examples: ${examples}`];
 }
 
 // Launches cluster at known Nintendo eShop go-live times (9am/9pm PT,

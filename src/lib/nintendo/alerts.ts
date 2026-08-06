@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { formatPrice, formatShortDate } from "@/lib/format";
+import { formatPrice, formatShortDate, getDaysUntil } from "@/lib/format";
 import { withRetry } from "@/lib/retry";
 import { getPrefColumn } from "@/lib/notifications/dispatch";
 
@@ -234,10 +234,28 @@ export async function generateSaleEndingAlert(
   discount: number,
   saleEndDate: string
 ): Promise<boolean> {
-  const daysLeft = Math.ceil(
-    (new Date(saleEndDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  );
-  const urgency = daysLeft <= 1 ? "ends today" : `ends in ${daysLeft} days`;
+  // One ending-soon alert per sale, ever: the 48h scan window outlives
+  // hasRecentAlert's 24h dedup, so without this a sale alerted at T-48h
+  // re-alerted at T-24h (2026-08-05 audit M8). sale_end_date identifies
+  // the sale instance, so this survives any window/cadence change.
+  try {
+    const { data: existing } = await supabase
+      .from("alerts")
+      .select("id")
+      .eq("game_id", game.id)
+      .eq("type", "sale_ending")
+      .eq("sale_end_date", saleEndDate)
+      .limit(1);
+    if (existing && existing.length > 0) return false;
+  } catch {
+    // Fail open -- hasRecentAlert's 24h gate still applies downstream.
+  }
+
+  // Pacific day-anchored, not new Date(dateStr) UTC-midnight parsing --
+  // the same skew audit #27 fixed for display copy was still live here,
+  // making "ends today" fire up to a day early in every US timezone.
+  const daysLeft = getDaysUntil(saleEndDate);
+  const urgency = daysLeft <= 0 ? "ends today" : daysLeft === 1 ? "ends tomorrow" : `ends in ${daysLeft} days`;
   return insertAndDispatch(supabase, game, "sale_ending", {
     headline: `${game.title} sale ${urgency}`,
     subtext: `${formatPrice(currentPrice, "")} (${discount}% off), was ${formatPrice(originalPrice, "")}`,
