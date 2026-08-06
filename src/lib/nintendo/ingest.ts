@@ -1193,11 +1193,31 @@ export async function runReleaseStatusUpdate(): Promise<number> {
     // corruption resolved. Any game with existing alert history of any
     // kind has obviously already been out for a while — only fire the
     // announcement for ones with none.
-    const { data: priorAlerts } = await supabase
-      .from("alerts")
-      .select("game_id")
-      .in("game_id", ids);
-    const hasHistory = new Set((priorAlerts ?? []).map((a) => a.game_id as string));
+    // Paginated: PostgREST caps an unbounded select at 1,000 rows, and the
+    // incident this guard exists for (a wave of $0-corrupted games all
+    // recovering at once) is exactly when candidates collectively carry
+    // thousands of alert rows — a truncated result made history-having
+    // games read as "genuinely new" again (2026-08-05 audit C3).
+    const hasHistory = new Set<string>();
+    const HISTORY_PAGE = 1000;
+    for (let from = 0; ; from += HISTORY_PAGE) {
+      const { data: priorAlerts, error: historyError } = await supabase
+        .from("alerts")
+        .select("game_id")
+        .in("game_id", ids)
+        .range(from, from + HISTORY_PAGE - 1);
+      if (historyError) {
+        // Fail safe: without complete history we cannot tell new from
+        // recovering — treat every candidate as history-having (correct
+        // status silently, announce nothing) rather than risk false
+        // out_now emails. The next cycle retries with full data.
+        console.error(`Release-status fallback: alert-history query failed (${historyError.message}) — suppressing announcements this cycle`);
+        for (const g of pricedUpcoming) hasHistory.add(g.id);
+        break;
+      }
+      for (const a of priorAlerts ?? []) hasHistory.add(a.game_id as string);
+      if (!priorAlerts || priorAlerts.length < HISTORY_PAGE) break;
+    }
     const genuinelyNew = pricedUpcoming.filter((g) => !hasHistory.has(g.id));
     const falseFlagged = pricedUpcoming.filter((g) => hasHistory.has(g.id));
 
