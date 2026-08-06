@@ -31,7 +31,7 @@ const features: Feature[] = [
   { name: "Named sale detection", blippd: true, ntDeals: false, note: "Blippd detects named events like Mar10 Day and groups alerts intelligently" },
   { name: "Price history", blippd: "Building", ntDeals: "9 years" },
   { name: "Desired price threshold", blippd: "Free", ntDeals: "Premium only" },
-  { name: "Follow limit (free)", blippd: "Unlimited", ntDeals: "Unlimited" },
+  { name: "Watch limit (free)", blippd: "Unlimited", ntDeals: "Unlimited" },
   { name: "Ad-free experience", blippd: true, ntDeals: false, note: "NT Deals shows aggressive ads triggered by search" },
   { name: "iOS app", blippd: "Coming soon", ntDeals: true },
   { name: "Android app", blippd: "Coming soon", ntDeals: false, note: "NT Deals promised Android in 2021, never delivered" },

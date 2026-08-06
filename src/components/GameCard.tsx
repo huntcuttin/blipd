@@ -154,7 +154,7 @@ export default memo(function GameCard({ game, ownAction, justOwned }: { game: Ga
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!justOwned) ownAction(); }}
               disabled={justOwned}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-all active:scale-95 ${
+              className={`flex items-center gap-1 px-3 min-h-[44px] rounded-md text-[10px] font-medium border transition-all active:scale-95 ${
                 justOwned
                   ? "bg-white/10 text-white border-white/20"
                   : "bg-[#1a1a1a] text-[#777777] border-[#2a2a2a] hover:border-[#3a3a3a] hover:text-[#aaaaaa]"

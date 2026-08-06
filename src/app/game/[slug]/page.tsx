@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (game.is_on_sale && game.discount) {
     description = `${game.title} is ${game.discount}% off, now ${formatMetaPrice(game.current_price)} (was ${formatMetaPrice(game.original_price)}). Get price drop alerts on Blippd.`;
   } else if (game.release_status === "upcoming") {
-    description = `${game.title} is coming soon. Follow on Blippd to get notified when it releases or goes on sale.`;
+    description = `${game.title} is coming soon. Watch it on Blippd to get notified when it releases or goes on sale.`;
   } else {
     description = `Track ${game.title} prices and get alerts when it goes on sale. Currently ${formatMetaPrice(game.current_price)} on Nintendo eShop.`;
   }

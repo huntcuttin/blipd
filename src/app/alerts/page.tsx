@@ -244,7 +244,7 @@ export default function AlertsPage() {
           </svg>
         </div>
         <h2 className="text-lg font-semibold text-white mb-2">Sign in to see your alerts</h2>
-        <p className="text-[#555555] text-sm mb-6 max-w-[240px]">Follow games and get notified when prices drop or sales go live.</p>
+        <p className="text-[#555555] text-sm mb-6 max-w-[240px]">Watch games and get notified when prices drop or sales go live.</p>
         <Link href="/login" className="px-6 py-3 rounded-full bg-[#00ff88] text-[#0a0a0a] text-sm font-semibold">
           Sign in
         </Link>
@@ -342,7 +342,7 @@ export default function AlertsPage() {
           <p className="text-[#555555] text-sm text-center max-w-[260px]">
             {user
               ? `Watching ${followedGameIds.size} game${followedGameIds.size !== 1 ? "s" : ""} for you · ${lowercaseFirst(formatFreshness(lastChecked))}`
-              : "Sign in and follow games to get notified about price drops, sales, and new releases."}
+              : "Sign in and watch games to get notified about price drops, sales, and new releases."}
           </p>
           {!user && (
             <Link

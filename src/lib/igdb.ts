@@ -239,7 +239,18 @@ export async function getIGDBHype(
     body: `fields name,hypes; where id = ${igdbId}; limit 1;`,
   });
 
-  if (!res.ok) return null;
+  if (!res.ok) {
+    // Throw on 429 like every other IGDB call site -- returning null here
+    // made a rate-limited game indistinguishable from "no hype data", so
+    // the batch caller neither counted it toward the circuit breaker nor
+    // retried it (the last surviving instance of the row-poisoning class
+    // audit #7 fixed).
+    if (res.status === 429) {
+      await sleep(2000);
+      throw new Error("IGDB 429 rate limit");
+    }
+    return null;
+  }
 
   const data = await res.json();
   if (!data || data.length === 0) return null;

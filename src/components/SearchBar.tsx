@@ -46,7 +46,7 @@ export default function SearchBar({
           if (!value) setExpanded(false);
         }}
         placeholder={placeholder}
-        className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-[#111111] border border-[#222222] text-white text-sm placeholder:text-[#666666] focus:outline-none focus:border-[#00ff88] focus:shadow-[0_0_12px_#00ff8844] transition-all"
+        className="w-full pl-9 pr-11 py-2.5 rounded-xl bg-[#111111] border border-[#222222] text-white text-sm placeholder:text-[#666666] focus:outline-none focus:border-[#00ff88] focus:shadow-[0_0_12px_#00ff8844] transition-all"
       />
       {value && (
         <button
@@ -55,7 +55,7 @@ export default function SearchBar({
             onChange("");
             inputRef.current?.focus();
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666666] hover:text-white"
+          className="absolute right-0 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#666666] hover:text-white"
         >
           <XIcon className="w-4 h-4" />
         </button>

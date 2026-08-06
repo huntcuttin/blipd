@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   manifest: "/manifest.json",
   title: "blippd · Never miss a Nintendo drop.",
-  description: "Track Nintendo eShop prices, get alerts when they drop. Follow games, get instant price drop alerts, and never miss a sale.",
+  description: "Track Nintendo eShop prices, get alerts when they drop. Watch games, get instant price drop alerts, and never miss a sale.",
   icons: {
     icon: "/favicon.svg",
     apple: "/icon-180.png",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: {
     title: "blippd · Never miss a Nintendo drop.",
-    description: "Track Nintendo eShop prices, get alerts when they drop. Follow games, get instant price drop alerts, and never miss a sale.",
+    description: "Track Nintendo eShop prices, get alerts when they drop. Watch games, get instant price drop alerts, and never miss a sale.",
     url: "https://www.blippd.app",
     siteName: "blippd",
     type: "website",

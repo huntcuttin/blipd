@@ -98,12 +98,17 @@ export function FollowProvider({ children }: { children: ReactNode }) {
       const supabase = createClient();
       if (followedGameIds.has(gameId)) {
         const savedPrefs = gamePrefsMap.get(gameId) ?? { ...DEFAULT_NOTIFY_PREFS };
+        const savedTarget = targetPriceMap.get(gameId);
         setFollowedGameIds((prev) => { const next = new Set(prev); next.delete(gameId); return next; });
         setGamePrefsMap((prev) => { const next = new Map(prev); next.delete(gameId); return next; });
+        // The DB row (and its target_price) is deleted with the follow --
+        // keeping the stale entry showed a phantom "Target $X" on re-follow.
+        setTargetPriceMap((prev) => { const next = new Map(prev); next.delete(gameId); return next; });
         if (user) {
           dbUnfollowGame(supabase, user.id, gameId).catch(() => {
             setFollowedGameIds((prev) => new Set(prev).add(gameId));
             setGamePrefsMap((prev) => new Map(prev).set(gameId, savedPrefs));
+            if (savedTarget != null) setTargetPriceMap((prev) => new Map(prev).set(gameId, savedTarget));
           });
         }
         return;
@@ -117,7 +122,7 @@ export function FollowProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [followedGameIds, gamePrefsMap, user]
+    [followedGameIds, gamePrefsMap, targetPriceMap, user]
   );
 
   const toggleFollowFranchise = useCallback(

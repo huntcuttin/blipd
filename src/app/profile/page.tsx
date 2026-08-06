@@ -121,7 +121,7 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-bold text-white">Profile</h1>
         <Link
           href="/settings"
-          className="w-9 h-9 rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center hover:border-[#333333] transition-colors"
+          className="w-11 h-11 rounded-full bg-[#111111] border border-[#222222] flex items-center justify-center hover:border-[#333333] transition-colors"
           aria-label="Settings"
         >
           <svg className="w-4 h-4 text-[#444444]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
@@ -146,7 +146,7 @@ export default function ProfilePage() {
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-[#111111] rounded-xl border border-[#222222] p-3 text-center">
           <p className="text-2xl font-bold text-white">{followedGameIds.size}</p>
-          <p className="text-[#555555] text-xs mt-0.5">Following</p>
+          <p className="text-[#555555] text-xs mt-0.5">Watching</p>
         </div>
         <div className="bg-[#111111] rounded-xl border border-[#222222] p-3 text-center">
           <p className="text-2xl font-bold text-white">{ownedGameIds.size}</p>
@@ -216,7 +216,7 @@ export default function ProfilePage() {
       {/* Empty state */}
       {!dataLoading && followedGameIds.size === 0 && ownedGameIds.size === 0 && (
         <div className="bg-[#111111] rounded-xl border border-[#222222] p-6 text-center">
-          <p className="text-[#444444] text-sm mb-3">No games followed yet</p>
+          <p className="text-[#444444] text-sm mb-3">Not watching any games yet</p>
           <Link
             href="/home"
             className="inline-block px-4 py-2 bg-[#00ff88] text-[#0a0a0a] rounded-lg text-sm font-semibold"

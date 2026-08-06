@@ -285,7 +285,7 @@ function OnTheHorizonCard({ game }: { game: Game }) {
           <h3 className="font-semibold text-white text-[13px] leading-snug line-clamp-2">{game.title}</h3>
           <p className="text-[#555555] text-[11px] mt-0.5 truncate">{game.publisher}</p>
           <p className="text-[#666666] text-[11px] mt-1 leading-snug">
-            No date yet. Follow to know the minute it gets one, and the minute it launches.
+            No date yet. Watch it to know the minute it gets one, and the minute it launches.
           </p>
         </div>
         <div className="shrink-0">

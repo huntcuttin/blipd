@@ -265,7 +265,7 @@ export default function GameDetailClient({ slug }: { slug: string }) {
                 <span className="text-sm font-medium text-[#a78bfa]">In your library</span>
                 <button
                   onClick={handleLibraryToggle}
-                  className="text-[11px] text-[#555555] hover:text-[#ff6874] transition-colors"
+                  className="min-h-[44px] px-3 -mr-3 flex items-center text-[11px] text-[#555555] hover:text-[#ff6874] transition-colors"
                 >
                   Remove
                 </button>

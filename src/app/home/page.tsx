@@ -146,7 +146,7 @@ export default function HomePage() {
           ) : (
             <Link
               href="/login"
-              className="shrink-0 px-4 py-3 rounded-full bg-[#00ff88] text-[#0a0a0a] text-xs font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
+              className="shrink-0 px-4 py-3 rounded-full border border-[#2a2a2a] text-white text-xs font-semibold hover:border-[#3a3a3a] transition-all active:scale-95"
             >
               Sign in
             </Link>
@@ -194,7 +194,7 @@ export default function HomePage() {
           </div>
           <h2 className="text-lg font-semibold text-white mb-2">Your games, your deals</h2>
           <p className="text-[#666666] text-sm max-w-[260px] mb-6">
-            Sign in to follow games and get alerted the moment prices drop.
+            Sign in to watch games and get alerted the moment prices drop.
           </p>
           <Link
             href="/login"
@@ -223,7 +223,7 @@ export default function HomePage() {
           </div>
           <h2 className="text-lg font-semibold text-white mb-2">No games yet</h2>
           <p className="text-[#666666] text-sm max-w-[260px] mb-4">
-            Follow games to track prices and get alerts when they go on sale.
+            Watch games to track prices and get alerts when they go on sale.
           </p>
           <Link
             href="/sales"

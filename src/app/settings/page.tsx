@@ -219,7 +219,7 @@ export default function SettingsPage() {
           {/* Following summary */}
           <div className="bg-[#111111] rounded-xl border border-[#222222] p-4">
             <h2 className="text-[10px] font-bold text-[#666666] tracking-wider mb-3">
-              FOLLOWING
+              WATCHING
             </h2>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-[#0a0a0a] rounded-lg p-3 text-center">
