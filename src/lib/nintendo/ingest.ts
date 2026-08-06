@@ -258,14 +258,16 @@ export async function runFullCatalogSync(): Promise<SyncResult> {
   // back to "upcoming" on every daily sync. Confirmed live 2026-08-02 for
   // "DRAGON QUEST - HD-2D Erdrick Trilogy Collection": Algolia's own record
   // has releaseDateDisplay=null and msrp=null despite the game being real
-  // and out. release_date_source distinguishes two trusted origins here:
-  // "igdb" (the existing sync-release-dates cron) and "price-confirmed" (the
-  // pricedUpcoming fallback in runReleaseStatusUpdate below) — both get
+  // and out. release_date_source distinguishes three trusted origins here:
+  // "igdb" (the existing sync-release-dates cron), "price-confirmed" (the
+  // pricedUpcoming fallback in runReleaseStatusUpdate below), and "nintendo"
+  // (dates taken from Nintendo's own storefront listings via
+  // fixes/sync_nintendo_first_party_slate.py, 2026-08-05) — all get
   // restored the same way after the sync potentially clobbers them.
   const { data: trustedDates } = await supabase
     .from("games")
     .select("id, release_date, release_status, release_date_source")
-    .in("release_date_source", ["igdb", "price-confirmed"]);
+    .in("release_date_source", ["igdb", "price-confirmed", "nintendo"]);
   const trustedDateMap = new Map<string, { release_date: string; release_status: string; release_date_source: string }>();
   for (const g of trustedDates ?? []) {
     trustedDateMap.set(g.id, { release_date: g.release_date, release_status: g.release_status, release_date_source: g.release_date_source });
