@@ -3,8 +3,9 @@
 import { useAuth } from "@/lib/AuthContext";
 import { useFollow } from "@/lib/FollowContext";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
-import { requestPushPermission } from "@/components/ServiceWorkerRegistration";
+import { requestPushPermission, unsubscribeFromPush } from "@/components/ServiceWorkerRegistration";
 import { createClient } from "@/lib/supabase/client";
 import { setConsolePreference, getUserRetroFollows, toggleRetroFollow, getGamesByIds } from "@/lib/queries";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
@@ -22,7 +23,7 @@ const RETRO_CONSOLES = [
 ] as const;
 
 export default function SettingsPage() {
-  const { user, consolePreference, setConsolePreference: setAuthConsolePref, signOut } = useAuth();
+  const { user, session, consolePreference, setConsolePreference: setAuthConsolePref, signOut } = useAuth();
   const { followedGameIds, followedFranchiseIds, ownedGameIds } = useFollow();
   const [pushState, setPushState] = useState<"default" | "granted" | "denied" | "unsupported">("default");
   const [pushLoading, setPushLoading] = useState(false);
@@ -30,6 +31,9 @@ export default function SettingsPage() {
   const [consoleSaving, setConsoleSaving] = useState(false);
   const [retroFollows, setRetroFollows] = useState<Set<string>>(new Set());
   const [retroLoading, setRetroLoading] = useState<string | null>(null);
+  const [deleteState, setDeleteState] = useState<"idle" | "confirming" | "deleting">("idle");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     setConsolePref(consolePreference);
@@ -47,6 +51,28 @@ export default function SettingsPage() {
       .then((consoles) => setRetroFollows(new Set(consoles)))
       .catch(() => {});
   }, [user]);
+
+  async function handleDeleteAccount() {
+    if (!session?.access_token || deleteState === "deleting") return;
+    setDeleteState("deleting");
+    setDeleteError(null);
+    try {
+      // Drop the browser-level push subscription while the token is still
+      // valid, same ordering reason as signOut.
+      await unsubscribeFromPush();
+      const res = await fetch("/api/account/delete", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) throw new Error("delete failed");
+      // The account is gone; this just clears the now dead local session.
+      await signOut();
+      router.push("/");
+    } catch {
+      setDeleteState("confirming");
+      setDeleteError("Could not delete your account. Please try again.");
+    }
+  }
 
   async function handleConsoleChange(pref: ConsolePreference) {
     if (!user || consoleSaving || pref === consolePref) return;
@@ -331,10 +357,47 @@ export default function SettingsPage() {
           {/* Actions */}
           <button
             onClick={signOut}
-            className="w-full p-4 bg-[#111111] rounded-xl border border-[#222222] text-left text-[#ff6874] text-sm font-medium hover:border-[#ff6874]/30 transition-all"
+            className="w-full p-4 bg-[#111111] rounded-xl border border-[#222222] text-left text-white text-sm font-medium hover:border-[#333333] transition-all min-h-[44px]"
           >
             Sign out
           </button>
+
+          {/* Delete account */}
+          {deleteState === "idle" ? (
+            <button
+              onClick={() => { setDeleteError(null); setDeleteState("confirming"); }}
+              className="w-full p-4 bg-[#111111] rounded-xl border border-[#222222] text-left text-[#ff6874] text-sm font-medium hover:border-[#ff6874]/30 transition-all min-h-[44px]"
+            >
+              Delete account
+            </button>
+          ) : (
+            <div className="bg-[#111111] rounded-xl border border-[#ff6874]/30 p-4">
+              <p className="text-white text-sm font-semibold mb-1">Delete your account?</p>
+              <p className="text-[#888888] text-xs leading-relaxed mb-4">
+                This permanently removes your account, everything you watch, and your
+                alert history. It cannot be undone.
+              </p>
+              {deleteError && (
+                <p className="text-[#ff6874] text-xs mb-3">{deleteError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setDeleteState("idle")}
+                  disabled={deleteState === "deleting"}
+                  className="flex-1 py-3 rounded-xl border border-[#333333] text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteState === "deleting"}
+                  className="flex-1 py-3 rounded-xl bg-[#ff6874] text-[#0a0a0a] text-sm font-bold disabled:opacity-50 active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  {deleteState === "deleting" ? "Deleting..." : "Delete account"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center py-8 px-4">
