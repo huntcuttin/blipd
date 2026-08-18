@@ -41,6 +41,15 @@ export default function PrivacyPage() {
         </section>
 
         <section>
+          <h2 className="text-white font-semibold text-base mb-2">Deleting your account</h2>
+          <p>
+            You can delete your account at any time from Settings. This permanently
+            removes your account, everything you watch, and your alert history. It
+            takes effect immediately and cannot be undone.
+          </p>
+        </section>
+
+        <section>
           <h2 className="text-white font-semibold text-base mb-2">Contact</h2>
           <p>
             Questions about your data? Email us at{" "}
