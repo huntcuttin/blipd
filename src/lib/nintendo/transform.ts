@@ -1,10 +1,31 @@
 import type { AlgoliaHit } from "./types";
 import { getPacificDateStr } from "@/lib/format";
 
-const LANGUAGE_PREFIX = /^\((English|French|Spanish|German|Italian|Dutch|Japanese|Korean|Chinese|Portuguese|Russian)\)\s/i;
+// Nintendo lists some titles once per language, prefixed: "(English) Pokemon
+// FireRed Version", "(French) ...", "(Spanish) ...". The US catalog wants the
+// English one and none of the others.
+//
+// This filter used to reject ALL of them, English included, which permanently
+// excluded real games from the catalog: Pokemon FireRed/LeafGreen (both real,
+// both Nintendo first-party) could never enter via catalog sync and had to be
+// hand-inserted on 2026-08-05. Catalog completeness is a documented churn
+// driver, so a filter that silently drops legitimate titles is a real bug.
+const NON_ENGLISH_PREFIX = /^\((French|Spanish|German|Italian|Dutch|Japanese|Korean|Chinese|Portuguese|Russian)\)\s/i;
+const ENGLISH_PREFIX = /^\(English\)\s*/i;
 
 export function isEnglishGame(hit: AlgoliaHit): boolean {
-  return !LANGUAGE_PREFIX.test(hit.title);
+  return !NON_ENGLISH_PREFIX.test(hit.title);
+}
+
+/**
+ * The "(English) " marker is Nintendo's own multi-language shelf label, not
+ * part of the game's name, so it never reaches a user. Stripping it here also
+ * keeps the generated slug identical to what the hand-inserted rows already
+ * have (Algolia sends slug: null for these, so the slug comes from the title),
+ * which means no URL churn when sync finally picks them up.
+ */
+export function stripEnglishPrefix(title: string): string {
+  return title.replace(ENGLISH_PREFIX, "");
 }
 
 const NON_GAME_PATTERNS = /\b(DLC|Season Pass|Expansion Pass|Bundle|Pack|Transfer Tool|Membership|Online Service|Voucher|Demo|Trial|Starter Edition)\b/i;
@@ -274,7 +295,7 @@ export function detectRetroPlatform(title: string): string | null {
 }
 
 export function algoliaHitToGameRow(hit: AlgoliaHit) {
-  const title = hit.title;
+  const title = stripEnglishPrefix(hit.title);
   const slug = hit.slug || generateSlug(title);
   const coverArt = buildCoverArtUrl(hit);
   const msrp = hit.msrp ?? 0;
