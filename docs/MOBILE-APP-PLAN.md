@@ -28,7 +28,14 @@ These came out of the audit as wins regardless of whether the app ever ships:
 - **Inline dispatch after launch-burst-poll fires an out_now alert.** `insertAndDispatch` doesn't actually dispatch; delivery waits for the 10-min cron, so the "launch-minute" alert can lag ~12 min even though burst-poll detects in ~2. One small change (call `dispatchRecentAlerts()` in the same request; it's idempotent/durable by design). This is the single highest-leverage item in the whole plan — it fixes the hero moment for email now and for push later.
 - **Account deletion endpoint + a Settings row on web.** App Store blocker, but also just a thing the product should have.
 
-### Phase 1 — revive the scaffold (S–M, mechanical)
+### Phase 1 — revive the scaffold — MOSTLY DONE 2026-08-17
+Status: steps 1, 2, 3 and 5 shipped; step 4 (auth) is built and verified, and
+waits only on a founder decision about the email template
+(`docs/DRAFT-auth-email-otp-template.md`). Went to Expo SDK 57 rather than
+fixing SDK 54's matrix, since nothing had shipped and 54 was already three
+releases behind. Verified by `expo-doctor` 21/21 and a real iOS bundle.
+
+Original plan:
 1. Swap `mobile/.env` to the `sb_publishable_` key.
 2. `npx expo install --fix`, absorb React 19 / RN 0.81, bump to current stable SDK if newer.
 3. Re-port `queries.ts` / `types.ts` / `format.ts` wholesale from web (don't patch incrementally) — brings junk filters, ranking/IP tiers, precision-aware dates, Pacific-anchored countdowns, `sourceLabel`, `getUnreadAlertCount`, dismiss/mark-read, freshness stamp.

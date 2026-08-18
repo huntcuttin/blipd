@@ -10,7 +10,10 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   consolePreference: ConsolePreference | null;
+  /** Sends a sign-in email containing both a magic link and a numeric code. */
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>;
+  /** Completes sign-in with the code from that email. Primary mobile flow. */
+  verifyEmailCode: (email: string, code: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -101,12 +104,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  // Code entry is the primary mobile sign-in path, not the deep link. The
+  // magic-link round trip has to survive leaving the app, an email client's
+  // in-app browser, and a redirect back — the exact chain that produces the
+  // PKCE "verifier lost" failure the web app has documented against itself.
+  // Typing a code from the same email never leaves the app, so none of that
+  // can happen. The deep-link handler above stays as a fallback for users who
+  // tap the link anyway.
+  const verifyEmailCode = async (email: string, code: string) => {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code.trim(),
+      type: "email",
+    });
+    return { error: error as Error | null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, consolePreference, signInWithMagicLink, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, consolePreference, signInWithMagicLink, verifyEmailCode, signOut }}>
       {children}
     </AuthContext.Provider>
   );
