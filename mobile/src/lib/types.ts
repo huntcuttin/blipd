@@ -22,6 +22,19 @@ export interface Game {
   upgradePackPrice: number | null;
   isSuppressed: boolean;
   igdbHype: number | null;
+  platform: "switch" | "switch2" | null;
+  saleEventId: string | null;
+  retroPlatform: string | null;
+  hasDemo: boolean;
+  genres: string[];
+}
+
+export interface NamedSaleEvent {
+  id: string;
+  name: string;
+  detectedAt: string;
+  active: boolean;
+  gamesCount: number;
 }
 
 export interface NotifyPrefs {
@@ -54,9 +67,23 @@ export type AlertType =
   | "sale_ending"
   | "release_today"
   | "announced"
-  | "switch2_edition_announced";
+  | "switch2_edition_announced"
+  | "retro_game_added";
 
-export type ConsolePreference = "switch" | "switch2";
+export type ConsolePreference = "switch" | "switch2" | "both";
+
+export interface TrailerDetection {
+  id: string;
+  videoId: string;
+  title: string;
+  thumbnailUrl: string | null;
+  matchedGameTitle: string | null;
+  matchedFranchise: string | null;
+  confidence: number | null;
+  status: string;
+  publishedAt: string;
+  detectedAt: string;
+}
 
 export interface GameAlert {
   id: string;
@@ -71,4 +98,9 @@ export interface GameAlert {
   timestamp: string;
   timestampGroup: "today" | "yesterday" | "this_week" | "earlier";
   read: boolean;
+  // "Why am I seeing this" (Product Bible: never obscure why an alert
+  // fired). "Watching" = direct game follow, a franchise name = sourced via
+  // franchise follow, null/undefined = unknown (e.g. logged-out preview, or
+  // callers like getAlertsForGame that don't compute this).
+  sourceLabel?: string | null;
 }

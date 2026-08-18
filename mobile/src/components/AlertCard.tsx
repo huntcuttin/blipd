@@ -14,6 +14,9 @@ const alertConfig: Record<AlertType, { emoji: string; label: string; color: stri
   release_today: { emoji: "📅", label: "RELEASE TODAY", color: colors.orange, bg: "rgba(255, 165, 0, 0.15)" },
   announced: { emoji: "📣", label: "ANNOUNCED", color: colors.purple, bg: "rgba(155, 89, 182, 0.15)" },
   switch2_edition_announced: { emoji: "🎮", label: "SWITCH 2", color: colors.blue, bg: "rgba(0, 170, 255, 0.15)" },
+  // Matches web's AlertCard (#ffaa00 "RETRO DROP"). In-app feed only: this
+  // type is deliberately email-exempt, see CLAUDE.md's Alert Types note.
+  retro_game_added: { emoji: "👾", label: "RETRO DROP", color: "#ffaa00", bg: "rgba(255, 170, 0, 0.15)" },
 };
 
 export default function AlertCard({

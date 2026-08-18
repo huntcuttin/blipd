@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs } from "./types";
-import { DEFAULT_NOTIFY_PREFS } from "./types";
+import type { Game, Franchise, GameAlert, ConsolePreference, NotifyPrefs, NamedSaleEvent } from "@/lib/types";
+import { getGameTier, isNintendoFirstParty, getNintendoIpTier } from "@/lib/ranking";
+import { PLACEHOLDER_DATES, getPacificDateStr } from "@/lib/format";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = SupabaseClient<any>;
@@ -33,6 +34,11 @@ function mapGame(row: any): Game {
     upgradePackPrice: row.upgrade_pack_price != null ? Number(row.upgrade_pack_price) : null,
     isSuppressed: row.is_suppressed ?? false,
     igdbHype: row.igdb_hype ?? null,
+    platform: row.platform ?? null,
+    saleEventId: row.sale_event_id ?? null,
+    retroPlatform: row.retro_platform ?? null,
+    hasDemo: row.has_demo ?? false,
+    genres: Array.isArray(row.genres) ? row.genres : [],
   };
 }
 
@@ -87,68 +93,257 @@ function formatTimestamp(createdAt: string): string {
 
 // ── Game queries ──────────────────────────────────────────────
 
-export async function getTrendingGames(supabase: Client): Promise<Game[]> {
-  const { data, error } = await supabase
-    .from("games")
-    .select("*")
-    .eq("release_status", "released")
-    .eq("is_suppressed", false)
-    .gt("current_price", 0)
-    .order("updated_at", { ascending: false })
-    .limit(100);
-  if (error) throw error;
-  return (data ?? []).map(mapGame);
-}
-
 export async function getGamesOnSale(supabase: Client): Promise<Game[]> {
   const { data, error } = await supabase
     .from("games")
     .select("*")
     .eq("is_on_sale", true)
     .eq("is_suppressed", false)
+    // Junk carries the deepest "discounts" (a $0.99 costume piece reading as
+    // 90% off) -- same null-lenient OR as getRecentReleases, see its comment.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
     .order("discount", { ascending: false })
     .limit(500);
   if (error) throw error;
   return (data ?? []).map(mapGame);
 }
 
-export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
-  const today = new Date().toISOString().split("T")[0];
+export async function getActiveNamedSaleEvents(supabase: Client): Promise<NamedSaleEvent[]> {
+  const { data, error } = await supabase
+    .from("named_sale_events")
+    .select("*")
+    .eq("active", true)
+    .order("detected_at", { ascending: false })
+    .limit(10);
+  if (error) throw error;
+  // Deduplicate by name — keep the most recent (already ordered by detected_at desc)
+  const seen = new Set<string>();
+  const deduped = (data ?? []).filter((row) => {
+    // Defensive: never show a 0-tagged event even if `active` is stale
+    if (row.games_count <= 0) return false;
+    if (seen.has(row.name)) return false;
+    seen.add(row.name);
+    return true;
+  });
+  return deduped.map((row) => ({
+    id: row.id,
+    name: row.name,
+    detectedAt: row.detected_at,
+    active: row.active,
+    gamesCount: row.games_count,
+  }));
+}
+
+export async function getRecentReleases(supabase: Client): Promise<Game[]> {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const { data, error } = await supabase
     .from("games")
     .select("*")
-    .in("release_status", ["upcoming", "out_today"])
+    .eq("release_status", "released")
     .eq("is_suppressed", false)
-    .gte("release_date", today)
+    // Excludes individual DLC ("Sharing Stone", a $2.99 Pokemon Quest item)
+    // and edition/bundle re-listings ("PGA TOUR 2K25 Legend Edition Year 2",
+    // dated two weeks after the base game) from reading as fresh new
+    // releases -- confirmed live 2026-08-03 both were slipping through
+    // because they already had a real release_date from ingest, so none of
+    // this session's earlier placeholder-date-only suppression sweeps ever
+    // touched them. product_type is null for rows not yet backfilled after
+    // this column was added -- plain .not("product_type", "in", ...) would
+    // silently exclude every one of those too (NOT IN treats NULL as
+    // non-matching in standard SQL three-valued logic, confirmed live before
+    // shipping this), so this explicitly keeps null alongside anything
+    // that's actually not junk.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
+    .gte("release_date", thirtyDaysAgo)
     .neq("release_date", "2099-12-31")
     .neq("release_date", "2020-01-01")
     .gt("original_price", 0)
-    .order("release_date", { ascending: true })
+    .order("release_date", { ascending: false })
     .limit(100);
   if (error) throw error;
-  return (data ?? []).map(mapGame);
+  const games = (data ?? []).map(mapGame);
+  // Tiered Nintendo IP boost (getNintendoIpTier), not the old binary
+  // franchise-tag check -- title-based so it survives the franchise-tag
+  // gaps that let real Nintendo releases slip past the boost entirely,
+  // and tiered so Mario/Zelda/Pokemon-class IP outranks smaller Nintendo
+  // titles instead of tying with them. Release date breaks ties within
+  // each tier.
+  return games.sort((a, b) => {
+    const tierDiff = getNintendoIpTier(b) - getNintendoIpTier(a);
+    if (tierDiff !== 0) return tierDiff;
+    return b.releaseDate.localeCompare(a.releaseDate);
+  });
 }
 
-export async function getGameBySlug(supabase: Client, slug: string): Promise<Game | null> {
-  const { data, error } = await supabase.from("games").select("*").eq("slug", slug).single();
-  if (error) return null;
-  return mapGame(data);
-}
-
-export async function searchGames(supabase: Client, query: string): Promise<Game[]> {
-  const escaped = query.replace(/[%_]/g, "\\$&");
+/** Top ~30 well-known released games for the onboarding "games you own" picker. */
+export async function getPopularGames(supabase: Client): Promise<Game[]> {
   const { data, error } = await supabase
     .from("games")
     .select("*")
-    .ilike("title", `%${escaped}%`)
-    .order("title")
-    .limit(20);
+    .eq("release_status", "released")
+    .eq("is_suppressed", false)
+    .gt("original_price", 0)
+    .not("metacritic_score", "is", null)
+    .order("metacritic_score", { ascending: false })
+    .limit(60);
   if (error) throw error;
-  return (data ?? []).map(mapGame);
+  const games = (data ?? []).map(mapGame);
+  // Nintendo's own titles lead regardless of score — getGameTier() alone
+  // isn't enough here, since it buckets Nintendo in with any 85+ third-party
+  // game, and a 95-rated indie would still outrank Mario within that tier on
+  // raw score. Tier still breaks the remaining ties (Tier 2 above Tier 3).
+  games.sort((a, b) => {
+    const nintendoDiff = Number(isNintendoFirstParty(b)) - Number(isNintendoFirstParty(a));
+    if (nintendoDiff !== 0) return nintendoDiff;
+    const tierDiff = getGameTier(a) - getGameTier(b);
+    if (tierDiff !== 0) return tierDiff;
+    return (b.metacriticScore ?? 0) - (a.metacriticScore ?? 0);
+  });
+  return games.slice(0, 30);
+}
+
+export async function getGameBySlug(supabase: Client, slug: string): Promise<Game | null> {
+  const { data, error } = await supabase.from("games").select("*").eq("slug", slug).maybeSingle();
+  if (error || !data) return null;
+  return mapGame(data);
+}
+
+// Title fragments that indicate DLC / add-ons — not standalone games
+const ADDON_PATTERNS = [
+  "upgrade pack",
+  "expansion pass",
+  "season pass",
+  " - dlc",
+  "booster course",
+  "additional content",
+];
+
+function isAddon(title: string): boolean {
+  const lower = title.toLowerCase();
+  return ADDON_PATTERNS.some((p) => lower.includes(p));
+}
+
+export async function searchGames(
+  supabase: Client,
+  query: string,
+  consolePreference?: ConsolePreference | null
+): Promise<Game[]> {
+  // Try Algolia first for relevance-ranked results, fall back to ILIKE
+  try {
+    const { fetchGameCatalog } = await import("@/lib/nintendo/client");
+    // Switch 2 users see Switch 2 titles; everyone else sees both platforms
+    const platformFilter =
+      consolePreference === "switch2"
+        ? 'platform:"Nintendo Switch 2"'
+        : '(platform:"Nintendo Switch" OR platform:"Nintendo Switch 2")';
+    const result = await fetchGameCatalog({
+      query,
+      hitsPerPage: 40,
+      filters: `topLevelCategoryCode:GAMES AND ${platformFilter}`,
+    });
+
+    // Only keep hits where the title actually contains the query (avoids fuzzy false positives).
+    // eshopDetails.productType is Nintendo's own authoritative signal (see
+    // isStandaloneGame's comment) -- isAddon's title regex alone missed real
+    // junk like "PGA TOUR 2K25 Legend Edition Year 2" (a BUNDLE with no
+    // addon-pattern keyword in its title), and search is the one place a
+    // user can still follow junk directly, sidestepping every catalog-level
+    // filter. Null-lenient: only exclude an exact ADD_ON_CONTENT/BUNDLE match.
+    const queryLower = query.toLowerCase();
+    const nsuids = result.hits
+      .filter((h) => !isAddon(h.title ?? ""))
+      .filter((h) => {
+        const pt = h.eshopDetails?.productType;
+        return pt !== "ADD_ON_CONTENT" && pt !== "BUNDLE";
+      })
+      .filter((h) => (h.title ?? "").toLowerCase().includes(queryLower))
+      .map((h) => h.nsuid)
+      .filter(Boolean) as string[];
+
+    // Run Algolia DB lookup + announced-game DB search in parallel
+    const escaped = query.replace(/[%_]/g, "\\$&");
+    const [eshopResult, announcedResult] = await Promise.all([
+      nsuids.length > 0
+        ? supabase.from("games").select("*").in("nsuid", nsuids).eq("is_suppressed", false).limit(20)
+        : Promise.resolve({ data: [], error: null }),
+      supabase
+        .from("games")
+        .select("*")
+        .is("nsuid", null)
+        .eq("release_status", "upcoming")
+        .eq("is_suppressed", false)
+        .ilike("title", `%${escaped}%`)
+        .limit(10),
+    ]);
+
+    if (eshopResult.error) throw eshopResult.error;
+
+    // eShop results in Algolia rank order, then announced games appended
+    const byNsuid = new Map((eshopResult.data ?? []).map((g) => [g.nsuid, g]));
+    const eshopGames = nsuids
+      .map((nsuid) => byNsuid.get(nsuid))
+      .filter((g): g is NonNullable<typeof g> => !!g)
+      .slice(0, 20)
+      .map(mapGame);
+
+    const announcedGames = (announcedResult.data ?? []).map(mapGame);
+    const seenIds = new Set(eshopGames.map((g) => g.id));
+    const newAnnounced = announcedGames.filter((g) => !seenIds.has(g.id));
+
+    return [...eshopGames, ...newAnnounced].slice(0, 20);
+  } catch {
+    // Algolia unavailable — fall back to DB ILIKE
+    const escaped = query.replace(/[%_]/g, "\\$&");
+    const { data, error } = await supabase
+      .from("games")
+      .select("*")
+      .eq("is_suppressed", false)
+      .ilike("title", `%${escaped}%`)
+      .order("title")
+      .limit(20);
+    if (error) throw error;
+    return (data ?? []).map(mapGame);
+  }
+}
+
+export async function getGameFollowerCount(supabase: Client, gameId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("user_game_follows")
+    .select("id", { count: "exact", head: true })
+    .eq("game_id", gameId);
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/**
+ * Pipeline-global freshness signal for the "last checked X min ago" stamp
+ * (Bible mandate: "users should never have to wonder if their alerts are
+ * working"). Deliberately the freshest last_price_check across the WHOLE
+ * catalog, not any single game's -- same query health-check's own
+ * freshness check already uses to detect a stale pipeline.
+ */
+export async function getLastPriceCheckTimestamp(supabase: Client): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("last_price_check")
+    .order("last_price_check", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.last_price_check) return null;
+  return data.last_price_check as string;
 }
 
 export async function getGamesByFranchise(supabase: Client, franchiseName: string): Promise<Game[]> {
-  const { data, error } = await supabase.from("games").select("*").eq("franchise", franchiseName);
+  // Junk-filtered like every other discovery surface: franchise pages were
+  // the one place still rendering suppressed DLC kits/bundles (2026-08-05
+  // audit). A followed junk game stays visible in the user's own watchlist
+  // and alerts either way -- this only affects the franchise listing.
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("franchise", franchiseName)
+    .eq("is_suppressed", false)
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)");
   if (error) throw error;
   return (data ?? []).map(mapGame);
 }
@@ -169,32 +364,81 @@ export async function getAllFranchises(supabase: Client): Promise<Franchise[]> {
 }
 
 export async function getFranchiseByName(supabase: Client, name: string): Promise<Franchise | null> {
-  const { data, error } = await supabase.from("franchises").select("*").eq("name", name).single();
-  if (error) return null;
+  // Escape ilike wildcards -- this receives a raw URL segment, and an
+  // unescaped % or _ could match the wrong franchise (same bug class as
+  // audit #29's detect-trailers fix).
+  const escaped = name.replace(/[%_]/g, (m) => "\\" + m);
+  const { data, error } = await supabase.from("franchises").select("*").ilike("name", escaped).maybeSingle();
+  if (error || !data) return null;
   return mapFranchise(data);
 }
 
 // ── Alert queries ─────────────────────────────────────────────
 
+const ALERT_PAGE_SIZE = 50;
+const ALERT_FETCH_CAP = 500;
+
 export async function getAlerts(supabase: Client, userId?: string): Promise<GameAlert[]> {
+  // If user is logged in, only show alerts for games they follow
   let followedGameIds: Set<string> | null = null;
+  // Followed franchise names, lowercased — batched once here (not per alert)
+  // so "why am I seeing this" can be answered for franchise-sourced alerts
+  // below without an N+1 query per row.
+  let followedFranchiseNames: Set<string> | null = null;
   if (userId) {
     const { data: follows } = await supabase
       .from("user_game_follows")
       .select("game_id")
       .eq("user_id", userId);
     followedGameIds = new Set((follows ?? []).map((f: { game_id: string }) => f.game_id));
+
+    const { data: franchiseFollows } = await supabase
+      .from("user_franchise_follows")
+      .select("franchises ( name )")
+      .eq("user_id", userId);
+    followedFranchiseNames = new Set(
+      (franchiseFollows ?? [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((f: any) => f.franchises?.name as string | undefined)
+        .filter((n: string | undefined): n is string => !!n)
+        .map((n: string) => n.toLowerCase())
+    );
+  }
+
+  // The dismissed filter runs client-side below (dismissal lives in
+  // user_alert_status, which has no FK join usable from here), so a flat
+  // limit(50) meant a heavy dismisser saw fewer than 50 alerts, and once the
+  // 50 most recent were all dismissed the feed read fully empty even though
+  // older undismissed alerts existed. Widen the fetch by however many the
+  // user has actually dismissed, then slice back to ALERT_PAGE_SIZE.
+  let fetchLimit = ALERT_PAGE_SIZE;
+  if (userId) {
+    const { count } = await supabase
+      .from("user_alert_status")
+      .select("alert_id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("dismissed", true);
+    // Capped: past the cap the feed degrades to "fewer than 50 shown" again,
+    // but bounded payload beats an unbounded one, and this is far past any
+    // realistic POC-scale dismissal count.
+    fetchLimit = Math.min(ALERT_PAGE_SIZE + (count ?? 0), ALERT_FETCH_CAP);
   }
 
   let query = supabase
     .from("alerts")
-    .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art, slug )")
+    .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art, slug, franchise )")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(fetchLimit);
 
+  // If user follows games, filter to those games only
   if (followedGameIds && followedGameIds.size > 0) {
     query = query.in("game_id", Array.from(followedGameIds));
-  } else if (userId) {
+  } else {
+    // Either logged in and following nothing, or not logged in at all.
+    // The signed-out "global preview" this used to fetch had no rendering
+    // consumer (the alerts page early-returns for signed-out visitors), and
+    // it was unfiltered by is_suppressed/product_type, so if it were ever
+    // surfaced it would show junk-SKU alerts. Don't run the query.
     return [];
   }
 
@@ -221,21 +465,36 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
 
   return (data ?? [])
     .filter((row: { id: string }) => !dismissedSet.has(row.id))
+    .slice(0, ALERT_PAGE_SIZE)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((row: any) => ({
-      id: row.id,
-      gameId: row.game_id,
-      gameTitle: row.games.title,
-      gameCoverArt: row.games.cover_art,
-      gameSlug: row.games.slug,
-      type: row.type,
-      headline: row.headline,
-      subtext: row.subtext,
-      createdAt: row.created_at,
-      timestampGroup: computeTimestampGroup(row.created_at),
-      timestamp: formatTimestamp(row.created_at),
-      read: readMap.get(row.id) ?? false,
-    }));
+    .map((row: any) => {
+      // Direct follow wins over franchise follow (a user can follow both the
+      // game and its franchise) — "Watching" is the obvious default and the
+      // UI renders nothing for it; only the franchise case is worth a chip.
+      let sourceLabel: string | null = null;
+      if (userId) {
+        if (followedGameIds?.has(row.game_id)) {
+          sourceLabel = "Watching";
+        } else if (row.games.franchise && followedFranchiseNames?.has(String(row.games.franchise).toLowerCase())) {
+          sourceLabel = row.games.franchise;
+        }
+      }
+      return {
+        id: row.id,
+        gameId: row.game_id,
+        gameTitle: row.games.title,
+        gameCoverArt: row.games.cover_art,
+        gameSlug: row.games.slug,
+        type: row.type,
+        headline: row.headline,
+        subtext: row.subtext,
+        createdAt: row.created_at,
+        timestampGroup: computeTimestampGroup(row.created_at),
+        timestamp: formatTimestamp(row.created_at),
+        read: readMap.get(row.id) ?? false,
+        sourceLabel,
+      };
+    });
 }
 
 export async function getAlertsForGame(supabase: Client, gameId: string): Promise<GameAlert[]> {
@@ -267,7 +526,16 @@ export async function getAlertsForGame(supabase: Client, gameId: string): Promis
 export async function markAlertRead(supabase: Client, userId: string, alertId: string) {
   const { error } = await supabase
     .from("user_alert_status")
-    .upsert({ user_id: userId, alert_id: alertId, read: true });
+    .upsert({ user_id: userId, alert_id: alertId, read: true }, { onConflict: "user_id,alert_id" });
+  if (error) throw error;
+}
+
+export async function markAllAlertsRead(supabase: Client, userId: string, alertIds: string[]) {
+  if (alertIds.length === 0) return;
+  const rows = alertIds.map((alert_id) => ({ user_id: userId, alert_id, read: true }));
+  const { error } = await supabase
+    .from("user_alert_status")
+    .upsert(rows, { onConflict: "user_id,alert_id" });
   if (error) throw error;
 }
 
@@ -275,19 +543,47 @@ export async function remindAlert(supabase: Client, userId: string, alertId: str
   const remindAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
   const { error } = await supabase
     .from("user_alert_status")
-    .upsert({ user_id: userId, alert_id: alertId, read: true, remind_at: remindAt });
+    .upsert({ user_id: userId, alert_id: alertId, read: true, remind_at: remindAt }, { onConflict: "user_id,alert_id" });
+  if (error) throw error;
+}
+
+export async function dismissAlerts(supabase: Client, userId: string, alertIds: string[]) {
+  if (alertIds.length === 0) return;
+  const rows = alertIds.map((alert_id) => ({ user_id: userId, alert_id, dismissed: true, read: true }));
+  const { error } = await supabase
+    .from("user_alert_status")
+    .upsert(rows, { onConflict: "user_id,alert_id" });
   if (error) throw error;
 }
 
 // ── User profile queries ──────────────────────────────────────
 
-export async function getUserProfile(supabase: Client, userId: string): Promise<{ consolePreference: ConsolePreference | null }> {
-  const { data } = await supabase
+export async function getUserProfile(supabase: Client, userId: string): Promise<{ consolePreference: ConsolePreference | null; onboardingCompleted: boolean }> {
+  const { data, error } = await supabase
     .from("user_profiles")
-    .select("console_preference")
+    .select("console_preference, onboarding_completed")
     .eq("user_id", userId)
-    .single();
-  return { consolePreference: data?.console_preference ?? null };
+    .maybeSingle();
+  if (error) {
+    // Loud, and biased toward "already onboarded": silently defaulting to
+    // false on a transient failure bounced real, onboarded users back into
+    // onboarding (2026-08-05 audit; same silent-error class that hid the
+    // missing onboarding_completed column for 5 months). A genuinely new
+    // user has data=null with NO error, which still returns false below.
+    console.error("getUserProfile failed:", error.message);
+    return { consolePreference: null, onboardingCompleted: true };
+  }
+  return {
+    consolePreference: data?.console_preference ?? null,
+    onboardingCompleted: data?.onboarding_completed ?? false,
+  };
+}
+
+export async function setConsolePreference(supabase: Client, userId: string, preference: ConsolePreference) {
+  const { error } = await supabase
+    .from("user_profiles")
+    .upsert({ user_id: userId, console_preference: preference, updated_at: new Date().toISOString() });
+  if (error) throw error;
 }
 
 // ── Follow queries ────────────────────────────────────────────
@@ -295,18 +591,20 @@ export async function getUserProfile(supabase: Client, userId: string): Promise<
 export interface GameFollowRecord {
   gameId: string;
   prefs: NotifyPrefs;
+  targetPrice: number | null;
 }
 
 export async function getUserGameFollows(supabase: Client, userId: string): Promise<GameFollowRecord[]> {
   const { data, error } = await supabase
     .from("user_game_follows")
-    .select("game_id, notify_announcements, notify_sales, notify_all_time_low, notify_releases")
+    .select("game_id, notify_announcements, notify_sales, notify_all_time_low, notify_releases, target_price")
     .eq("user_id", userId);
   if (error) throw error;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (data ?? []).map((r: any) => ({
     gameId: r.game_id,
     prefs: mapNotifyPrefs(r),
+    targetPrice: r.target_price != null ? Number(r.target_price) : null,
   }));
 }
 
@@ -327,6 +625,7 @@ export async function getUserFranchiseFollows(supabase: Client, userId: string):
     prefs: mapNotifyPrefs(r),
   }));
 }
+
 
 export async function followGame(supabase: Client, userId: string, gameId: string) {
   const { error } = await supabase.from("user_game_follows").insert({ user_id: userId, game_id: gameId });
@@ -358,6 +657,15 @@ export async function updateGameFollowPrefs(supabase: Client, userId: string, ga
   if (error) throw error;
 }
 
+export async function setTargetPrice(supabase: Client, userId: string, gameId: string, targetPrice: number | null) {
+  const { error } = await supabase
+    .from("user_game_follows")
+    .update({ target_price: targetPrice })
+    .eq("user_id", userId)
+    .eq("game_id", gameId);
+  if (error) throw error;
+}
+
 export async function updateFranchiseFollowPrefs(supabase: Client, userId: string, franchiseId: string, prefs: Partial<NotifyPrefs>) {
   const update: Record<string, boolean> = {};
   if (prefs.announcements !== undefined) update.notify_announcements = prefs.announcements;
@@ -366,4 +674,224 @@ export async function updateFranchiseFollowPrefs(supabase: Client, userId: strin
   if (prefs.releases !== undefined) update.notify_releases = prefs.releases;
   const { error } = await supabase.from("user_franchise_follows").update(update).eq("user_id", userId).eq("franchise_id", franchiseId);
   if (error) throw error;
+}
+
+// ── Games I Own queries ───────────────────────────────────────
+
+export async function getUnreadAlertCount(supabase: Client, userId: string): Promise<number> {
+  // Get game IDs the user follows
+  const { data: follows } = await supabase
+    .from("user_game_follows")
+    .select("game_id")
+    .eq("user_id", userId);
+  const gameIds = (follows ?? []).map((f: { game_id: string }) => f.game_id);
+  if (gameIds.length === 0) return 0;
+
+  const { data: alertRows } = await supabase
+    .from("alerts")
+    .select("id")
+    .in("game_id", gameIds)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const alertIds = (alertRows ?? []).map((a: { id: string }) => a.id);
+  if (alertIds.length === 0) return 0;
+
+  // Scoped to the 50 fetched alerts. The old unscoped read-statuses fetch
+  // silently truncated at PostgREST's 1,000-row cap once a user
+  // accumulated that many read rows, making the badge overcount forever.
+  const { data: statuses } = await supabase
+    .from("user_alert_status")
+    .select("alert_id")
+    .eq("user_id", userId)
+    .eq("read", true)
+    .in("alert_id", alertIds);
+
+  const readIds = new Set((statuses ?? []).map((s: { alert_id: string }) => s.alert_id));
+  return alertIds.filter((id: string) => !readIds.has(id)).length;
+}
+
+export async function getUserGameOwns(supabase: Client, userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("user_game_owns")
+    .select("game_id")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return (data ?? []).map((r: { game_id: string }) => r.game_id);
+}
+
+export async function markGameOwned(supabase: Client, userId: string, gameId: string) {
+  const { error } = await supabase.from("user_game_owns").insert({ user_id: userId, game_id: gameId });
+  if (error) throw error;
+}
+
+export async function unmarkGameOwned(supabase: Client, userId: string, gameId: string) {
+  const { error } = await supabase.from("user_game_owns").delete().eq("user_id", userId).eq("game_id", gameId);
+  if (error) throw error;
+}
+
+// ── Retro console follow queries ─────────────────────────────
+
+export async function getUserRetroFollows(supabase: Client, userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("user_retro_follows")
+    .select("console")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return (data ?? []).map((r: { console: string }) => r.console);
+}
+
+export async function toggleRetroFollow(supabase: Client, userId: string, console: string): Promise<boolean> {
+  // Check if already following
+  const { data } = await supabase
+    .from("user_retro_follows")
+    .select("console")
+    .eq("user_id", userId)
+    .eq("console", console)
+    .maybeSingle();
+
+  if (data) {
+    const { error } = await supabase
+      .from("user_retro_follows")
+      .delete()
+      .eq("user_id", userId)
+      .eq("console", console);
+    if (error) throw error;
+    return false; // unfollowed
+  } else {
+    const { error } = await supabase
+      .from("user_retro_follows")
+      .insert({ user_id: userId, console });
+    if (error) throw error;
+    return true; // followed
+  }
+}
+
+export async function setRetroFollows(supabase: Client, userId: string, consoles: string[]): Promise<void> {
+  // Delete all existing, then insert new ones
+  await supabase.from("user_retro_follows").delete().eq("user_id", userId);
+  if (consoles.length > 0) {
+    const rows = consoles.map((c) => ({ user_id: userId, console: c }));
+    const { error } = await supabase.from("user_retro_follows").insert(rows);
+    if (error) throw error;
+  }
+}
+
+// ── Feed queries ──────────────────────────────────────────────
+
+export async function getUpcomingGamesSoon(supabase: Client): Promise<Game[]> {
+  const today = new Date().toISOString().split("T")[0];
+  const sixtyDaysOut = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  // No upper date bound at the query level -- Nintendo announces some of its
+  // biggest titles many months out with a firm date attached (unlike most
+  // third-party listings), and a flat 60-day cutoff silently hid every one
+  // of those, so "Coming Soon" could show a single Nintendo game (whichever
+  // happened to land inside the window) even when others were confirmed for
+  // later this year. The real-dated upcoming pool is small (~60 games
+  // catalog-wide as of writing), so fetching all of it and applying the
+  // window in JS only for non-Nintendo titles is cheap.
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .in("release_status", ["upcoming", "out_today"])
+    .eq("is_suppressed", false)
+    // Same DLC/bundle exclusion as getRecentReleases -- see its comment.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
+    .gte("release_date", today)
+    .neq("release_date", "2099-12-31")
+    .order("release_date", { ascending: true })
+    .limit(200);
+  if (error) throw error;
+  const games = (data ?? []).map(mapGame);
+  // Unlike /sales, getGameTier()'s score-based filter doesn't apply here —
+  // unreleased games essentially never have a metacritic_score yet, so
+  // filtering on it would wipe out almost every non-Nintendo upcoming title,
+  // review-less rather than low-quality. Nintendo's own upcoming titles
+  // still lead (same reasoning as the games-you-own picker), release date
+  // still governs the rest so the page stays "what's coming, soonest first."
+  return games
+    .filter((g) => getNintendoIpTier(g) > 0 || g.releaseDate <= sixtyDaysOut)
+    .sort((a, b) => {
+      const tierDiff = getNintendoIpTier(b) - getNintendoIpTier(a);
+      if (tierDiff !== 0) return tierDiff;
+      return a.releaseDate.localeCompare(b.releaseDate);
+    })
+    .slice(0, 30);
+}
+
+/**
+ * Real, followable upcoming titles with no resolvable release date at all --
+ * genuinely different from getUpcomingGamesSoon's pool, which requires a
+ * real date to even be selected (`neq release_date 2099-12-31`). Without
+ * this query these games are invisible everywhere in the app despite being
+ * legitimate catalog entries, not junk -- surfaced separately as "On the
+ * Horizon" inside the Coming Soon page's TBA bucket.
+ */
+export async function getUnannouncedUpcomingGames(supabase: Client): Promise<Game[]> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("release_status", "upcoming")
+    .eq("is_suppressed", false)
+    // Same DLC/bundle exclusion as getUpcomingGamesSoon -- see its comment.
+    .or("product_type.is.null,product_type.not.in.(ADD_ON_CONTENT,BUNDLE)")
+    .in("release_date", [...PLACEHOLDER_DATES])
+    .order("igdb_hype", { ascending: false, nullsFirst: false })
+    .limit(60);
+  if (error) throw error;
+  const games = (data ?? []).map(mapGame);
+  // Same tiered Nintendo-IP-first convention as getUpcomingGamesSoon;
+  // hype score is the only remaining signal once there's no date to sort by.
+  return games
+    .sort((a, b) => {
+      const tierDiff = getNintendoIpTier(b) - getNintendoIpTier(a);
+      if (tierDiff !== 0) return tierDiff;
+      return (b.igdbHype ?? 0) - (a.igdbHype ?? 0);
+    })
+    .slice(0, 20);
+}
+
+
+
+
+// ── Mobile-only queries ───────────────────────────────────────
+//
+// These two have no web counterpart: they back the scaffold's original
+// Discover/Upcoming screens, an IA the web app has since restructured twice.
+// Kept so the existing screens keep working, but brought up to the same
+// standard as everything above: junk SKUs (ADD_ON_CONTENT / BUNDLE) are
+// filtered out, and sentinel dates come from PLACEHOLDER_DATES rather than
+// being spelled out inline. Phase 3 replaces the screens themselves.
+
+export async function getTrendingGames(supabase: Client): Promise<Game[]> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("*")
+    .eq("release_status", "released")
+    .eq("is_suppressed", false)
+    .or("product_type.is.null,product_type.eq.TITLE")
+    .gt("current_price", 0)
+    .order("updated_at", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
+}
+
+export async function getUpcomingGames(supabase: Client): Promise<Game[]> {
+  const today = getPacificDateStr();
+  let query = supabase
+    .from("games")
+    .select("*")
+    .in("release_status", ["upcoming", "out_today"])
+    .eq("is_suppressed", false)
+    .or("product_type.is.null,product_type.eq.TITLE")
+    .gte("release_date", today)
+    .gt("original_price", 0);
+  for (const sentinel of PLACEHOLDER_DATES) {
+    query = query.neq("release_date", sentinel);
+  }
+  const { data, error } = await query
+    .order("release_date", { ascending: true })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map(mapGame);
 }
