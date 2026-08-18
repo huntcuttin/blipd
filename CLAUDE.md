@@ -1445,3 +1445,62 @@ Founder said "fix the bugs now" after reviewing `docs/AUDIT-2026-08-05.md`. All 
 **Prod data fixes (no code)**: franchise backfilled on the 13 slate rows (franchise followers now actually alert for them) + Star Fox franchise row created; discovered `release_date_source='nintendo'` is a March-era convention covering ~390 rows, not just the slate (validates the cbe8d48 protection, now extended to 'manual' too); re-ran the idempotent slate script, which exposed that **the "Pokémon FireRed Version" slate row never existed — its nsuid (70010000118613) was attached to a mistitled March-era "Pokémon: Let's Go, Pikachu!" row** that the script had been silently patching with FireRed's data; retitled it correctly (the real Let's Go Pikachu row, nsuid 70010000000447, was untouched and correct). Also swapped `mobile/.env` (gitignored) to the current `sb_publishable_` key, unblocking the scaffold.
 
 **Deliberately not done**: dead signed-out branches on /alerts (m5), dismissed-after-limit feed shrinkage (m6), stale nav badge (m7, known #16 residue), non-pill back links (m8, founder taste call), filtered Clear-all semantics (m9, founder taste call), and the open franchise-alerts-in-feed product question — all documented in `docs/audit-2026-08-05/audit-client-frontend.md`.
+
+## Session Log — 2026-08-17 (account deletion built + 11-day health check)
+
+**Prod health after ~11 days unattended: healthy.** Health-check's 3 reported
+problems are all the known-benign ones (YouTube RSS 404s on detect-directs /
+detect-trailers, and Catalog Sync "status 5" = cron-job.org's 30s caller
+timeout while the sync itself completes server-side). Substance: 0 undispatched
+alerts, last 7d = 45 price_drop / 77 sale_ending / 20 all_time_low / 2
+release_today, 4 emails sent. **The junk-content fix held**: zero DLC/bundle
+`out_now` alerts since 2026-08-03, and the only launch alerts in 30 days are two
+real games (Madden NFL 27, Oblivion Remastered).
+
+**Account deletion shipped** (`api/account/delete` + Settings row + privacy
+copy). Nothing of the kind existed anywhere in the product before this: hard
+App Store blocker (guideline 5.1.1(v)) per `docs/MOBILE-APP-PLAN.md`, and a real
+gap on web regardless.
+- Auth follows `/api/push/subscribe`'s bearer-token pattern: the caller's own
+  access token identifies the account, and there is deliberately no "delete user
+  X" parameter, so the route cannot be aimed at another account.
+- **Verified live against `pg_constraint`, not assumed from the plan doc**: all
+  7 per-user tables cascade from `auth.users`. The 2 that don't are handled
+  explicitly, in order, with the irreversible `deleteUser` call last:
+  `notification_log` (no FK to auth.users at all) and `email_suppressions`
+  (keyed by email, not user_id). Cleanup failures are logged but don't block the
+  deletion, since a leftover internal log row is not a reason to refuse a user
+  their own deletion.
+- **Deleting `email_suppressions` does clear any bounce/complaint suppression on
+  that address.** Deliberate: the address is personal data and goes with the
+  account; a deleted account has no follows and therefore no alerts, and a
+  re-signup gets re-suppressed by the webhook on the next real bounce.
+- Sign out is no longer red, so the only red row in Settings is the one that
+  actually destroys something.
+
+**Verified end-to-end against production with throwaway accounts, never the
+founder's.** Created a real Supabase user, seeded it across both cascading
+(`user_game_follows`, `user_profiles`, `user_alert_status`) and non-cascading
+(`notification_log`, `email_suppressions`) tables, signed in as it to get a
+genuine access token, and called the live endpoint: `200 {"ok":true}`, auth user
+404s afterward, every seeded row gone, and the access token now 403s. Ran twice
+because the first pass seeded `notification_log = 0` (its `alert_id` is NOT
+NULL) which would have left the one non-cascading table unproven. Confirmed
+after: founder's data intact (22 follows, 8 franchise follows, 199 alert
+statuses), no test residue.
+- **Auth guard checked live too**: no header → 401, garbage bearer → 401, GET →
+  405. `api/` is excluded from the middleware matcher, so nothing gates it.
+- **Not verified**: the Settings UI itself (tsc/lint/build clean, but the delete
+  row only renders signed-in, and this environment still can't hold a real
+  session — see the 2026-08-02 note on why credential injection is not the
+  workaround). Worth a look next time you're signed in on a phone.
+
+**zsh gotcha worth remembering**: `UID` is a readonly special variable in zsh, so
+`UID=$(...)` in a verification script fails with a confusing "bad math
+expression" and can leave a half-created test fixture behind (it did: one orphan
+auth user, cleaned up). Use a different variable name in shell test harnesses.
+
+**Noticed, not acted on**: there is a second real account in `auth.users`
+(`hwgrrdtbrg@privaterelay.appleid.com`, an Apple private-relay signup, created
+2026-03-17, last sign-in 2026-03-20). Either a real early user or the founder's
+own Apple sign-in. Worth knowing before reading any retention numbers.
