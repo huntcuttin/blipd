@@ -9,9 +9,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: "./assets/icon.png",
   userInterfaceStyle: "dark",
   scheme: "blippd",
-  splash: {
-    backgroundColor: "#0a0a0a",
-  },
   ios: {
     supportsTablet: false,
     bundleIdentifier: "app.blippd.mobile",
@@ -25,6 +22,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     package: "app.blippd.mobile",
   },
+  // NOTE: `splash` stopped being a top-level ExpoConfig key in SDK 55. The
+  // scaffold only ever set a background color, so it is dropped rather than
+  // pulling in expo-splash-screen for a default. Real splash assets are a
+  // Phase 3 (design parity) task.
   plugins: [["expo-router", { root: "./src/app" }]],
   experiments: {
     typedRoutes: true,

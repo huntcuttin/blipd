@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardHover,
   },
   heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(10, 10, 10, 0.5)",
   },
   backButton: {
