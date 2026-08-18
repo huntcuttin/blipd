@@ -778,3 +778,64 @@ auth user, cleaned up). Use a different variable name in shell test harnesses.
 (`hwgrrdtbrg@privaterelay.appleid.com`, an Apple private-relay signup, created
 2026-03-17, last sign-in 2026-03-20). Either a real early user or the founder's
 own Apple sign-in. Worth knowing before reading any retention numbers.
+
+## Session Log — 2026-08-17 (continued: deferred minors, catalog filter bug, CLAUDE.md split)
+
+Founder said "keep going" three times with no steering, so this was autonomous
+work through the non-gated backlog. Mobile Phase 1 was named as the highest-value
+remaining item but **deliberately not started** — it sits behind the retention
+gate, and a generic "keep going" is not the explicit go that deserves.
+
+**Alerts feed was showing zero alerts, live.** `getAlerts` fetched the 50 newest
+and only then dropped dismissed ones client-side. The founder has exactly 50
+dismissed, all inside that top 50, so the feed rendered fully empty while
+undismissed alerts sat just past the cut. Measured against the live account
+before and after: **0 of 50 -> 50 recovered.** The 2026-08-05 audit rated this
+minor and "fine at POC volume"; it was already fully degraded on the only real
+account. Fix widens the fetch by the user's dismissed count (capped at 500) and
+slices back to 50. Lesson: "fine at POC volume" is a prediction, not a
+measurement, and this one was wrong the day it was written.
+
+**Unread nav badge never refreshed** (audit #16, open since 2026-08-02, survived
+three passes because BottomNav and the alerts feed share no provider). Marking
+alerts read left the badge stale until a hard reload. Fixed with a window event
+(`src/lib/alertEvents.ts`) dispatched on read/mark-all-read/dismiss — smallest
+thing that works, no new context, no query cache, no refetch per navigation.
+
+**Signed-out alerts preview query removed.** It ran an unfiltered global-alerts
+fetch for signed-out visitors whose result was always discarded (the page
+early-returns first), and it lacked the `is_suppressed`/`product_type` filters
+every other surface has, so it would have shown junk-SKU alerts if ever
+rendered. Dead render branches removed with it.
+
+**`(English)`-prefixed titles could never enter the catalog.** Nintendo lists
+some games once per language; `isEnglishGame` rejected every language-prefixed
+title, English included. Verified against live Algolia: exactly 6 exist, 2
+English (Pokemon FireRed/LeafGreen, both real Nintendo first-party) and 4
+French/Spanish. The 2 English ones had to be hand-inserted on 2026-08-05 because
+no sync path could ever admit them. Fixed to reject only non-English prefixes,
+and to strip the `(English) ` shelf label from the stored title — Algolia sends
+`slug: null` for these, so the slug derives from the title and now matches the
+hand-inserted rows exactly, meaning no URL churn. **Verified with a real catalog
+sync**: both rows keep clean titles and slugs, zero prefixed titles leaked,
+French/Spanish still correctly absent.
+
+**Checked and found already fixed, no change made** (recording these so a future
+session doesn't redo them): m1 Watch-verb stragglers, m2 targetPriceMap leak, m3
+signed-out green CTAs, m4 touch targets (all in `f4f4125`), and notifications M2
+digest dedup — `alreadySentPairs` filters recipients before the
+individual/digest split, and `c6e14d5` made that query abort rather than fail
+open, so the concern is closed from both ends.
+
+**Repo hygiene**: removed `public/images/{covers,franchises}` (32 files, 2MB,
+last touched 2026-03-04, zero references anywhere) and the `images.remotePatterns`
+config, since nothing imports `next/image`.
+
+**CLAUDE.md split, 256KB -> 65KB.** Five months of chronological logs moved
+verbatim into this file. Verified byte-identical to the original tail with all 23
+session logs accounted for. What stayed is durable knowledge plus two new
+sections: "Hard-Won Lessons" (the eleven recurring bug classes, each of which bit
+more than once before being named) and "Current State".
+
+Earlier the same day: account deletion built and verified end-to-end (see the
+preceding log).

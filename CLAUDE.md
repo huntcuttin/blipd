@@ -799,6 +799,9 @@ and most of them bit more than once before being named.
 
 ## Current State (2026-08-17)
 
+**Account deletion** exists as of 2026-08-17 (`/api/account/delete` + Settings
+row + privacy copy), closing the App Store 5.1.1(v) blocker and a real web gap.
+
 **Pipeline:** healthy. Alerts generating, 0 undispatched, junk-alert fix holding
 (zero DLC/bundle `out_now` since 2026-08-03). Health-check's three standing
 "problems" are known-benign: YouTube RSS 404s on detect-directs/detect-trailers,
