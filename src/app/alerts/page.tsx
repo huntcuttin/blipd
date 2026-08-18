@@ -338,24 +338,14 @@ export default function AlertsPage() {
         <div className="flex flex-col items-center justify-center py-20 px-4">
           <div className="relative w-16 h-16 rounded-2xl bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
             <RadarIcon className="w-8 h-8 text-[#444444]" />
-            {user && <span className="absolute inset-0 m-auto w-8 h-8 rounded-full animate-radar-ping bg-[#444444]/20" aria-hidden="true" />}
+            <span className="absolute inset-0 m-auto w-8 h-8 rounded-full animate-radar-ping bg-[#444444]/20" aria-hidden="true" />
           </div>
           <h2 className="text-lg font-semibold text-white mb-2">
-            {user ? "All quiet. We're watching" : "No alerts yet"}
+            All quiet. We&apos;re watching
           </h2>
           <p className="text-[#555555] text-sm text-center max-w-[260px]">
-            {user
-              ? `Watching ${followedGameIds.size} game${followedGameIds.size !== 1 ? "s" : ""} for you · ${lowercaseFirst(formatFreshness(lastChecked))}`
-              : "Sign in and watch games to get notified about price drops, sales, and new releases."}
+            {`Watching ${followedGameIds.size} game${followedGameIds.size !== 1 ? "s" : ""} for you · ${lowercaseFirst(formatFreshness(lastChecked))}`}
           </p>
-          {!user && (
-            <Link
-              href="/login"
-              className="mt-4 px-5 py-2.5 rounded-xl bg-[#00ff88] text-[#0a0a0a] text-sm font-semibold hover:shadow-[0_0_12px_#00ff8855] transition-all"
-            >
-              Sign in to get alerts
-            </Link>
-          )}
         </div>
       ) : (
         <>

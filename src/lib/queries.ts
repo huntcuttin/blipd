@@ -433,11 +433,14 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
   // If user follows games, filter to those games only
   if (followedGameIds && followedGameIds.size > 0) {
     query = query.in("game_id", Array.from(followedGameIds));
-  } else if (userId) {
-    // User is logged in but follows nothing — return empty
+  } else {
+    // Either logged in and following nothing, or not logged in at all.
+    // The signed-out "global preview" this used to fetch had no rendering
+    // consumer (the alerts page early-returns for signed-out visitors), and
+    // it was unfiltered by is_suppressed/product_type, so if it were ever
+    // surfaced it would show junk-SKU alerts. Don't run the query.
     return [];
   }
-  // If not logged in, show recent global alerts as a preview (limit already set)
 
   const { data, error } = await query;
   if (error) throw error;
