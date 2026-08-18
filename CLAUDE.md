@@ -102,7 +102,7 @@ attention.
 - **Two things stay at product grade, everything else gets pinned and frozen:**
   1. **Alert correctness** — a false price-drop alert to a real user damages the portfolio value, not just the product experience.
   2. **Whatever makes the monthly check-in actually effective** — health-check coverage, error alerting, the things that let a once-a-month glance catch real problems.
-- The only path back to "real product" thinking is retention data proving people actually want this — that's a future decision, not something to hedge for now by over-building. **Concrete gate, see Bible Addendum below: 10+ users returning in week 2, OR ≥25% week-2 return rate.**
+- ~~The only path back to "real product" thinking is retention data.~~ **Repealed 2026-08-17** (see Bible Addendum): retention no longer gates anything. The founder builds what the founder wants; retention data is informational. The POC instinct below survives only as taste (don't manufacture multi-year maintenance burdens), never as a reason to defer requested work.
 
 ## Bible Addendum — Decisions from Founder Interview (2026-08-02)
 
@@ -121,8 +121,9 @@ Launch-minute alerts are what nobody does. This is Blippd's edge.
   sync timeout, placeholder dates) outranks sale-alert polish. (Release-date
   sync timeout and placeholder dates fixed 2026-08-02 — see fix batches
   #3/#5/#6. Web push hardening also shipped 2026-08-02, but see Bible
-  Addendum 2 below — push itself is now deprioritized post-retention-gate;
-  email is the hero channel for MVP.)
+  Addendum 2 below — push was deprioritized behind the retention gate, which
+  was repealed 2026-08-17; email remains the hero channel on web, and real
+  push arrives with the iOS app.)
 - **Not yet built:** the launch burst polling cron itself. This is the next
   real feature, not just a hygiene fix — pending implementation.
 
@@ -166,18 +167,29 @@ The app stays running indefinitely on free tiers regardless of involvement
 level. Low involvement ≠ shutdown. Monthly check-in keeps it alive; there
 is no sunset plan and none is needed.
 
-### Retention gate for POC → product (adopted)
-**10+ users returning in week 2, OR ≥25% week-2 return rate from the launch
-cohort** — either triggers a genuine reconsideration of the POC framing
-(supporter tier, iOS app, catalog expansion all become discussable). Below
-that: stay POC, stay zero-touch, no re-litigating.
+### Retention gate — REPEALED 2026-08-17 (founder decision)
+The gate ("10+ users returning in week 2, OR ≥25% week-2 return rate from the
+launch cohort") **no longer blocks anything.** Founder, 2026-08-17: "don't block
+any building based on [it] ... I want to do iOS too."
+
+Retention data is now **informational, not a gate.** It is still worth measuring
+(follows-per-signup and week-2 return rate, see Marketing Strategy) because it
+tells you whether the thing is working. It does not decide what gets built.
+
+**What this means for a session: do not defer, decline, or slow any piece of
+work by citing retention, the gate, or POC framing.** If the founder asks for
+something, build it. The POC framing in Project Philosophy still holds as
+*taste* (don't invent multi-year maintenance burdens for their own sake), never
+as a veto.
 
 ## Bible Addendum 2 — Channel & Launch Decisions (2026-08-02)
 
 ### Email is the hero channel for MVP (decided)
 Users will not add a PWA to their home screen — accept reality.
 - Web push audit items (#11, iOS PWA install flow) drop to
-  post-retention-gate. Do not build install prompts. (#10's actual bugs —
+  behind the (since-repealed) retention gate. Still do not build web-push
+  install prompts: the reason there was never the gate, it is that users do
+  not add PWAs to their home screen. Real push comes with the iOS app. (#10's actual bugs —
   dedup logging, sign-out cleanup, the success-count miscount — were
   already fixed 2026-08-02 before this decision landed; that work wasn't
   wasted, it's just not where further investment goes next.)
@@ -191,12 +203,16 @@ Users will not add a PWA to their home screen — accept reality.
   your inbox" still beats every competitor's cadence. The pocket-buzz
   version of the hero moment is what the iOS app unlocks later.
 
-### iOS app: gated behind retention, explicitly (decided)
-Maintaining web + native roughly doubles the surface (App Store review,
-$99/yr dev account, OS breakage ~2x/yr, cert management, second codebase)
-and breaks zero-touch. The app is built if and only if the retention gate
-triggers. Its pitch at that point: real push notifications — the actual
-hero moment — not "our website, installed."
+### iOS app: GREENLIT 2026-08-17 (founder decision, supersedes the gate below)
+Previously "built if and only if the retention gate triggers." The founder
+lifted that on 2026-08-17 and asked for the iOS app directly. **It is being
+built.** Plan: `docs/MOBILE-APP-PLAN.md`.
+
+The original cost note still stands as something to manage, not a reason to
+hesitate: web + native roughly doubles the surface (App Store review, $99/yr
+dev account, OS breakage ~2x/yr, cert management, second codebase) and strains
+zero-touch. The pitch is unchanged and it is the right one: real push
+notifications, the actual hero moment, not "our website, installed."
 
 ### alerts table growth (noted, no action)
 `alerts` is the global event log (every price event on all ~2,800 games),
@@ -544,7 +560,7 @@ GET https://api.isthereanydeal.com/games/history/v2
 
 - [x] Per-game launch burst polling cron — **built and live 2026-08-02** (`/api/cron/launch-burst-poll`, cron-job.org job 8205523, every 2 min). Verified live: `{"ok":true,"checked":0,"inWindow":0,"released":0}` — 0 in-window is expected, no followed upcoming game happened to be near its predicted launch at verification time. **Full implementation as of 2026-08-02 evening** — now imports the recovered `src/lib/nintendo/launch-window.ts` module (19 passing tests), so the physical+digital rule (9pm PT the night before, via `has_physical_release`) is live alongside major-first-party (midnight ET) and digital-only (9am PT) — no longer a partial implementation. Pacific/Eastern offsets computed via `Intl`'s real timezone database (correct across DST), not a hardcoded UTC offset. Also fixed a real correctness bug the same day: the route was treating "has a `regular_price`" as "is released," but Nintendo's API can return a price for still-unreleased preorders (verified live) — now requires `sales_status === "onsale"` as ground truth.
 - [x] Release-date sync timeout fixed (2026-08-02, fix batch #3)
-- [x] Web push notification layer hardened — dedup logging, success-count bug, sign-out cleanup (2026-08-02, audit #10). **Per Bible Addendum 2: further push investment (iOS install flow, #11) is now gated behind the retention gate — email is the hero channel for MVP, not push.**
+- [x] Web push notification layer hardened — dedup logging, success-count bug, sign-out cleanup (2026-08-02, audit #10). **Web-push install prompts (#11) stay unbuilt on their own merits (users do not install PWAs), not because of the retention gate, which was repealed 2026-08-17. Real push ships with the iOS app.**
 - [x] #20 fixed — Resend send errors now surfaced instead of logged as "sent" (2026-08-02) — promoted to launch-critical per Bible Addendum 2
 - [x] `has_physical_release` migration applied 2026-08-02 evening via the Supabase Management API (a fresh personal access token unblocked this — the previous session's keychain token was expired). Unblocked the per-game release-time prediction feature (`/games/[slug]/release-time` now shows one specific predicted rule instead of all four generically) and the launch-burst-poll extension above. Column is `null` for every existing row until the next daily catalog sync repopulates it from Nintendo's `editions` field — no regression in the meantime, existing rows just fall back to the digital-only default (same as before).
 - [ ] Bounce visibility for email — **code done 2026-08-02** (`src/app/api/webhooks/resend/route.ts` + `email_suppressions` table migration). The `email_suppressions` table migration was also applied 2026-08-02 evening (same Management API token), confirmed live. Still blocked on one manual step: register the webhook URL (`https://www.blippd.app/api/webhooks/resend`) in the Resend dashboard so bounce/complaint events actually get sent — no API path for this, needs the dashboard. Launch-critical per Bible Addendum 2.
@@ -831,11 +847,15 @@ zombie sale banners gone. Still open:
 4. `release_date_set` email is drafted but deliberately not wired
    (`docs/DRAFT-release-date-set-email-template.md`).
 
+**iOS app: greenlit 2026-08-17, in progress.** The retention gate that used to
+block it was repealed by the founder the same day. Plan and phases:
+`docs/MOBILE-APP-PLAN.md`. Phase 0 (server-side) is fully shipped.
+
 **Known open work, deliberately deferred:** non-pill back links and filtered
 Clear-all semantics (both founder taste calls, `docs/audit-2026-08-05/`),
 named-sale dedup-key refinement, detect-trailers routing through
 `insertAndDispatch`, and the mobile app plan (`docs/MOBILE-APP-PLAN.md`, gated
-behind the retention gate; its Phase 0 server-side items are all shipped).
+greenlit 2026-08-17; its Phase 0 server-side items are all shipped).
 
 **Second account exists:** `hwgrrdtbrg@privaterelay.appleid.com` (Apple private
 relay, created 2026-03-17, last sign-in 2026-03-20). Either a real early user or
