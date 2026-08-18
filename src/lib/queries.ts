@@ -375,6 +375,9 @@ export async function getFranchiseByName(supabase: Client, name: string): Promis
 
 // ── Alert queries ─────────────────────────────────────────────
 
+const ALERT_PAGE_SIZE = 50;
+const ALERT_FETCH_CAP = 500;
+
 export async function getAlerts(supabase: Client, userId?: string): Promise<GameAlert[]> {
   // If user is logged in, only show alerts for games they follow
   let followedGameIds: Set<string> | null = null;
@@ -402,11 +405,30 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
     );
   }
 
+  // The dismissed filter runs client-side below (dismissal lives in
+  // user_alert_status, which has no FK join usable from here), so a flat
+  // limit(50) meant a heavy dismisser saw fewer than 50 alerts, and once the
+  // 50 most recent were all dismissed the feed read fully empty even though
+  // older undismissed alerts existed. Widen the fetch by however many the
+  // user has actually dismissed, then slice back to ALERT_PAGE_SIZE.
+  let fetchLimit = ALERT_PAGE_SIZE;
+  if (userId) {
+    const { count } = await supabase
+      .from("user_alert_status")
+      .select("alert_id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("dismissed", true);
+    // Capped: past the cap the feed degrades to "fewer than 50 shown" again,
+    // but bounded payload beats an unbounded one, and this is far past any
+    // realistic POC-scale dismissal count.
+    fetchLimit = Math.min(ALERT_PAGE_SIZE + (count ?? 0), ALERT_FETCH_CAP);
+  }
+
   let query = supabase
     .from("alerts")
     .select("id, game_id, type, headline, subtext, created_at, games!inner ( title, cover_art, slug, franchise )")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(fetchLimit);
 
   // If user follows games, filter to those games only
   if (followedGameIds && followedGameIds.size > 0) {
@@ -440,6 +462,7 @@ export async function getAlerts(supabase: Client, userId?: string): Promise<Game
 
   return (data ?? [])
     .filter((row: { id: string }) => !dismissedSet.has(row.id))
+    .slice(0, ALERT_PAGE_SIZE)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .map((row: any) => {
       // Direct follow wins over franchise follow (a user can follow both the
