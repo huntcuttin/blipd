@@ -13,6 +13,7 @@ import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getAlerts, markAlertRead, markAllAlertsRead, remindAlert, dismissAlerts, getLastPriceCheckTimestamp } from "@/lib/queries";
 import { formatFreshness } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
+import { notifyAlertsChanged } from "@/lib/alertEvents";
 import type { GameAlert, AlertType } from "@/lib/types";
 
 const UNDO_WINDOW_MS = 5000;
@@ -89,6 +90,7 @@ export default function AlertsPage() {
     try {
       const supabase = createClient();
       await dismissAlerts(supabase, userId, alertsToDismiss.map((a) => a.id));
+      notifyAlertsChanged();
     } catch {
       // Already removed from view; a failed write just means it may
       // reappear next refresh. Not worth a rollback UX for this action.
@@ -193,6 +195,7 @@ export default function AlertsPage() {
       try {
         const supabase = createClient();
         await markAlertRead(supabase, user.id, id);
+        notifyAlertsChanged();
       } catch {
         setLocalAlerts((prev) =>
           prev.map((a) => (a.id === id ? { ...a, read: false } : a))
@@ -226,6 +229,7 @@ export default function AlertsPage() {
       try {
         const supabase = createClient();
         await markAllAlertsRead(supabase, user.id, Array.from(unreadIds));
+        notifyAlertsChanged();
       } catch {
         setLocalAlerts((prev) =>
           prev.map((a) => (unreadIds.has(a.id) ? { ...a, read: false } : a))

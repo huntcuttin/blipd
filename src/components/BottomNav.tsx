@@ -5,13 +5,17 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { useSupabaseQuery } from "@/lib/hooks/useSupabaseQuery";
 import { getUnreadAlertCount } from "@/lib/queries";
+import { onAlertsChanged } from "@/lib/alertEvents";
+import { useEffect, useState } from "react";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => onAlertsChanged(() => setRefreshKey((k) => k + 1)), []);
   const { data: unreadCount } = useSupabaseQuery(
     (sb) => user ? getUnreadAlertCount(sb, user.id) : Promise.resolve(0),
-    [user?.id]
+    [user?.id, refreshKey]
   );
 
   const tabs = [
